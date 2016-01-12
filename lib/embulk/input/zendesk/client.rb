@@ -38,18 +38,31 @@ module Embulk
 
           @retryer.with_retry do
             response = client.get(u.to_s, query)
+
+            # https://developer.zendesk.com/rest_api/docs/core/introduction#response-format
             case response.status
             when 200
               response
+            when 400, 401
+              raise Embulk::ConfigError.new("[#{response.status}] #{response.body}")
+            when 409
+              raise "[#{response.status}] temporally failure."
             when 429
               # rate limit
               retry_after = response.headers["Retry-After"].to_i
               Embulk.logger.warn "Rate Limited. Waiting #{retry_after} seconds to retry"
               sleep retry_after
               throw :retry
-            when 500
-              raise "Server returns 500"
-            else # TODO: investigate all possible response
+            when 500, 503
+              # rate limit
+              retry_after = response.headers["Retry-After"].to_i
+              if retry_after
+                sleep retry_after
+                throw :retry
+              else
+                raise "[503] temporally failure."
+              end
+            else
               raise "Server returns unknown status code (#{response.status})"
             end
           end

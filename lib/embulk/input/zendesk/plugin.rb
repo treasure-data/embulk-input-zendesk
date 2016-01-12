@@ -18,7 +18,7 @@ module Embulk
             retry_wait_initial_sec: config.param("retry_wait_initial_sec", :integer, default: 1),
           }
           unless enough_credentials?(task)
-            raise Embulk::ConfigError.new("#{task[:auth_method]} ")
+            raise Embulk::ConfigError.new("Missing required credentials for #{task[:auth_method]}")
           end
 
           # TODO

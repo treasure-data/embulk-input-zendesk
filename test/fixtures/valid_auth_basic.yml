@@ -1,0 +1,8 @@
+in:
+  type: zendesk
+  login_url: "https://example.zendesk.com/"
+  auth_method: basic
+  username: foo@example.com
+  password: password
+out:
+  type: stdout

@@ -16,14 +16,18 @@ module Embulk
             access_token: config.param("access_token", :string, default: nil),
             retry_limit: config.param("retry_limit", :integer, default: 5),
             retry_wait_initial_sec: config.param("retry_wait_initial_sec", :integer, default: 1),
+            schema: config.param(:columns, :array),
           }
           unless enough_credentials?(task)
             raise Embulk::ConfigError.new("Missing required credentials for #{task[:auth_method]}")
           end
 
-          # TODO
-          columns = [
-          ]
+          columns = task[:schema].map do |column|
+            name = column["name"]
+            type = column["type"].to_sym
+
+            Column.new(nil, name, type, column["format"])
+          end
 
           resume(task, columns, 1, &control)
         end
@@ -63,8 +67,9 @@ module Embulk
 
         def run
           client = Client.new(task, retryer(task[:retry_limit], task[:retry_wait_initial_sec]))
-          client.tickets((Time.now - 6000).to_i) do |ticket|
-            page_builder.add([ticket["id"]])
+          client.tickets do |ticket|
+            values = extract_values(ticket)
+            page_builder.add(values)
           end
           page_builder.finish
 
@@ -80,6 +85,14 @@ module Embulk
             config.dont_rescues = [Embulk::DataError, Embulk::ConfigError]
             config.sleep = lambda{|n| wait * (2 ** (n-1)) }
           end
+        end
+
+        def extract_values(ticket)
+          values = task[:schema].map do |column|
+            ticket[column["name"].to_s]
+          end
+
+          values
         end
       end
 

@@ -3,5 +3,7 @@ in:
   login_url: "https://example.zendesk.com/"
   auth_method: oauth
   access_token: oauth_token
+  columns:
+    - {name: id, type: string}
 out:
-  type: stdout
+  type: "null"

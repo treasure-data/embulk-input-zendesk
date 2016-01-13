@@ -4,5 +4,7 @@ in:
   auth_method: token
   username: foo@example.com
   token: token
+  columns:
+    - {name: id, type: string}
 out:
-  type: stdout
+  type: "null"

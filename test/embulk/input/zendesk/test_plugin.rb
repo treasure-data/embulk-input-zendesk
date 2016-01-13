@@ -65,8 +65,8 @@ module Embulk
           end
 
           test "lack username config" do
-              Plugin.transaction(config("invalid_lack_username.yml"), &@control)
             assert_raise(ConfigError) do
+              Plugin.transaction(config("invalid_lack_username.yml"), &@control)
             end
           end
 

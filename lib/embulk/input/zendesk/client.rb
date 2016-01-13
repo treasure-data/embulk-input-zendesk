@@ -40,13 +40,14 @@ module Embulk
             response = client.get(u.to_s, query)
 
             # https://developer.zendesk.com/rest_api/docs/core/introduction#response-format
-            case response.status
+            status_code = response.status
+            case status_code
             when 200
               response
             when 400, 401
-              raise Embulk::ConfigError.new("[#{response.status}] #{response.body}")
+              raise Embulk::ConfigError.new("[#{status_code}] #{response.body}")
             when 409
-              raise "[#{response.status}] temporally failure."
+              raise "[#{status_code}] temporally failure."
             when 429
               # rate limit
               retry_after = response.headers["Retry-After"].to_i
@@ -54,16 +55,16 @@ module Embulk
               sleep retry_after
               throw :retry
             when 500, 503
-              # rate limit
+              # 503 possible rate limit
               retry_after = response.headers["Retry-After"].to_i
               if retry_after
                 sleep retry_after
                 throw :retry
               else
-                raise "[503] temporally failure."
+                raise "[#{status_code}] temporally failure."
               end
             else
-              raise "Server returns unknown status code (#{response.status})"
+              raise "Server returns unknown status code (#{status_code})"
             end
           end
         end

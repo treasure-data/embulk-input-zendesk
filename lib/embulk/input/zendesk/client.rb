@@ -6,9 +6,8 @@ module Embulk
       class Client
         attr_reader :config
 
-        def initialize(config, retryer)
+        def initialize(config)
           @config = config
-          @retryer = retryer
         end
 
         def client
@@ -17,55 +16,20 @@ module Embulk
           return set_auth(client)
         end
 
-        def set_auth(client)
-          # https://developer.zendesk.com/rest_api/docs/core/introduction#security-and-authentication
-          case config[:auth_method]
+        def validate_credentials
+          valid = case config[:auth_method]
           when "basic"
-            client.set_auth(config[:login_url], config[:username], config[:password])
+            config[:username] && config[:password]
           when "token"
-            client.set_auth(config[:login_url], "#{config[:username]}/token", config[:token])
+            config[:username] && config[:token]
           when "oauth"
-            client.default_header = {
-              "Authorization" => "Bearer #{config[:access_token]}"
-            }
+            config[:access_token]
+          else
+            raise Embulk::ConfigError.new("Unknown auth_method (#{config[:auth_method]}). Should pick one from 'basic', 'token' or 'oauth'.")
           end
-          client
-        end
 
-        def request(path, query = {})
-          u = URI.parse(config[:login_url])
-          u.path = path
-
-          @retryer.with_retry do
-            response = client.get(u.to_s, query)
-
-            # https://developer.zendesk.com/rest_api/docs/core/introduction#response-format
-            status_code = response.status
-            case status_code
-            when 200
-              response
-            when 400, 401
-              raise Embulk::ConfigError.new("[#{status_code}] #{response.body}")
-            when 409
-              raise "[#{status_code}] temporally failure."
-            when 429
-              # rate limit
-              retry_after = response.headers["Retry-After"].to_i
-              Embulk.logger.warn "Rate Limited. Waiting #{retry_after} seconds to retry"
-              sleep retry_after
-              throw :retry
-            when 500, 503
-              # 503 possible rate limit
-              retry_after = response.headers["Retry-After"].to_i
-              if retry_after
-                sleep retry_after
-                throw :retry
-              else
-                raise "[#{status_code}] temporally failure."
-              end
-            else
-              raise "Server returns unknown status code (#{status_code})"
-            end
+          unless valid
+            raise Embulk::ConfigError.new("Missing required credentials for #{config[:auth_method]}")
           end
         end
 
@@ -116,6 +80,73 @@ module Embulk
             tickets(data["end_time"], known_ids, &block)
           end
         end
+
+        private
+
+        def retryer
+          PerfectRetry.new do |config|
+            config.limit = @config[:retry_limit]
+            config.logger = Embulk.logger
+            config.log_level = nil
+            config.dont_rescues = [Embulk::DataError, Embulk::ConfigError]
+            config.sleep = lambda{|n| @config[:retry_wait_initial_sec]* (2 ** (n-1)) }
+          end
+        end
+
+        def set_auth(client)
+          validate_credentials
+
+          # https://developer.zendesk.com/rest_api/docs/core/introduction#security-and-authentication
+          case config[:auth_method]
+          when "basic"
+            client.set_auth(config[:login_url], config[:username], config[:password])
+          when "token"
+            client.set_auth(config[:login_url], "#{config[:username]}/token", config[:token])
+          when "oauth"
+            client.default_header = {
+              "Authorization" => "Bearer #{config[:access_token]}"
+            }
+          end
+          client
+        end
+
+        def request(path, query = {})
+          u = URI.parse(config[:login_url])
+          u.path = path
+
+          retryer.with_retry do
+            response = client.get(u.to_s, query)
+
+            # https://developer.zendesk.com/rest_api/docs/core/introduction#response-format
+            status_code = response.status
+            case status_code
+            when 200
+              response
+            when 400, 401
+              raise Embulk::ConfigError.new("[#{status_code}] #{response.body}")
+            when 409
+              raise "[#{status_code}] temporally failure."
+            when 429
+              # rate limit
+              retry_after = response.headers["Retry-After"].to_i
+              Embulk.logger.warn "Rate Limited. Waiting #{retry_after} seconds to retry"
+              sleep retry_after
+              throw :retry
+            when 500, 503
+              # 503 possible rate limit
+              retry_after = response.headers["Retry-After"].to_i
+              if retry_after
+                sleep retry_after
+                throw :retry
+              else
+                raise "[#{status_code}] temporally failure."
+              end
+            else
+              raise "Server returns unknown status code (#{status_code})"
+            end
+          end
+        end
+
       end
     end
   end

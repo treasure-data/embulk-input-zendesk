@@ -69,7 +69,7 @@ module Embulk
           end
         end
 
-        def tickets(start_time = 0, &block)
+        def tickets(start_time = 0, known_ids = [], &block)
           endpoint = "/api/v2/incremental/tickets"
           response = request(endpoint, start_time: start_time)
           begin
@@ -78,12 +78,22 @@ module Embulk
             raise Embulk::DataError.new(e)
           end
 
+          Embulk.logger.debug "start_time:#{start_time} (#{Time.at(start_time)}) count:#{data["count"]} next_page:#{data["next_page"]} end_time:#{data["end_time"]} "
           data["tickets"].each do |ticket|
+            # de-duplicated tickets.
+            # https://developer.zendesk.com/rest_api/docs/core/incremental_export#usage-notes
+            # https://github.com/zendesk/zendesk_api_client_rb/issues/251
+            next if known_ids.include?(ticket["id"])
+
+            known_ids << ticket["id"]
             block.call ticket
           end
 
+          # NOTE: If count is less than 1000, then stop paginating.
+          #       Otherwise, use the next_page URL to get the next page of results.
+          #       https://developer.zendesk.com/rest_api/docs/core/incremental_export#pagination
           if data["count"] == 1000
-            tickets(data["end_time"], &block)
+            tickets(data["end_time"], known_ids, &block)
           end
         end
       end

@@ -66,24 +66,32 @@ module Embulk
         end
 
         def run
-          client = Client.new(task, retryer(task[:retry_limit], task[:retry_wait_initial_sec]))
-          client.tickets do |ticket|
+          client = Client.new(task[:credentials], retryer)
+          method = preview? ? :tickets : :ticket_all
+          client.send(method) do |ticket|
             values = extract_values(ticket)
             page_builder.add(values)
           end
+
           page_builder.finish
 
           task_report = {}
           return task_report
         end
 
-        def retryer(limit, wait)
+        def preview?
+          org.embulk.spi.Exec.isPreview()
+        rescue java.lang.NullPointerException => e
+          false
+        end
+
+        def retryer
           PerfectRetry.new do |config|
-            config.limit = limit
+            config.limit = task[:retry_limit]
             config.logger = Embulk.logger
             config.log_level = nil
             config.dont_rescues = [Embulk::DataError, Embulk::ConfigError]
-            config.sleep = lambda{|n| wait * (2 ** (n-1)) }
+            config.sleep = lambda{|n| task[:retry_wait_initial_sec]* (2 ** (n-1)) }
           end
         end
 

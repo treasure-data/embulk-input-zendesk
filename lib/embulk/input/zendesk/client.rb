@@ -69,9 +69,29 @@ module Embulk
           end
         end
 
-        def tickets(start_time = 0, known_ids = [], &block)
+        def tickets(per_page = 50, &block)
+          # for `embulk guess` and `embulk preview` to fetch ~50 tickets only.
+          # /api/v2/incremental/tickets has support only 1000 per page, it is too large to guess/preview
+          endpoint = "/api/v2/tickets"
+          Embulk.logger.debug "#{endpoint} with per_page: #{per_page}"
+          response = request(endpoint, per_page: per_page)
+
+          begin
+            data = JSON.parse(response.body)
+          rescue => e
+            raise Embulk::DataError.new(e)
+          end
+
+          data["tickets"].each do |ticket|
+            block.call ticket
+          end
+        end
+
+        def ticket_all(start_time = 0, known_ids = [], &block)
+          # for `embulk run` to fetch all tickets.
           endpoint = "/api/v2/incremental/tickets"
           response = request(endpoint, start_time: start_time)
+
           begin
             data = JSON.parse(response.body)
           rescue => e

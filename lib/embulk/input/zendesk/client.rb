@@ -10,10 +10,10 @@ module Embulk
           @config = config
         end
 
-        def client
-          client = HTTPClient.new
-          # client.debug_dev = STDOUT
-          return set_auth(client)
+        def httpclient
+          httpclient = HTTPClient.new
+          # httpclient.debug_dev = STDOUT
+          return set_auth(httpclient)
         end
 
         def validate_credentials
@@ -93,21 +93,21 @@ module Embulk
           end
         end
 
-        def set_auth(client)
+        def set_auth(httpclient)
           validate_credentials
 
           # https://developer.zendesk.com/rest_api/docs/core/introduction#security-and-authentication
           case config[:auth_method]
           when "basic"
-            client.set_auth(config[:login_url], config[:username], config[:password])
+            httpclient.set_auth(config[:login_url], config[:username], config[:password])
           when "token"
-            client.set_auth(config[:login_url], "#{config[:username]}/token", config[:token])
+            httpclient.set_auth(config[:login_url], "#{config[:username]}/token", config[:token])
           when "oauth"
-            client.default_header = {
+            httpclient.default_header = {
               "Authorization" => "Bearer #{config[:access_token]}"
             }
           end
-          client
+          httpclient
         end
 
         def request(path, query = {})
@@ -115,7 +115,7 @@ module Embulk
           u.path = path
 
           retryer.with_retry do
-            response = client.get(u.to_s, query)
+            response = httpclient.get(u.to_s, query)
 
             # https://developer.zendesk.com/rest_api/docs/core/introduction#response-format
             status_code = response.status

@@ -133,10 +133,11 @@ module Embulk
               sleep retry_after
               throw :retry
             when 500, 503
-              # 503 possible rate limit
-              retry_after = response.headers["Retry-After"].to_i
+              # 503 is possible rate limit
+              retry_after = response.headers["Retry-After"]
               if retry_after
-                sleep retry_after
+                Embulk.logger.warn "Rate Limited. Waiting #{retry_after} seconds to retry"
+                sleep retry_after.to_i
                 throw :retry
               else
                 raise "[#{status_code}] temporally failure."

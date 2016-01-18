@@ -69,6 +69,8 @@ module Embulk
           return task_report
         end
 
+        private
+
         def preview?
           org.embulk.spi.Exec.isPreview()
         rescue java.lang.NullPointerException => e

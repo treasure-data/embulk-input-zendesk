@@ -45,9 +45,8 @@ module Embulk
           end
 
           test "run with invalid username lack" do
-            omit "will be raised Java::OrgEmbulkExec::PartialExecutionException, but it is Embulk internally spec"
-
-            assert_raise(ConfigError) do
+            # NOTE: will be raised Java::OrgEmbulkExec::PartialExecutionException, not ConfigError. It is Embulk internally exception handling matter.
+            assert_raise do
               run_with("invalid_lack_username.yml")
             end
           end

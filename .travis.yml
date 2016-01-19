@@ -32,13 +32,13 @@ matrix:
   exclude:
     - jdk: oraclejdk8 # Ignore all matrix at first, use `include` to allow build
   include:
-    - {rvm: jruby-9.0.0.0, gemfile: gemfiles/embulk-0.8.0-latest}
-    - {rvm: jruby-9.0.0.0, gemfile: gemfiles/embulk-0.8.1}
-    - {rvm: jruby-9.0.0.0, gemfile: gemfiles/embulk-latest}
+    - {rvm: jruby-9.0.4.0, gemfile: gemfiles/embulk-0.8.0-latest}
+    - {rvm: jruby-9.0.4.0, gemfile: gemfiles/embulk-0.8.1}
+    - {rvm: jruby-9.0.4.0, gemfile: gemfiles/embulk-latest}
     
 
   allow_failures:
     # Ignore failure for *-latest
-    - gemfile: embulk-0.8.0-latest
-    - gemfile: embulk-latest
+    - gemfile: gemfiles/embulk-0.8.0-latest
+    - gemfile: gemfiles/embulk-latest
     

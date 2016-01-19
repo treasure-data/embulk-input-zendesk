@@ -33,11 +33,11 @@ matrix:
     - jdk: oraclejdk8 # Ignore all matrix at first, use `include` to allow build
   include:
     <% matrix.each do |m| -%>
-<%= m %>
+<%= m.gsub("9.0.0.0", "9.0.4.0") %>
     <% end %>
 
   allow_failures:
     # Ignore failure for *-latest
     <% versions.find_all{|file| file.to_s.match(/-latest/)}.each do |file| -%>
-- gemfile: <%= file %>
+- gemfile: gemfiles/<%= file %>
     <% end %>

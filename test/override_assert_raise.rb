@@ -9,6 +9,9 @@ module OverrideAssertRaise
     rescue ::Test::Unit::AssertionFailedError => e
       # failed assert raises this Error and that extends StandardError, so rescue it first
       raise e
+    rescue expected_class.class => e
+      # https://github.com/test-unit/test-unit/issues/94
+      assert_equal e.message, expected_class.message
     rescue expected_class
       assert true # passed
     rescue => e

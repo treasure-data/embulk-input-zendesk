@@ -135,7 +135,7 @@ module Embulk
             task.merge({
               schema: schema,
               retry_limit: 1,
-              retry_wait_initial_sec: 0,
+              retry_initial_wait_sec: 0,
             })
           end
 

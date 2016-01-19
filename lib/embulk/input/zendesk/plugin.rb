@@ -56,7 +56,7 @@ module Embulk
             token: config.param("token", :string, default: nil),
             access_token: config.param("access_token", :string, default: nil),
             retry_limit: config.param("retry_limit", :integer, default: 5),
-            retry_wait_initial_sec: config.param("retry_wait_initial_sec", :integer, default: 1),
+            retry_initial_wait_sec: config.param("retry_initial_wait_sec", :integer, default: 1),
             schema: config.param(:columns, :array, default: []),
           }
         end

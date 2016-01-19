@@ -17,7 +17,7 @@ module Embulk
 
         sub_test_case "tickets" do
           def client
-            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_wait_initial_sec: 0)
+            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
           end
 
           setup do
@@ -63,7 +63,7 @@ module Embulk
 
         sub_test_case "ticket_all" do
           def client
-            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_wait_initial_sec: 0)
+            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
           end
 
           setup do
@@ -275,7 +275,7 @@ module Embulk
 
         sub_test_case "retry" do
           def client
-            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 2, retry_wait_initial_sec: 0)
+            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 2, retry_initial_wait_sec: 0)
           end
 
           def stub_response(status, headers = [])

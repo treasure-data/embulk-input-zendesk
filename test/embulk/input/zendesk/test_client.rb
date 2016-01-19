@@ -331,7 +331,7 @@ module Embulk
             after = "123"
             stub_response(429, ["Retry-After: #{after}"])
             mock(client).sleep after.to_i
-            catch(:retry) do
+            assert_throw(:retry) do
               client.tickets(&proc{})
             end
           end
@@ -354,7 +354,7 @@ module Embulk
             after = "123"
             stub_response(503, ["Retry-After: #{after}"])
             mock(client).sleep after.to_i
-            catch(:retry) do
+            assert_throw(:retry) do
               client.tickets(&proc{})
             end
           end

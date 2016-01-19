@@ -128,17 +128,13 @@ module Embulk
               raise "[#{status_code}] temporally failure."
             when 429
               # rate limit
-              retry_after = response.headers["Retry-After"].to_i
-              Embulk.logger.warn "Rate Limited. Waiting #{retry_after} seconds to retry"
-              sleep retry_after
-              throw :retry
+              retry_after = response.headers["Retry-After"]
+              wait_rate_limit(retry_after.to_i)
             when 500, 503
               # 503 is possible rate limit
               retry_after = response.headers["Retry-After"]
               if retry_after
-                Embulk.logger.warn "Rate Limited. Waiting #{retry_after} seconds to retry"
-                sleep retry_after.to_i
-                throw :retry
+                wait_rate_limit(retry_after.to_i)
               else
                 raise "[#{status_code}] temporally failure."
               end
@@ -146,6 +142,12 @@ module Embulk
               raise "Server returns unknown status code (#{status_code})"
             end
           end
+        end
+
+        def wait_rate_limit(retry_after)
+          Embulk.logger.warn "Rate Limited. Waiting #{retry_after} seconds to retry"
+          sleep retry_after
+          throw :retry
         end
 
       end

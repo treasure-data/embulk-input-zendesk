@@ -77,7 +77,7 @@ module Embulk
           #       Otherwise, use the next_page URL to get the next page of results.
           #       https://developer.zendesk.com/rest_api/docs/core/incremental_export#pagination
           if data["count"] == 1000
-            tickets(data["end_time"], known_ids, &block)
+            ticket_all(data["end_time"], known_ids, &block)
           end
         end
 

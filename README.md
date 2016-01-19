@@ -7,9 +7,11 @@
 
 ** This is not released yet. Please wait a short time. **
 
-TODO: Write short description here and embulk-input-zendesk.gemspec file.
+Embulk input plugin for loading [Zendesk](https://www.zendesk.com/) tickets.
 
 ## Overview
+
+Required Embulk version >= 0.8.1.
 
 * **Plugin type**: input
 * **Resume supported**: no

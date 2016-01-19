@@ -1,0 +1,4 @@
+source 'https://rubygems.org/'
+gemspec :path => '../'
+
+gem "embulk", "> 0.8.1"

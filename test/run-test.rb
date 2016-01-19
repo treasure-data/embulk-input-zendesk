@@ -13,13 +13,8 @@ $LOAD_PATH.unshift(test_dir)
 ENV["TEST_UNIT_MAX_DIFF_TARGET_STRING_SIZE"] ||= "5000"
 
 if ENV["COVERAGE"]
-  require 'simplecov'
-  SimpleCov.start 'test_frameworks'
-
-  if ENV['CIRCLE_ARTIFACTS'] # https://circleci.com/docs/code-coverage
-    dir = File.join(ENV['CIRCLE_ARTIFACTS'], "coverage")
-    SimpleCov.coverage_dir(dir)
-  end
+  require "codeclimate-test-reporter"
+  CodeClimate::TestReporter.start
 end
 
 exit Test::Unit::AutoRunner.run(true, test_dir)

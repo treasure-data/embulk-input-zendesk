@@ -23,4 +23,6 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'test-unit-rr'
   spec.add_development_dependency 'rr', '~> 1.1.2'
   spec.add_development_dependency 'simplecov'
+  spec.add_development_dependency 'everyleaf-embulk_helper'
+  spec.add_development_dependency "codeclimate-test-reporter"
 end

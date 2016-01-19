@@ -273,6 +273,100 @@ module Embulk
           end
         end
 
+        sub_test_case "retry" do
+          def client
+            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 2, retry_wait_initial_sec: 0)
+          end
+
+          def stub_response(status, headers = [])
+            @httpclient.test_loopback_http_response << [
+              "HTTP/1.1 #{status}",
+              "Content-Type: application/json",
+              headers.join("\r\n"),
+              "",
+              {
+                tickets: []
+              }.to_json
+            ].join("\r\n")
+          end
+
+          setup do
+            retryer = PerfectRetry.new do |conf|
+              conf.dont_rescues = [Exception] # Don't care any exceptions to retry
+            end
+
+            stub(Embulk).logger { Logger.new(File::NULL) }
+            @httpclient = client.httpclient
+            stub(client).httpclient { @httpclient }
+            stub(client).retryer { retryer }
+            PerfectRetry.disable!
+          end
+
+          teardown do
+            PerfectRetry.enable!
+          end
+
+          test "400" do
+            stub_response(400)
+            assert_raise(ConfigError) do
+              client.tickets(&proc{})
+            end
+          end
+
+          test "401" do
+            stub_response(401)
+            assert_raise(ConfigError) do
+              client.tickets(&proc{})
+            end
+          end
+
+          test "409" do
+            stub_response(409)
+            assert_raise(StandardError) do
+              client.tickets(&proc{})
+            end
+          end
+
+          test "429" do
+            after = "123"
+            stub_response(429, ["Retry-After: #{after}"])
+            mock(client).sleep after.to_i
+            catch(:retry) do
+              client.tickets(&proc{})
+            end
+          end
+
+          test "500" do
+            stub_response(500)
+            assert_raise(StandardError) do
+              client.tickets(&proc{})
+            end
+          end
+
+          test "503" do
+            stub_response(503)
+            assert_raise(StandardError) do
+              client.tickets(&proc{})
+            end
+          end
+
+          test "503 with Retry-After" do
+            after = "123"
+            stub_response(503, ["Retry-After: #{after}"])
+            mock(client).sleep after.to_i
+            catch(:retry) do
+              client.tickets(&proc{})
+            end
+          end
+
+          test "Unhandled response code (555)" do
+            stub_response(555)
+            assert_raise(RuntimeError.new("Server returns unknown status code (555)")) do
+              client.tickets(&proc{})
+            end
+          end
+        end
+
         def login_url
           "http://example.com"
         end

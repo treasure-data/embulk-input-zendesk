@@ -13,7 +13,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec)/})
   spec.require_paths = ["lib"]
 
-  spec.add_dependency 'perfect_retry', '~> 0.3.0'
+  spec.add_dependency 'perfect_retry', '~> 0.4.0'
   spec.add_dependency 'httpclient'
   spec.add_development_dependency 'embulk', ['~> 0.8.1']
   spec.add_development_dependency 'bundler', ['~> 1.0']

@@ -27,15 +27,25 @@ module Embulk
           return next_config_diff
         end
 
-        # TODO
-        #def self.guess(config)
-        #  sample_records = [
-        #    {"example"=>"a", "column"=>1, "value"=>0.1},
-        #    {"example"=>"a", "column"=>2, "value"=>0.2},
-        #  ]
-        #  columns = Guess::SchemaGuess.from_hash_records(sample_records)
-        #  return {"columns" => columns}
-        #end
+        def self.guess(config)
+          task = config_to_task(config)
+          client = Client.new(task)
+          client.validate_credentials
+
+          records = []
+          client.tickets do |ticket|
+            records << ticket
+          end
+
+          columns = Guess::SchemaGuess.from_hash_records(records).map do |column|
+            hash = column.to_h
+            hash.delete(:index)
+            hash.delete(:format) unless hash[:format]
+            hash
+          end
+
+          return {"columns" => columns}
+        end
 
         def self.config_to_task(config)
           {

@@ -41,6 +41,14 @@ module Embulk
             hash = column.to_h
             hash.delete(:index)
             hash.delete(:format) unless hash[:format]
+
+            # NOTE: Embulk 0.8.1 guesses Hash and Hashes in Array as string.
+            #       https://github.com/embulk/embulk/issues/379
+            #       This is workaround for that
+            if records.any? {|r| [Array, Hash].include?(r[hash[:name]].class) }
+              hash[:type] = :json
+            end
+
             hash
           end
 

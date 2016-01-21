@@ -113,10 +113,8 @@ module Embulk
             assert actual.include?(name: "has_incidents", type: :boolean)
             assert actual.include?(name: "tags", type: :json)
 
-            # NOTE: Hash and "hashes in array" record will be guessed as string type on Embulk 0.8.1
-            #       But I think they should be json type.
-            # assert actual.include?(name: "custom_fields", type: :json)
-            # assert actual.include?(name: "satisfaction_rating", type: :json)
+            assert actual.include?(name: "custom_fields", type: :json)
+            assert actual.include?(name: "satisfaction_rating", type: :json)
           end
         end
 

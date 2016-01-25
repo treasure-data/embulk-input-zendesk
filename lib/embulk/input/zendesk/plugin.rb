@@ -59,6 +59,7 @@ module Embulk
           {
             login_url: config.param("login_url", :string),
             auth_method: config.param("auth_method", :string, default: "basic"),
+            target: config.param("target", :string),
             username: config.param("username", :string, default: nil),
             password: config.param("password", :string, default: nil),
             token: config.param("token", :string, default: nil),

@@ -9,6 +9,7 @@ module Embulk
         def self.transaction(config, &control)
           task = config_to_task(config)
           Client.new(task).validate_credentials
+          validate_target(task[:target])
 
           columns = task[:schema].map do |column|
             name = column["name"]
@@ -31,6 +32,7 @@ module Embulk
           task = config_to_task(config)
           client = Client.new(task)
           client.validate_credentials
+          validate_target(task[:target])
 
           records = []
           method = determine_export_method(task[:target], true)
@@ -90,6 +92,12 @@ module Embulk
         end
 
         private
+
+        def self.validate_target(target)
+          unless determine_export_method(target)
+            raise Embulk::ConfigError.new("target: #{target} is not supported.")
+          end
+        end
 
         def self.determine_export_method(target, partial = true)
           # NOTE: incremental export API for `embulk run`, otherwise such `embulk preview` and `embulk guess` use export API

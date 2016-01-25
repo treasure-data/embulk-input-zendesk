@@ -52,10 +52,13 @@ module Embulk
               hash[:type] = :json
             end
 
+            # NOTE: current version don't support JSON type
+            next if hash[:type] == :json
+
             hash
           end
 
-          return {"columns" => columns}
+          return {"columns" => columns.compact}
         end
 
         def self.config_to_task(config)

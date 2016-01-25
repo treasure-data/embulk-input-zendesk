@@ -13,6 +13,8 @@ Embulk input plugin for loading [Zendesk](https://www.zendesk.com/) tickets.
 
 Required Embulk version >= 0.8.1.
 
+**NOTE** This plugin don't support JSON type columns e.g. custom fields, tags, etc for now. But they will be supported soon.
+
 * **Plugin type**: input
 * **Resume supported**: no
 * **Cleanup supported**: no

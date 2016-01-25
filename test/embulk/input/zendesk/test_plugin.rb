@@ -129,12 +129,14 @@ module Embulk
             assert actual.include?(name: "url", type: :string)
             assert actual.include?(name: "id", type: :long)
             assert actual.include?(name: "created_at", type: :timestamp, format: "%Y-%m-%dT%H:%M:%S%z")
-            assert actual.include?(name: "collaborator_ids", type: :json)
             assert actual.include?(name: "has_incidents", type: :boolean)
-            assert actual.include?(name: "tags", type: :json)
 
-            assert actual.include?(name: "custom_fields", type: :json)
-            assert actual.include?(name: "satisfaction_rating", type: :json)
+            # TODO: re-enable these json type tests after this plugin officially support it
+            # assert actual.include?(name: "tags", type: :json)
+            # assert actual.include?(name: "collaborator_ids", type: :json)
+
+            # assert actual.include?(name: "custom_fields", type: :json)
+            # assert actual.include?(name: "satisfaction_rating", type: :json)
           end
         end
 

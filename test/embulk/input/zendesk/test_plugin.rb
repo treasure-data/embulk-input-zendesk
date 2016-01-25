@@ -75,6 +75,11 @@ module Embulk
             end
           end
 
+          test "invoke validate_target" do
+            mock(Plugin).validate_target("tickets")
+            Plugin.transaction(config("valid_auth_oauth.yml"), &@control)
+          end
+
           test "run as well" do
             actual = nil
             assert_nothing_raised do
@@ -92,6 +97,21 @@ module Embulk
             stub(Client).new { @client }
             @httpclient = @client.httpclient
             stub(@client).httpclient { @httpclient }
+          end
+
+          test "invoke validate_target" do
+            @httpclient.test_loopback_http_response << [
+              "HTTP/1.1 200",
+              "Content-Type: application/json",
+              "",
+              {
+                tickets: [
+                  JSON.parse(fixture_load("tickets.json"))
+                ]
+              }.to_json
+            ].join("\r\n")
+            mock(Plugin).validate_target("tickets")
+            Plugin.guess(config)["columns"]
           end
 
           test "guessing" do
@@ -216,6 +236,30 @@ module Embulk
               mock(page_builder).finish
 
               @plugin.run
+            end
+          end
+
+          sub_test_case ".validate_target" do
+            data do
+              [
+                ["tickets", ["tickets", nil]],
+                ["ticket_events", ["ticket_events", nil]],
+                ["users", ["users", nil]],
+                ["organizations", ["organizations", nil]],
+                ["unknown", ["unknown", Embulk::ConfigError]],
+              ]
+            end
+            test "validate with target" do |data|
+              target, error = data
+              if error
+                assert_raise(error) do
+                  Plugin.validate_target(target)
+                end
+              else
+                assert_nothing_raised do
+                  Plugin.validate_target(target)
+                end
+              end
             end
           end
         end

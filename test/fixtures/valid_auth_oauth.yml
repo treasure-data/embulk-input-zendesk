@@ -2,6 +2,7 @@ in:
   type: zendesk
   login_url: "https://example.zendesk.com/"
   auth_method: oauth
+  target: tickets
   access_token: oauth_token
   columns:
     - {name: id, type: string}

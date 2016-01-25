@@ -9,6 +9,7 @@ module Embulk
         def self.transaction(config, &control)
           task = config_to_task(config)
           Client.new(task).validate_credentials
+          validate_target(task[:target])
 
           columns = task[:schema].map do |column|
             name = column["name"]
@@ -31,10 +32,12 @@ module Embulk
           task = config_to_task(config)
           client = Client.new(task)
           client.validate_credentials
+          validate_target(task[:target])
 
           records = []
-          client.tickets do |ticket|
-            records << ticket
+          method = determine_export_method(task[:target], true)
+          client.send(method) do |record|
+            records << record
           end
 
           columns = Guess::SchemaGuess.from_hash_records(records).map do |column|
@@ -59,6 +62,7 @@ module Embulk
           {
             login_url: config.param("login_url", :string),
             auth_method: config.param("auth_method", :string, default: "basic"),
+            target: config.param("target", :string),
             username: config.param("username", :string, default: nil),
             password: config.param("password", :string, default: nil),
             token: config.param("token", :string, default: nil),
@@ -74,7 +78,7 @@ module Embulk
 
         def run
           client = Client.new(task)
-          method = preview? ? :tickets : :ticket_all
+          method = self.class.determine_export_method(task[:target], preview?)
 
           client.send(method) do |ticket|
             values = extract_values(ticket)
@@ -88,6 +92,28 @@ module Embulk
         end
 
         private
+
+        def self.validate_target(target)
+          unless determine_export_method(target)
+            raise Embulk::ConfigError.new("target: #{target} is not supported.")
+          end
+        end
+
+        def self.determine_export_method(target, partial = true)
+          # NOTE: incremental export API for `embulk run`, otherwise such `embulk preview` and `embulk guess` use export API
+          #       Because incremental export API returns 1000 records per page but it is too large and too slow to guess/preview.
+          case target
+          when "tickets"
+            partial ? :tickets : :ticket_all
+          when "ticket_events"
+            # NOTE: ticket_events only have full export API
+            :ticket_events
+          when "users"
+            partial ? :users : :user_all
+          when "organizations"
+            partial ? :organizations : :organization_all
+          end
+        end
 
         def preview?
           org.embulk.spi.Exec.isPreview()

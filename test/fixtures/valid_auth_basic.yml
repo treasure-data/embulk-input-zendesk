@@ -2,6 +2,7 @@ in:
   type: zendesk
   login_url: "https://example.zendesk.com/"
   auth_method: basic
+  target: tickets
   username: foo@example.com
   password: password
   columns:

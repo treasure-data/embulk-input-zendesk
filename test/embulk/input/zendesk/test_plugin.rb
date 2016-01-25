@@ -237,6 +237,34 @@ module Embulk
 
               @plugin.run
             end
+
+            sub_test_case "start_time option not given" do
+              test "Nothing passed to client" do
+                stub(page_builder).finish
+
+                mock(@client).ticket_all
+                @plugin.run
+              end
+            end
+
+            sub_test_case "start_time option given" do
+              def run_task
+                task.merge({
+                  start_time: "2000-01-01T00:00:00+0000",
+                  schema: schema,
+                  retry_limit: 1,
+                  retry_initial_wait_sec: 0,
+                })
+              end
+
+              test "Passed to client as integer (epoch)" do
+                stub(page_builder).finish
+
+                start_time = Time.parse(run_task[:start_time]).to_i
+                mock(@client).ticket_all(start_time)
+                @plugin.run
+              end
+            end
           end
 
           sub_test_case ".validate_target" do

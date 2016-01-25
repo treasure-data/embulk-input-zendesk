@@ -67,6 +67,7 @@ module Embulk
             password: config.param("password", :string, default: nil),
             token: config.param("token", :string, default: nil),
             access_token: config.param("access_token", :string, default: nil),
+            start_time: config.param("start_time", :string, default: nil),
             retry_limit: config.param("retry_limit", :integer, default: 5),
             retry_initial_wait_sec: config.param("retry_initial_wait_sec", :integer, default: 1),
             schema: config.param(:columns, :array, default: []),
@@ -74,13 +75,18 @@ module Embulk
         end
 
         def init
+          @start_time = Time.parse(task[:start_time]) if task[:start_time]
         end
 
         def run
           client = Client.new(task)
           method = self.class.determine_export_method(task[:target], preview?)
+          args = []
+          if !preview? && @start_time
+            args << @start_time.to_i
+          end
 
-          client.send(method) do |ticket|
+          client.send(method, *args) do |ticket|
             values = extract_values(ticket)
             page_builder.add(values)
           end

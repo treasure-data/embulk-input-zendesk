@@ -27,6 +27,7 @@ Required Embulk version >= 0.8.1.
 - **password**: Password. required if `auth_method` is `basic`. (string, default: `null`)
 - **token**: Token. required if `auth_method` is `token`. (string, default: `null`)
 - **access_token**: OAuth Access Token. required if `auth_method` is `oauth`. (string, default: `null`)
+- **start_time**: Start export from this time if present. (string, default: `null`)
 - **retry_limit**: Try to retry this times (integer, default: 5)
 - **retry_initial_wait_sec**: Wait seconds for exponential backoff initial value (integer, default: 1)
 
@@ -39,6 +40,7 @@ in:
   auth_method: token
   username: jdoe@example.com
   token: 6wiIBWbGkBMo1mRDMuVwkw1EPsNkeUj95PIz2akv
+  start_time: "2015-01-01 00:00:00+0000"
 ```
 
 

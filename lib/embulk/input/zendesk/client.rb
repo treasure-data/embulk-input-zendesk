@@ -34,11 +34,44 @@ module Embulk
         end
 
         def tickets(per_page = 50, &block)
+          export("/api/v2/tickets.json", "tickets", per_page, &block)
+        end
+
+        def users(per_page = 50, &block)
+          export("/api/v2/users.json", "users", per_page, &block)
+        end
+
+        def organizations(per_page = 50, &block)
+          export("/api/v2/organizations.json", "organizations", per_page, &block)
+        end
+
+        def ticket_all(start_time = 0, &block)
+          path = "/api/v2/incremental/tickets"
+          incremental_export(path, "tickets", start_time, [], &block)
+        end
+
+        def ticket_events(start_time = 0, &block)
+          path = "/api/v2/incremental/ticket_events"
+          incremental_export(path, "ticket_events", start_time, [], &block)
+        end
+
+        def user_all(start_time = 0, &block)
+          path = "/api/v2/incremental/users.json"
+          incremental_export(path, "users", start_time, [], &block)
+        end
+
+        def organization_all(start_time = 0, &block)
+          path = "/api/v2/incremental/organizations"
+          incremental_export(path, "organizations", start_time, [], &block)
+        end
+
+        private
+
+        def export(path, key, per_page, &block)
           # for `embulk guess` and `embulk preview` to fetch ~50 tickets only.
-          # /api/v2/incremental/tickets has support only 1000 per page, it is too large to guess/preview
-          endpoint = "/api/v2/tickets"
-          Embulk.logger.debug "#{endpoint} with per_page: #{per_page}"
-          response = request(endpoint, per_page: per_page)
+          # incremental export API has supported only 1000 per page, it is too large to guess/preview
+          Embulk.logger.debug "#{path} with per_page: #{per_page}"
+          response = request(path, per_page: per_page)
 
           begin
             data = JSON.parse(response.body)
@@ -46,20 +79,13 @@ module Embulk
             raise Embulk::DataError.new(e)
           end
 
-          data["tickets"].each do |ticket|
-            block.call ticket
+          data[key].each do |record|
+            block.call record
           end
         end
 
-        def ticket_all(start_time = 0, &block)
-          # for `embulk run` to fetch all tickets.
-          path = "/api/v2/incremental/tickets"
-          incremental_export(path, "tickets", start_time, [], &block)
-        end
-
-        private
-
         def incremental_export(path, key, start_time = 0, known_ids = [], &block)
+          # for `embulk run` to fetch all tickets.
           response = request(path, start_time: start_time)
 
           begin
@@ -119,7 +145,7 @@ module Embulk
           u.path = path
 
           retryer.with_retry do
-            response = httpclient.get(u.to_s, query)
+            response = httpclient.get(u.to_s, query, follow_redirect: true)
 
             # https://developer.zendesk.com/rest_api/docs/core/introduction#response-format
             status_code = response.status

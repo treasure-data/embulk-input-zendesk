@@ -51,10 +51,16 @@ module Embulk
           end
         end
 
-        def ticket_all(start_time = 0, known_ids = [], &block)
+        def ticket_all(start_time = 0, &block)
           # for `embulk run` to fetch all tickets.
-          endpoint = "/api/v2/incremental/tickets"
-          response = request(endpoint, start_time: start_time)
+          path = "/api/v2/incremental/tickets"
+          incremental_export(path, "tickets", start_time, [], &block)
+        end
+
+        private
+
+        def incremental_export(path, key, start_time = 0, known_ids = [], &block)
+          response = request(path, start_time: start_time)
 
           begin
             data = JSON.parse(response.body)
@@ -63,25 +69,23 @@ module Embulk
           end
 
           Embulk.logger.debug "start_time:#{start_time} (#{Time.at(start_time)}) count:#{data["count"]} next_page:#{data["next_page"]} end_time:#{data["end_time"]} "
-          data["tickets"].each do |ticket|
+          data[key].each do |record|
             # de-duplicated tickets.
             # https://developer.zendesk.com/rest_api/docs/core/incremental_export#usage-notes
             # https://github.com/zendesk/zendesk_api_client_rb/issues/251
-            next if known_ids.include?(ticket["id"])
+            next if known_ids.include?(record["id"])
 
-            known_ids << ticket["id"]
-            block.call ticket
+            known_ids << record["id"]
+            block.call record
           end
 
           # NOTE: If count is less than 1000, then stop paginating.
           #       Otherwise, use the next_page URL to get the next page of results.
           #       https://developer.zendesk.com/rest_api/docs/core/incremental_export#pagination
           if data["count"] == 1000
-            ticket_all(data["end_time"], known_ids, &block)
+            incremental_export(path, key, data["end_time"], known_ids, &block)
           end
         end
-
-        private
 
         def retryer
           PerfectRetry.new do |config|

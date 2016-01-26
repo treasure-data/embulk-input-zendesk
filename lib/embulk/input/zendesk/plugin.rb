@@ -108,10 +108,26 @@ module Embulk
 
         def extract_values(record)
           values = task[:schema].map do |column|
-            record[column["name"].to_s]
+            value = record[column["name"].to_s]
+            cast(value, column["type"].to_s)
           end
 
           values
+        end
+
+        def cast(value, type)
+          case type
+          when "timestamp"
+            Time.parse(value)
+          when "double"
+            Float(value)
+          when "long"
+            Integer(value)
+          when "boolean"
+            !!value
+          else
+            value
+          end
         end
       end
 

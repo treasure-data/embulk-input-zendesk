@@ -16,6 +16,153 @@ module Embulk
         include CaptureIo
 
         sub_test_case "tickets" do
+          sub_test_case "partial" do
+            def client
+              @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
+            end
+
+            setup do
+              stub(Embulk).logger { Logger.new(File::NULL) }
+              @httpclient = client.httpclient
+              stub(client).httpclient { @httpclient }
+            end
+
+            test "fetch tickets" do
+              tickets = [
+                {"id" => 1},
+                {"id" => 2},
+              ]
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: tickets
+                }.to_json
+              ].join("\r\n")
+
+              handler = proc { }
+              tickets.each do |ticket|
+                mock(handler).call(ticket)
+              end
+              client.tickets(&handler)
+            end
+
+            test "raise DataError when invalid JSON response" do
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                "[[[" # invalid json
+              ].join("\r\n")
+
+              assert_raise(DataError) do
+                client.tickets
+              end
+            end
+          end
+
+          sub_test_case "all" do
+            def client
+              @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
+            end
+
+            setup do
+              stub(Embulk).logger { Logger.new(File::NULL) }
+              @httpclient = client.httpclient
+              stub(client).httpclient { @httpclient }
+            end
+
+            test "fetch tickets" do
+              tickets = [
+                {"id" => 1},
+                {"id" => 2},
+              ]
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: tickets
+                }.to_json
+              ].join("\r\n")
+
+              handler = proc { }
+              tickets.each do |ticket|
+                mock(handler).call(ticket)
+              end
+              client.tickets(false, &handler)
+            end
+
+            test "fetch tickets without duplicated" do
+              tickets = [
+                {"id" => 1},
+                {"id" => 2},
+                {"id" => 1},
+                {"id" => 1},
+              ]
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: tickets
+                }.to_json
+              ].join("\r\n")
+
+              handler = proc { }
+              mock(handler).call(anything).twice
+              client.tickets(false, &handler)
+            end
+
+            test "fetch tickets with next_page" do
+              end_time = Time.now.to_i
+
+              response_1 = [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: [{"id" => 1}],
+                  count: 1000,
+                  end_time: end_time,
+                }.to_json
+              ].join("\r\n")
+
+              response_2 = [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: [{"id" => 2}],
+                  count: 2,
+                }.to_json
+              ].join("\r\n")
+
+              @httpclient.test_loopback_http_response << response_1
+              @httpclient.test_loopback_http_response << response_2
+
+              handler = proc { }
+              mock(handler).call(anything).twice
+              client.tickets(false, &handler)
+            end
+
+            test "raise DataError when invalid JSON response" do
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                "[[[" # invalid json
+              ].join("\r\n")
+
+              assert_raise(DataError) do
+                client.tickets(false)
+              end
+            end
+          end
+        end
+
+        sub_test_case "targets" do
           def client
             @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
           end
@@ -26,139 +173,19 @@ module Embulk
             stub(client).httpclient { @httpclient }
           end
 
-          test "fetch tickets" do
-            tickets = [
-              {"id" => 1},
-              {"id" => 2},
-            ]
-            @httpclient.test_loopback_http_response << [
-              "HTTP/1.1 200",
-              "Content-Type: application/json",
-              "",
-              {
-                tickets: tickets
-              }.to_json
-            ].join("\r\n")
-
-            handler = proc { }
-            tickets.each do |ticket|
-              mock(handler).call(ticket)
+          sub_test_case "ticket_events" do
+            test "invoke incremental_export when partial=true" do
+              mock(client).incremental_export(anything, "ticket_events", anything, [])
+              client.ticket_events(true)
             end
-            client.tickets(&handler)
-          end
 
-          test "raise DataError when invalid JSON response" do
-            @httpclient.test_loopback_http_response << [
-              "HTTP/1.1 200",
-              "Content-Type: application/json",
-              "",
-              "[[[" # invalid json
-            ].join("\r\n")
-
-            assert_raise(DataError) do
-              client.tickets
+            test "invoke incremental_export when partial=false" do
+              mock(client).incremental_export(anything, "ticket_events", anything, [])
+              client.ticket_events(false)
             end
           end
         end
 
-        sub_test_case "ticket_all" do
-          def client
-            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
-          end
-
-          setup do
-            stub(Embulk).logger { Logger.new(File::NULL) }
-            @httpclient = client.httpclient
-            stub(client).httpclient { @httpclient }
-          end
-
-          test "fetch tickets" do
-            tickets = [
-              {"id" => 1},
-              {"id" => 2},
-            ]
-            @httpclient.test_loopback_http_response << [
-              "HTTP/1.1 200",
-              "Content-Type: application/json",
-              "",
-              {
-                tickets: tickets
-              }.to_json
-            ].join("\r\n")
-
-            handler = proc { }
-            tickets.each do |ticket|
-              mock(handler).call(ticket)
-            end
-            client.ticket_all(&handler)
-          end
-
-          test "fetch tickets without duplicated" do
-            tickets = [
-              {"id" => 1},
-              {"id" => 2},
-              {"id" => 1},
-              {"id" => 1},
-            ]
-            @httpclient.test_loopback_http_response << [
-              "HTTP/1.1 200",
-              "Content-Type: application/json",
-              "",
-              {
-                tickets: tickets
-              }.to_json
-            ].join("\r\n")
-
-            handler = proc { }
-            mock(handler).call(anything).twice
-            client.ticket_all(&handler)
-          end
-
-          test "fetch tickets with next_page" do
-            end_time = Time.now.to_i
-
-            response_1 = [
-              "HTTP/1.1 200",
-              "Content-Type: application/json",
-              "",
-              {
-                tickets: [{"id" => 1}],
-                count: 1000,
-                end_time: end_time,
-              }.to_json
-            ].join("\r\n")
-
-            response_2 = [
-              "HTTP/1.1 200",
-              "Content-Type: application/json",
-              "",
-              {
-                tickets: [{"id" => 2}],
-                count: 2,
-              }.to_json
-            ].join("\r\n")
-
-            @httpclient.test_loopback_http_response << response_1
-            @httpclient.test_loopback_http_response << response_2
-
-            handler = proc { }
-            mock(handler).call(anything).twice
-            client.ticket_all(&handler)
-          end
-
-          test "raise DataError when invalid JSON response" do
-            @httpclient.test_loopback_http_response << [
-              "HTTP/1.1 200",
-              "Content-Type: application/json",
-              "",
-              "[[[" # invalid json
-            ].join("\r\n")
-
-            assert_raise(DataError) do
-              client.ticket_all
-            end
-          end
-        end
 
         sub_test_case "auth" do
           test "httpclient call validate_credentials" do
@@ -363,6 +390,32 @@ module Embulk
             stub_response(555)
             assert_raise(RuntimeError.new("Server returns unknown status code (555)")) do
               client.tickets(&proc{})
+            end
+          end
+        end
+
+        sub_test_case ".validate_target" do
+          data do
+            [
+              ["tickets", ["tickets", nil]],
+              ["ticket_events", ["ticket_events", nil]],
+              ["users", ["users", nil]],
+              ["organizations", ["organizations", nil]],
+              ["unknown", ["unknown", Embulk::ConfigError]],
+            ]
+          end
+          test "validate with target" do |data|
+            target, error = data
+            client = Client.new({target: target})
+
+            if error
+              assert_raise(error) do
+                client.validate_target
+              end
+            else
+              assert_nothing_raised do
+                client.validate_target
+              end
             end
           end
         end

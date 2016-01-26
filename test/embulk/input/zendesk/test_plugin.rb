@@ -75,8 +75,10 @@ module Embulk
             end
           end
 
-          test "invoke validate_target" do
-            mock(Plugin).validate_target("tickets")
+          test "invoke Client#validate_config" do
+            any_instance_of(Client) do |klass|
+              mock(klass).validate_config
+            end
             Plugin.transaction(config("valid_auth_oauth.yml"), &@control)
           end
 
@@ -99,7 +101,7 @@ module Embulk
             stub(@client).httpclient { @httpclient }
           end
 
-          test "invoke validate_target" do
+          test "invoke Client#validate_config" do
             @httpclient.test_loopback_http_response << [
               "HTTP/1.1 200",
               "Content-Type: application/json",
@@ -110,7 +112,7 @@ module Embulk
                 ]
               }.to_json
             ].join("\r\n")
-            mock(Plugin).validate_target("tickets")
+            mock(@client).validate_config
             Plugin.guess(config)["columns"]
           end
 
@@ -173,8 +175,8 @@ module Embulk
             end
 
             test "call tickets method instead of ticket_all" do
-              mock(@client).tickets { [] }
-              mock(@client).ticket_all.never
+              mock(@client).export(anything, "tickets", anything) { [] }
+              mock(@client).incremental_export.never
               mock(page_builder).finish
 
               @plugin.run
@@ -210,8 +212,8 @@ module Embulk
             end
 
             test "call ticket_all method instead of tickets" do
-              mock(@client).tickets.never
-              mock(@client).ticket_all { [] }
+              mock(@client).export.never
+              mock(@client).incremental_export(anything, "tickets", 0, []) { [] }
               mock(page_builder).finish
 
               @plugin.run
@@ -244,7 +246,7 @@ module Embulk
               test "Nothing passed to client" do
                 stub(page_builder).finish
 
-                mock(@client).ticket_all
+                mock(@client).tickets(false)
                 @plugin.run
               end
             end
@@ -263,35 +265,12 @@ module Embulk
                 stub(page_builder).finish
 
                 start_time = Time.parse(run_task[:start_time]).to_i
-                mock(@client).ticket_all(start_time)
+                mock(@client).tickets(false, start_time)
                 @plugin.run
               end
             end
           end
 
-          sub_test_case ".validate_target" do
-            data do
-              [
-                ["tickets", ["tickets", nil]],
-                ["ticket_events", ["ticket_events", nil]],
-                ["users", ["users", nil]],
-                ["organizations", ["organizations", nil]],
-                ["unknown", ["unknown", Embulk::ConfigError]],
-              ]
-            end
-            test "validate with target" do |data|
-              target, error = data
-              if error
-                assert_raise(error) do
-                  Plugin.validate_target(target)
-                end
-              else
-                assert_nothing_raised do
-                  Plugin.validate_target(target)
-                end
-              end
-            end
-          end
         end
 
         def yml

@@ -8,8 +8,8 @@ module Embulk
 
         def self.transaction(config, &control)
           task = config_to_task(config)
-          Client.new(task).validate_credentials
-          validate_target(task[:target])
+          client = Client.new(task)
+          client.validate_config
 
           columns = task[:schema].map do |column|
             name = column["name"]
@@ -31,12 +31,10 @@ module Embulk
         def self.guess(config)
           task = config_to_task(config)
           client = Client.new(task)
-          client.validate_credentials
-          validate_target(task[:target])
+          client.validate_config
 
           records = []
-          method = determine_export_method(task[:target], true)
-          client.send(method) do |record|
+          client.public_send(task[:target]) do |record|
             records << record
           end
 
@@ -82,15 +80,15 @@ module Embulk
         end
 
         def run
-          client = Client.new(task)
-          method = self.class.determine_export_method(task[:target], preview?)
-          args = []
+          method = task[:target]
+          args = [preview?]
           if !preview? && @start_time
             args << @start_time.to_i
           end
 
-          client.send(method, *args) do |ticket|
-            values = extract_values(ticket)
+          client = Client.new(task)
+          client.public_send(method, *args) do |record|
+            values = extract_values(record)
             page_builder.add(values)
           end
 
@@ -102,37 +100,15 @@ module Embulk
 
         private
 
-        def self.validate_target(target)
-          unless determine_export_method(target)
-            raise Embulk::ConfigError.new("target: #{target} is not supported.")
-          end
-        end
-
-        def self.determine_export_method(target, partial = true)
-          # NOTE: incremental export API for `embulk run`, otherwise such `embulk preview` and `embulk guess` use export API
-          #       Because incremental export API returns 1000 records per page but it is too large and too slow to guess/preview.
-          case target
-          when "tickets"
-            partial ? :tickets : :ticket_all
-          when "ticket_events"
-            # NOTE: ticket_events only have full export API
-            :ticket_events
-          when "users"
-            partial ? :users : :user_all
-          when "organizations"
-            partial ? :organizations : :organization_all
-          end
-        end
-
         def preview?
           org.embulk.spi.Exec.isPreview()
         rescue java.lang.NullPointerException => e
           false
         end
 
-        def extract_values(ticket)
+        def extract_values(record)
           values = task[:schema].map do |column|
-            ticket[column["name"].to_s]
+            record[column["name"].to_s]
           end
 
           values

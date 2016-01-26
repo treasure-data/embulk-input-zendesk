@@ -6,6 +6,11 @@ module Embulk
       class Client
         attr_reader :config
 
+        PARTIAL_RECORDS_SIZE = 50
+        AVAILABLE_TARGETS = %w(
+          tickets ticket_events users organizations
+        ).freeze
+
         def initialize(config)
           @config = config
         end
@@ -14,6 +19,10 @@ module Embulk
           httpclient = HTTPClient.new
           # httpclient.debug_dev = STDOUT
           return set_auth(httpclient)
+        end
+
+        def validate_config
+          validate_credentials && validate_target
         end
 
         def validate_credentials
@@ -33,42 +42,32 @@ module Embulk
           end
         end
 
-        def tickets(per_page = 50, &block)
-          export("/api/v2/tickets.json", "tickets", per_page, &block)
+        def validate_target
+          unless AVAILABLE_TARGETS.include?(config[:target])
+            raise Embulk::ConfigError.new("target: '#{config[:target]}' is not supported.")
+          end
         end
 
-        def users(per_page = 50, &block)
-          export("/api/v2/users.json", "users", per_page, &block)
+        %w(tickets users organizations).each do |target|
+          define_method(target) do |partial = true, start_time = 0, &block|
+            if partial
+              export("/api/v2/#{target}.json", target, PARTIAL_RECORDS_SIZE, &block) # Ignore start_time
+            else
+              incremental_export("/api/v2/incremental/#{target}.json", target, start_time, [], &block)
+            end
+          end
         end
 
-        def organizations(per_page = 50, &block)
-          export("/api/v2/organizations.json", "organizations", per_page, &block)
-        end
-
-        def ticket_all(start_time = 0, &block)
-          path = "/api/v2/incremental/tickets"
-          incremental_export(path, "tickets", start_time, [], &block)
-        end
-
-        def ticket_events(start_time = 0, &block)
+        def ticket_events(partial = true, start_time = 0, &block)
+          # NOTE: ticket_events only have full export API
           path = "/api/v2/incremental/ticket_events"
           incremental_export(path, "ticket_events", start_time, [], &block)
-        end
-
-        def user_all(start_time = 0, &block)
-          path = "/api/v2/incremental/users.json"
-          incremental_export(path, "users", start_time, [], &block)
-        end
-
-        def organization_all(start_time = 0, &block)
-          path = "/api/v2/incremental/organizations"
-          incremental_export(path, "organizations", start_time, [], &block)
         end
 
         private
 
         def export(path, key, per_page, &block)
-          # for `embulk guess` and `embulk preview` to fetch ~50 tickets only.
+          # for `embulk guess` and `embulk preview` to fetch ~50 records only.
           # incremental export API has supported only 1000 per page, it is too large to guess/preview
           Embulk.logger.debug "#{path} with per_page: #{per_page}"
           response = request(path, per_page: per_page)
@@ -85,7 +84,7 @@ module Embulk
         end
 
         def incremental_export(path, key, start_time = 0, known_ids = [], &block)
-          # for `embulk run` to fetch all tickets.
+          # for `embulk run` to fetch all records.
           response = request(path, start_time: start_time)
 
           begin
@@ -96,7 +95,7 @@ module Embulk
 
           Embulk.logger.debug "start_time:#{start_time} (#{Time.at(start_time)}) count:#{data["count"]} next_page:#{data["next_page"]} end_time:#{data["end_time"]} "
           data[key].each do |record|
-            # de-duplicated tickets.
+            # de-duplicated records.
             # https://developer.zendesk.com/rest_api/docs/core/incremental_export#usage-notes
             # https://github.com/zendesk/zendesk_api_client_rb/issues/251
             next if known_ids.include?(record["id"])

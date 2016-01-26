@@ -40,6 +40,7 @@ in:
   auth_method: token
   username: jdoe@example.com
   token: 6wiIBWbGkBMo1mRDMuVwkw1EPsNkeUj95PIz2akv
+  target: tickets
   start_time: "2015-01-01 00:00:00+0000"
 ```
 

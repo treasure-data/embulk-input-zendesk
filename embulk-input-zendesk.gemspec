@@ -2,10 +2,10 @@
 Gem::Specification.new do |spec|
   spec.name          = "embulk-input-zendesk"
   spec.version       = "0.1.1"
-  spec.authors       = ["uu59"]
+  spec.authors       = ["uu59", "muga", "sakama"]
   spec.summary       = "Zendesk input plugin for Embulk"
   spec.description   = "Loads records from Zendesk."
-  spec.email         = ["k@uu59.org"]
+  spec.email         = ["k@uu59.org", "muga.nishizawa@gmail.com", "satoshiakama@gmail.com"]
   spec.licenses      = ["MIT"]
   # TODO set this: spec.homepage      = "https://github.com/k/embulk-input-zendesk"
 

@@ -22,7 +22,8 @@ module Embulk
         end
 
         def validate_config
-          validate_credentials && validate_target
+          validate_credentials
+          validate_target
         end
 
         def validate_credentials

@@ -44,14 +44,14 @@ module Embulk
 
         def validate_target
           unless AVAILABLE_TARGETS.include?(config[:target])
-            raise Embulk::ConfigError.new("target: #{config[:target]} is not supported.")
+            raise Embulk::ConfigError.new("target: '#{config[:target]}' is not supported.")
           end
         end
 
         %w(tickets users organizations).each do |target|
           define_method(target) do |partial = true, start_time = 0, &block|
             if partial
-              export("/api/v2/#{target}.json", target, PARTIAL_RECORDS_SIZE, &block)
+              export("/api/v2/#{target}.json", target, PARTIAL_RECORDS_SIZE, &block) # Ignore start_time
             else
               incremental_export("/api/v2/incremental/#{target}.json", target, start_time, [], &block)
             end

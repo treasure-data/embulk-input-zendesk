@@ -80,13 +80,13 @@ module Embulk
         end
 
         def run
-          client = Client.new(task)
           method = task[:target]
           args = [preview?]
           if !preview? && @start_time
             args << @start_time.to_i
           end
 
+          client = Client.new(task)
           client.public_send(method, *args) do |record|
             values = extract_values(record)
             page_builder.add(values)

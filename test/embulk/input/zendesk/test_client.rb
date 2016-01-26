@@ -184,6 +184,30 @@ module Embulk
               client.ticket_events(false)
             end
           end
+
+          sub_test_case "ticket_fields" do
+            test "invoke export when partial=true" do
+              mock(client).export(anything, "ticket_fields", anything)
+              client.ticket_fields(true)
+            end
+
+            test "invoke export when partial=false" do
+              mock(client).export(anything, "ticket_fields", anything)
+              client.ticket_fields(false)
+            end
+          end
+
+          sub_test_case "ticket_forms" do
+            test "invoke export when partial=true" do
+              mock(client).export(anything, "ticket_forms", anything)
+              client.ticket_forms(true)
+            end
+
+            test "invoke export when partial=false" do
+              mock(client).export(anything, "ticket_forms", anything)
+              client.ticket_forms(false)
+            end
+          end
         end
 
 

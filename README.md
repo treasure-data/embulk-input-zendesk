@@ -5,9 +5,7 @@
 
 # Zendesk input plugin for Embulk
 
-** This is not released yet. Please wait a short time. **
-
-Embulk input plugin for loading [Zendesk](https://www.zendesk.com/) tickets.
+Embulk input plugin for loading [Zendesk](https://www.zendesk.com/) records.
 
 ## Overview
 

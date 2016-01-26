@@ -162,6 +162,30 @@ module Embulk
           end
         end
 
+        sub_test_case "targets" do
+          def client
+            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
+          end
+
+          setup do
+            stub(Embulk).logger { Logger.new(File::NULL) }
+            @httpclient = client.httpclient
+            stub(client).httpclient { @httpclient }
+          end
+
+          sub_test_case "ticket_events" do
+            test "invoke incremental_export when partial=true" do
+              mock(client).incremental_export(anything, "ticket_events", anything, [])
+              client.ticket_events(true)
+            end
+
+            test "invoke incremental_export when partial=false" do
+              mock(client).incremental_export(anything, "ticket_events", anything, [])
+              client.ticket_events(false)
+            end
+          end
+        end
+
 
         sub_test_case "auth" do
           test "httpclient call validate_credentials" do

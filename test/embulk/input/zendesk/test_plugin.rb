@@ -242,6 +242,51 @@ module Embulk
               @plugin.run
             end
 
+            sub_test_case "casting value" do
+              setup do
+                stub(@plugin).preview? { false }
+                @httpclient.test_loopback_http_response << [
+                  "HTTP/1.1 200",
+                  "Content-Type: application/json",
+                  "",
+                  {
+                    tickets: data
+                  }.to_json
+                ].join("\r\n")
+              end
+
+              def schema
+                [
+                  {"name" => "target_l", "type" => "long"},
+                  {"name" => "target_f", "type" => "double"},
+                  {"name" => "target_str", "type" => "string"},
+                  {"name" => "target_bool", "type" => "boolean"},
+                  {"name" => "target_time", "type" => "timestamp"},
+                ]
+              end
+
+              def data
+                [
+                  {
+                    "id" => 1, "target_l" => "3", "target_f" => "3", "target_str" => "str",
+                    "target_bool" => false, "target_time" => "2000-01-01",
+                  },
+                  {
+                    "id" => 2, "target_l" => 4.5, "target_f" => 4.5, "target_str" => 999,
+                    "target_bool" => "truthy", "target_time" => Time.parse("1999-01-01"),
+                  },
+                ]
+              end
+
+              test "cast as given type" do
+                mock(page_builder).add([3, 3.0, "str", false, Time.parse("2000-01-01")])
+                mock(page_builder).add([4, 4.5, "999", true, Time.parse("1999-01-01")])
+                mock(page_builder).finish
+
+                @plugin.run
+              end
+            end
+
             sub_test_case "start_time option not given" do
               test "Nothing passed to client" do
                 stub(page_builder).finish

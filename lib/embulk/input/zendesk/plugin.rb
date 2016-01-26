@@ -125,6 +125,8 @@ module Embulk
             Integer(value)
           when "boolean"
             !!value
+          when "string"
+            value.to_s
           else
             value
           end

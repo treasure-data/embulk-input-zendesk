@@ -67,7 +67,7 @@ module Embulk
         private
 
         def export(path, key, per_page, &block)
-          # for `embulk guess` and `embulk preview` to fetch ~50 tickets only.
+          # for `embulk guess` and `embulk preview` to fetch ~50 records only.
           # incremental export API has supported only 1000 per page, it is too large to guess/preview
           Embulk.logger.debug "#{path} with per_page: #{per_page}"
           response = request(path, per_page: per_page)
@@ -84,7 +84,7 @@ module Embulk
         end
 
         def incremental_export(path, key, start_time = 0, known_ids = [], &block)
-          # for `embulk run` to fetch all tickets.
+          # for `embulk run` to fetch all records.
           response = request(path, start_time: start_time)
 
           begin
@@ -95,7 +95,7 @@ module Embulk
 
           Embulk.logger.debug "start_time:#{start_time} (#{Time.at(start_time)}) count:#{data["count"]} next_page:#{data["next_page"]} end_time:#{data["end_time"]} "
           data[key].each do |record|
-            # de-duplicated tickets.
+            # de-duplicated records.
             # https://developer.zendesk.com/rest_api/docs/core/incremental_export#usage-notes
             # https://github.com/zendesk/zendesk_api_client_rb/issues/251
             next if known_ids.include?(record["id"])

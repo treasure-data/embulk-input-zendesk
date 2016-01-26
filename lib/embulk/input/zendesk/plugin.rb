@@ -87,8 +87,8 @@ module Embulk
             args << @start_time.to_i
           end
 
-          client.public_send(method, *args) do |ticket|
-            values = extract_values(ticket)
+          client.public_send(method, *args) do |record|
+            values = extract_values(record)
             page_builder.add(values)
           end
 
@@ -106,9 +106,9 @@ module Embulk
           false
         end
 
-        def extract_values(ticket)
+        def extract_values(record)
           values = task[:schema].map do |column|
-            ticket[column["name"].to_s]
+            record[column["name"].to_s]
           end
 
           values

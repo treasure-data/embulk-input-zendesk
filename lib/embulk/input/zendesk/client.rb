@@ -9,6 +9,7 @@ module Embulk
         PARTIAL_RECORDS_SIZE = 50
         AVAILABLE_TARGETS = %w(
           tickets ticket_events users organizations
+          ticket_fields ticket_forms
         ).freeze
 
         def initialize(config)
@@ -60,9 +61,21 @@ module Embulk
         end
 
         def ticket_events(partial = true, start_time = 0, &block)
-          # NOTE: ticket_events only have full export API
+          # NOTE: ticket_events only have incremental export API
           path = "/api/v2/incremental/ticket_events"
           incremental_export(path, "ticket_events", start_time, [], &block)
+        end
+
+        def ticket_fields(partial = true, start_time = 0, &block)
+          # NOTE: ticket_fields only have export API (not incremental)
+          path = "/api/v2/ticket_fields.json"
+          export(path, "ticket_fields", 1000, &block)
+        end
+
+        def ticket_forms(partial = true, start_time = 0, &block)
+          # NOTE: ticket_forms only have export API (not incremental)
+          path = "/api/v2/ticket_forms.json"
+          export(path, "ticket_forms", 1000, &block)
         end
 
         private

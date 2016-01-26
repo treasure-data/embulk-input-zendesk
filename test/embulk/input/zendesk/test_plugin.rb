@@ -275,12 +275,17 @@ module Embulk
                     "id" => 2, "target_l" => 4.5, "target_f" => 4.5, "target_str" => 999,
                     "target_bool" => "truthy", "target_time" => Time.parse("1999-01-01"),
                   },
+                  {
+                    "id" => 3, "target_l" => nil, "target_f" => nil, "target_str" => nil,
+                    "target_bool" => nil, "target_time" => nil,
+                  },
                 ]
               end
 
               test "cast as given type" do
                 mock(page_builder).add([3, 3.0, "str", false, Time.parse("2000-01-01")])
                 mock(page_builder).add([4, 4.5, "999", true, Time.parse("1999-01-01")])
+                mock(page_builder).add([nil, nil, nil, nil, nil])
                 mock(page_builder).finish
 
                 @plugin.run

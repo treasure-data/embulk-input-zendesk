@@ -109,6 +109,7 @@ module Embulk
         def extract_values(record)
           values = task[:schema].map do |column|
             value = record[column["name"].to_s]
+            next if value.nil?
             cast(value, column["type"].to_s)
           end
 

@@ -1,7 +1,7 @@
 
 Gem::Specification.new do |spec|
   spec.name          = "embulk-input-zendesk"
-  spec.version       = "0.1.0"
+  spec.version       = "0.1.1"
   spec.authors       = ["uu59"]
   spec.summary       = "Zendesk input plugin for Embulk"
   spec.description   = "Loads records from Zendesk."

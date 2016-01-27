@@ -11,6 +11,7 @@ module Embulk
           tickets ticket_events users organizations
           ticket_fields ticket_forms
         ).freeze
+        AVAILABLE_INCREMENTAL_EXPORT = AVAILABLE_TARGETS - %w(ticket_fields ticket_forms)
 
         def initialize(config)
           @config = config

@@ -18,6 +18,10 @@ module Embulk
             Column.new(nil, name, type, column["format"])
           end
 
+          if task[:incremental] && !Client::AVAILABLE_INCREMENTAL_EXPORT.include?(task[:target])
+            Embulk.logger.warn "target: #{task[:target]} don't support incremental export API. Will be ignored start_time option"
+          end
+
           resume(task, columns, 1, &control)
         end
 

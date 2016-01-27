@@ -242,6 +242,61 @@ module Embulk
               @plugin.run
             end
 
+            sub_test_case "config diff" do
+              def end_time
+                1234567890
+              end
+
+              def next_start_time
+                end_time + 1
+              end
+
+              def start_time
+                Time.at(1111111111).strftime("%F %T+0900")
+              end
+
+              setup do
+                events = [
+                  {"id" => 1, "created_at" => "2000-01-01T00:00:00+0900"},
+                  {"id" => 2, "created_at" => "2000-01-01T01:00:00+0900"},
+                ]
+
+                @httpclient.test_loopback_http_response << [
+                  "HTTP/1.1 200",
+                  "Content-Type: application/json",
+                  "",
+                  {
+                    ticket_events: events,
+                    end_time: end_time,
+                  }.to_json
+                ].join("\r\n")
+                stub(page_builder).add(anything)
+                stub(page_builder).finish
+              end
+
+              sub_test_case "incremental: true" do
+                def run_task
+                  task.merge(schema: schema, target: "ticket_events", incremental: true, start_time: start_time)
+                end
+
+                test "task_report contains next start_time" do
+                  report = @plugin.run
+                  assert_equal Time.at(next_start_time).strftime("%Y-%m-%d %H:%M:%S%z"), report[:start_time]
+                end
+              end
+
+              sub_test_case "incremental: false" do
+                def run_task
+                  task.merge(schema: schema, target: "ticket_events", incremental: false, start_time: start_time)
+                end
+
+                test "task_report don't contains start_time" do
+                  report = @plugin.run
+                  assert_nil report[:start_time]
+                end
+              end
+            end
+
             sub_test_case "casting value" do
               setup do
                 stub(@plugin).preview? { false }

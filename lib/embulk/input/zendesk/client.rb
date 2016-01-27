@@ -95,6 +95,8 @@ module Embulk
           data[key].each do |record|
             block.call record
           end
+
+          nil # this is necessary different with incremental_export
         end
 
         def incremental_export(path, key, start_time = 0, known_ids = [], &block)
@@ -123,6 +125,8 @@ module Embulk
           #       https://developer.zendesk.com/rest_api/docs/core/incremental_export#pagination
           if data["count"] == 1000
             incremental_export(path, key, data["end_time"], known_ids, &block)
+          else
+            data
           end
         end
 

@@ -248,7 +248,7 @@ module Embulk
               end
 
               def next_start_time
-                end_time + 1
+                Time.at(end_time + 1).strftime("%F %T+0900")
               end
 
               def start_time
@@ -281,7 +281,7 @@ module Embulk
 
                 test "task_report contains next start_time" do
                   report = @plugin.run
-                  assert_equal Time.at(next_start_time).strftime("%Y-%m-%d %H:%M:%S%z"), report[:start_time]
+                  assert_equal next_start_time, report[:start_time]
                 end
               end
 

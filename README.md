@@ -14,7 +14,7 @@ Required Embulk version >= 0.8.1.
 **NOTE** This plugin don't support JSON type columns e.g. custom fields, tags, etc for now. But they will be supported soon.
 
 * **Plugin type**: input
-* **Resume supported**: no
+* **Resume supported**: yes
 * **Cleanup supported**: no
 * **Guess supported**: yes
 
@@ -30,6 +30,7 @@ Required Embulk version >= 0.8.1.
 - **start_time**: Start export from this time if present. (string, default: `null`)
 - **retry_limit**: Try to retry this times (integer, default: 5)
 - **retry_initial_wait_sec**: Wait seconds for exponential backoff initial value (integer, default: 1)
+- **incremental**:  If false, `start_time` in next.yml would not be updated that means you always fetch all of data from Zendesk with statically conditions. If true, `start_time` would be updated in next.yml. (bool, default: true)
 
 ## Example
 

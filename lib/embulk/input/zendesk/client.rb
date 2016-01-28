@@ -11,6 +11,7 @@ module Embulk
           tickets ticket_events users organizations
           ticket_fields ticket_forms
         ).freeze
+        AVAILABLE_INCREMENTAL_EXPORT = AVAILABLE_TARGETS - %w(ticket_fields ticket_forms)
 
         def initialize(config)
           @config = config
@@ -95,6 +96,8 @@ module Embulk
           data[key].each do |record|
             block.call record
           end
+
+          nil # this is necessary different with incremental_export
         end
 
         def incremental_export(path, key, start_time = 0, known_ids = [], &block)
@@ -123,6 +126,8 @@ module Embulk
           #       https://developer.zendesk.com/rest_api/docs/core/incremental_export#pagination
           if data["count"] == 1000
             incremental_export(path, key, data["end_time"], known_ids, &block)
+          else
+            data
           end
         end
 

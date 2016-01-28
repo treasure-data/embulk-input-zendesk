@@ -248,11 +248,11 @@ module Embulk
               end
 
               def next_start_time
-                Time.at(end_time + 1).strftime("%F %T+0900")
+                Time.at(end_time + 1).strftime("%F %T%z")
               end
 
               def start_time
-                Time.at(1111111111).strftime("%F %T+0900")
+                Time.at(1111111111).strftime("%F %T%z")
               end
 
               setup do

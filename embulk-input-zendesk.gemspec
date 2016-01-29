@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.description   = "Loads records from Zendesk."
   spec.email         = ["k@uu59.org", "muga.nishizawa@gmail.com", "satoshiakama@gmail.com"]
   spec.licenses      = ["MIT"]
-  # TODO set this: spec.homepage      = "https://github.com/k/embulk-input-zendesk"
+  spec.homepage      = "https://github.com/treasure-data/embulk-input-zendesk"
 
   spec.files         = `git ls-files`.split("\n") + Dir["classpath/*.jar"]
   spec.test_files    = spec.files.grep(%r{^(test|spec)/})

@@ -47,7 +47,7 @@ module Embulk
 
         def validate_target
           unless AVAILABLE_TARGETS.include?(config[:target])
-            raise Embulk::ConfigError.new("target: '#{config[:target]}' is not supported.")
+            raise Embulk::ConfigError.new("target: '#{config[:target]}' is not supported. Supported targets are #{AVAILABLE_TARGETS.join(", ")}.")
           end
         end
 

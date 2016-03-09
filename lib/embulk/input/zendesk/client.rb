@@ -10,6 +10,7 @@ module Embulk
         AVAILABLE_TARGETS = %w(
           tickets ticket_events users organizations
           ticket_fields ticket_forms
+          ticket_metrics
         ).freeze
         AVAILABLE_INCREMENTAL_EXPORT = AVAILABLE_TARGETS - %w(ticket_fields ticket_forms)
 
@@ -51,6 +52,7 @@ module Embulk
           end
         end
 
+        # they have both Incremental API and non-incremental API
         %w(tickets users organizations).each do |target|
           define_method(target) do |partial = true, start_time = 0, &block|
             if partial
@@ -61,22 +63,20 @@ module Embulk
           end
         end
 
-        def ticket_events(partial = true, start_time = 0, &block)
-          # NOTE: ticket_events only have incremental export API
-          path = "/api/v2/incremental/ticket_events"
-          incremental_export(path, "ticket_events", start_time, [], &block)
+        # they have incremental API only
+        %w(ticket_events).each do |target|
+          define_method(target) do |partial = true, start_time = 0, &block|
+            path = "/api/v2/incremental/#{target}"
+            incremental_export(path, target, start_time, [], &block)
+          end
         end
 
-        def ticket_fields(partial = true, start_time = 0, &block)
-          # NOTE: ticket_fields only have export API (not incremental)
-          path = "/api/v2/ticket_fields.json"
-          export(path, "ticket_fields", 1000, &block)
-        end
-
-        def ticket_forms(partial = true, start_time = 0, &block)
-          # NOTE: ticket_forms only have export API (not incremental)
-          path = "/api/v2/ticket_forms.json"
-          export(path, "ticket_forms", 1000, &block)
+        # they have non-incremental API only
+        %w(ticket_fields ticket_forms ticket_metrics).each do |target|
+          define_method(target) do |partial = true, start_time = 0, &block|
+            path = "/api/v2/#{target}.json"
+            export(path, target, 1000, &block)
+          end
         end
 
         private

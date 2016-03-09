@@ -5,7 +5,7 @@ task default: :test
 
 desc "Run tests"
 task :test do
-  ruby("test/run-test.rb", "--use-color=yes", "--collector=dir")
+  ruby("--debug", "test/run-test.rb", "--use-color=yes", "--collector=dir")
 end
 
 desc "Run tests with coverage"

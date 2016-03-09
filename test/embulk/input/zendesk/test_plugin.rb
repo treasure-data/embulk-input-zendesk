@@ -132,13 +132,10 @@ module Embulk
             assert actual.include?(name: "id", type: :long)
             assert actual.include?(name: "created_at", type: :timestamp, format: "%Y-%m-%dT%H:%M:%S%z")
             assert actual.include?(name: "has_incidents", type: :boolean)
-
-            # TODO: re-enable these json type tests after this plugin officially support it
-            # assert actual.include?(name: "tags", type: :json)
-            # assert actual.include?(name: "collaborator_ids", type: :json)
-
-            # assert actual.include?(name: "custom_fields", type: :json)
-            # assert actual.include?(name: "satisfaction_rating", type: :json)
+            assert actual.include?(name: "tags", type: :json)
+            assert actual.include?(name: "collaborator_ids", type: :json)
+            assert actual.include?(name: "custom_fields", type: :json)
+            assert actual.include?(name: "satisfaction_rating", type: :json)
           end
         end
 
@@ -149,7 +146,8 @@ module Embulk
 
           def schema
             [
-              {"name" => "id", "type" => "long"}
+              {"name" => "id", "type" => "long"},
+              {"name" => "tags", "type" => "json"},
             ]
           end
 
@@ -184,8 +182,8 @@ module Embulk
 
             test "task[:schema] columns passed into page_builder.add" do
               tickets = [
-                {"id" => 1, "created_at" => "2000-01-01T00:00:00+0900"},
-                {"id" => 2, "created_at" => "2000-01-01T00:00:00+0900"},
+                {"id" => 1, "created_at" => "2000-01-01T00:00:00+0900", "tags" => ["foo"]},
+                {"id" => 2, "created_at" => "2000-01-01T00:00:00+0900", "tags" => ["foo"]},
               ]
 
               @httpclient.test_loopback_http_response << [
@@ -198,7 +196,7 @@ module Embulk
               ].join("\r\n")
 
               tickets.each do |ticket|
-                mock(page_builder).add([ticket["id"]])
+                mock(page_builder).add([ticket["id"], ticket["tags"]])
               end
               mock(page_builder).finish
 
@@ -317,6 +315,7 @@ module Embulk
                   {"name" => "target_str", "type" => "string"},
                   {"name" => "target_bool", "type" => "boolean"},
                   {"name" => "target_time", "type" => "timestamp"},
+                  {"name" => "target_json", "type" => "json"},
                 ]
               end
 
@@ -325,22 +324,25 @@ module Embulk
                   {
                     "id" => 1, "target_l" => "3", "target_f" => "3", "target_str" => "str",
                     "target_bool" => false, "target_time" => "2000-01-01",
+                    "target_json" => [1,2,3],
                   },
                   {
                     "id" => 2, "target_l" => 4.5, "target_f" => 4.5, "target_str" => 999,
                     "target_bool" => "truthy", "target_time" => Time.parse("1999-01-01"),
+                    "target_json" => {"foo" => "bar"},
                   },
                   {
                     "id" => 3, "target_l" => nil, "target_f" => nil, "target_str" => nil,
                     "target_bool" => nil, "target_time" => nil,
+                    "target_json" => nil,
                   },
                 ]
               end
 
               test "cast as given type" do
-                mock(page_builder).add([3, 3.0, "str", false, Time.parse("2000-01-01")])
-                mock(page_builder).add([4, 4.5, "999", true, Time.parse("1999-01-01")])
-                mock(page_builder).add([nil, nil, nil, nil, nil])
+                mock(page_builder).add([3, 3.0, "str", false, Time.parse("2000-01-01"), [1,2,3]])
+                mock(page_builder).add([4, 4.5, "999", true, Time.parse("1999-01-01"), {"foo" => "bar"}])
+                mock(page_builder).add([nil, nil, nil, nil, nil, nil])
                 mock(page_builder).finish
 
                 @plugin.run

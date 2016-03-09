@@ -58,9 +58,6 @@ module Embulk
               hash[:type] = :json
             end
 
-            # NOTE: current version don't support JSON type
-            next if hash[:type] == :json
-
             hash
           end
 

@@ -22,7 +22,7 @@ Required Embulk version >= 0.8.1.
 
 - **login_url**: Login URL for Zendesk (string, required)
 - **auth_method**: `basic`, `token`, or `oauth`. For more detail on [zendesk document](https://developer.zendesk.com/rest_api/docs/core/introduction#security-and-authentication). (string, required)
-- **target**: Which export Zendesk resource. Currently supported are `tickets`, `ticket_events`, `users`, `organizations`, `ticket_fields` or `ticket_forms`. (string, required)
+- **target**: Which export Zendesk resource. Currently supported are `tickets`, `ticket_events`, `users`, `organizations`, `ticket_fields`, `ticket_forms` or `ticket_metrics`. (string, required)
 - **includes**: Will fetch sub resources. For example, ticket has ticket_audits, ticket_comments. See below example config. (array, default: `[]`)
 - **username**: The user name a.k.a. email. Required if `auth_method` is `basic` or `token`. (string, default: `null`)
 - **password**: Password. required if `auth_method` is `basic`. (string, default: `null`)

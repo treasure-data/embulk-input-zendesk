@@ -139,6 +139,158 @@ module Embulk
           end
         end
 
+        sub_test_case "include subresources" do
+          def page_builder
+            @page_builder ||= Class.new do
+              def add(_); end
+              def finish; end
+            end.new
+          end
+
+          sub_test_case "guess" do
+            def task
+              t = {
+                type: "zendesk",
+                login_url: "https://example.zendesk.com/",
+                auth_method: "token",
+                username: "foo@example.com",
+                token: "token",
+                target: "tickets",
+                includes: includes,
+              }
+              t.delete :includes unless includes
+              t
+            end
+
+            def config
+              Embulk::DataSource.new(task)
+            end
+
+            def ticket
+              JSON.parse(fixture_load("tickets.json"))
+            end
+
+            setup do
+              @client = Client.new(task)
+              stub(Client).new { @client }
+              stub(@client).public_send(anything) do |*args|
+                args.last.call(ticket)
+              end
+            end
+
+            sub_test_case "includes present" do
+              def includes
+                %w(audits comments)
+              end
+
+              test "guessed includes fields" do
+                actual = Plugin.guess(config)["columns"]
+                assert actual.include?(name: "audits", type: :json)
+                assert actual.include?(name: "comments", type: :json)
+              end
+            end
+
+            sub_test_case "includes blank" do
+              def includes
+                nil
+              end
+
+              test "not guessed includes fields" do
+                actual = Plugin.guess(config)["columns"]
+                assert !actual.include?(name: "audits", type: :json)
+                assert !actual.include?(name: "comments", type: :json)
+              end
+            end
+          end
+
+          sub_test_case "#run" do
+            def schema
+              [
+                {"name" => "id", "type" => "long"},
+                {"name" => "tags", "type" => "json"},
+              ]
+            end
+
+            def run_task
+              task.merge({
+                schema: schema,
+                retry_limit: 1,
+                retry_initial_wait_sec: 0,
+                includes: includes,
+              })
+            end
+
+            setup do
+              @client = Client.new(run_task)
+              stub(@client).public_send {|*args| args.last.call({}) }
+              @plugin = Plugin.new(run_task, nil, nil, page_builder)
+              stub(@plugin).client { @client }
+              @httpclient = @client.httpclient
+              stub(@client).httpclient { @httpclient }
+            end
+
+            sub_test_case "preview" do
+              setup do
+                stub(@plugin).preview? { true }
+              end
+
+              sub_test_case "includes present" do
+                def includes
+                  %w(foo bar)
+                end
+
+                test "call fetch_subresource" do
+                  includes.each do |ent|
+                    mock(@client).fetch_subresource(anything, anything, ent).never
+                  end
+                  @plugin.run
+                end
+              end
+
+              sub_test_case "includes blank" do
+                def includes
+                  []
+                end
+
+                test "don't call fetch_subresource" do
+                  mock(@client).fetch_subresource.never
+                  @plugin.run
+                end
+              end
+            end
+
+            sub_test_case "run" do
+              setup do
+                stub(@plugin).preview? { false }
+              end
+
+              sub_test_case "includes present " do
+                def includes
+                  %w(foo bar)
+                end
+
+                test "call fetch_subresource" do
+                  includes.each do |ent|
+                    mock(@client).fetch_subresource(anything, anything, ent).at_least(1)
+                  end
+                  @plugin.run
+                end
+              end
+
+              sub_test_case "includes blank" do
+                def includes
+                  []
+                end
+
+                test "don't call fetch_subresource" do
+                  mock(@client).fetch_subresource.never
+                  @plugin.run
+                end
+              end
+            end
+          end
+        end
+
         sub_test_case "#run" do
           def page_builder
             @page_builder ||= Object.new
@@ -156,6 +308,7 @@ module Embulk
               schema: schema,
               retry_limit: 1,
               retry_initial_wait_sec: 0,
+              includes: [],
             })
           end
 

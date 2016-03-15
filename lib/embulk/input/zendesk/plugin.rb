@@ -61,6 +61,13 @@ module Embulk
             hash
           end
 
+          task[:includes].each do |ent|
+            columns << {
+              name: ent,
+              type: :json
+            }
+          end
+
           return {"columns" => columns.compact}
         end
 
@@ -78,6 +85,7 @@ module Embulk
             retry_initial_wait_sec: config.param("retry_initial_wait_sec", :integer, default: 1),
             incremental: config.param("incremental", :bool, default: true),
             schema: config.param(:columns, :array, default: []),
+            includes: config.param(:includes, :array, default: []),
           }
         end
 
@@ -92,8 +100,8 @@ module Embulk
             args << @start_time.to_i
           end
 
-          client = Client.new(task)
           last_data = client.public_send(method, *args) do |record|
+            record = fetch_related_object(record)
             values = extract_values(record)
             page_builder.add(values)
           end
@@ -112,6 +120,22 @@ module Embulk
         end
 
         private
+
+        def fetch_related_object(record)
+          (task[:includes] || []).each do |ent|
+            if preview?
+              # Fetching subresource consume ~2 sec for each record. it is too long to preview. so the dummy value used.
+              record[ent] = [{dummy: "(#{ent}) dummy value for preview"}]
+            else
+              record[ent] = client.fetch_subresource(record["id"], task[:target], ent)
+            end
+          end
+          record
+        end
+
+        def client
+          Client.new(task)
+        end
 
         def preview?
           org.embulk.spi.Exec.isPreview()

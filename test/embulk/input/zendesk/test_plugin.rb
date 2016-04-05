@@ -106,11 +106,7 @@ module Embulk
               "HTTP/1.1 200",
               "Content-Type: application/json",
               "",
-              {
-                tickets: [
-                  JSON.parse(fixture_load("tickets.json"))
-                ]
-              }.to_json
+              JSON.parse(fixture_load("tickets.json")).to_json
             ].join("\r\n")
             mock(@client).validate_config
             Plugin.guess(config)["columns"]
@@ -121,11 +117,7 @@ module Embulk
               "HTTP/1.1 200",
               "Content-Type: application/json",
               "",
-              {
-                tickets: [
-                  JSON.parse(fixture_load("tickets.json"))
-                ]
-              }.to_json
+              JSON.parse(fixture_load("tickets.json")).to_json
             ].join("\r\n")
             actual = Plugin.guess(config)["columns"]
             assert actual.include?(name: "url", type: :string)
@@ -326,8 +318,8 @@ module Embulk
             end
 
             test "call tickets method instead of ticket_all" do
-              mock(@client).export(anything, "tickets", anything) { [] }
-              mock(@client).incremental_export.never
+              mock(@client).export.never
+              mock(@client).incremental_export(anything, "tickets", anything, anything, anything) { [] }
               mock(page_builder).finish
 
               @plugin.run
@@ -364,7 +356,7 @@ module Embulk
 
             test "call ticket_all method instead of tickets" do
               mock(@client).export.never
-              mock(@client).incremental_export(anything, "tickets", 0, []) { [] }
+              mock(@client).incremental_export(anything, "tickets", 0, [], false) { [] }
               mock(page_builder).finish
 
               @plugin.run

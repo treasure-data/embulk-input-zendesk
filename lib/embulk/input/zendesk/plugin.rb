@@ -96,7 +96,7 @@ module Embulk
         def run
           method = task[:target]
           args = [preview?]
-          if !preview? && @start_time
+          if @start_time
             args << @start_time.to_i
           end
 

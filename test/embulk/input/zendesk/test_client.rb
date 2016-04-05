@@ -47,19 +47,6 @@ module Embulk
               end
               client.tickets(&handler)
             end
-
-            test "raise DataError when invalid JSON response" do
-              @httpclient.test_loopback_http_response << [
-                "HTTP/1.1 200",
-                "Content-Type: application/json",
-                "",
-                "[[[" # invalid json
-              ].join("\r\n")
-
-              assert_raise(DataError) do
-                client.tickets
-              end
-            end
           end
 
           sub_test_case "all" do
@@ -175,12 +162,12 @@ module Embulk
 
           sub_test_case "ticket_events" do
             test "invoke incremental_export when partial=true" do
-              mock(client).incremental_export(anything, "ticket_events", anything, [])
+              mock(client).incremental_export(anything, "ticket_events", anything, [], true)
               client.ticket_events(true)
             end
 
             test "invoke incremental_export when partial=false" do
-              mock(client).incremental_export(anything, "ticket_events", anything, [])
+              mock(client).incremental_export(anything, "ticket_events", anything, [], false)
               client.ticket_events(false)
             end
           end
@@ -364,13 +351,6 @@ module Embulk
             end
           end
 
-          test "401" do
-            stub_response(401)
-            assert_raise(ConfigError) do
-              client.tickets(&proc{})
-            end
-          end
-
           test "409" do
             stub_response(409)
             assert_raise(StandardError) do
@@ -441,6 +421,27 @@ module Embulk
                 client.validate_target
               end
             end
+          end
+        end
+
+        sub_test_case ".extract_valid_json_from_chunk" do
+          setup do
+            @client = Client.new({target: "tickets"})
+          end
+
+          test "complete json" do
+            actual = @client.send(:extract_valid_json_from_chunk, '{"tickets":[{"foo":1},{"foo":2}]}')
+            assert_equal ['{"foo":1}', '{"foo":2}'], actual
+          end
+
+          test "broken json" do
+            json = '{"ticket_events":[{"foo":1},{"foo":2},{"fo'
+            actual = @client.send(:extract_valid_json_from_chunk, json)
+            expected = [
+              '{"foo":1}',
+              '{"foo":2}',
+            ]
+            assert_equal expected, actual
           end
         end
 

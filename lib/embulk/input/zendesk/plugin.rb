@@ -104,6 +104,7 @@ module Embulk
             record = fetch_related_object(record)
             values = extract_values(record)
             page_builder.add(values)
+            break if preview? # NOTE: preview take care only 1 record. subresources fetching is slow.
           end
           page_builder.finish
 
@@ -123,12 +124,7 @@ module Embulk
 
         def fetch_related_object(record)
           (task[:includes] || []).each do |ent|
-            if preview?
-              # Fetching subresource consume ~2 sec for each record. it is too long to preview. so the dummy value used.
-              record[ent] = [{dummy: "(#{ent}) dummy value for preview"}]
-            else
-              record[ent] = client.fetch_subresource(record["id"], task[:target], ent)
-            end
+            record[ent] = client.fetch_subresource(record["id"], task[:target], ent)
           end
           record
         end

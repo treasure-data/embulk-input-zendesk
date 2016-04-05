@@ -233,7 +233,7 @@ module Embulk
 
                 test "call fetch_subresource" do
                   includes.each do |ent|
-                    mock(@client).fetch_subresource(anything, anything, ent).never
+                    mock(@client).fetch_subresource(anything, anything, ent)
                   end
                   @plugin.run
                 end
@@ -340,9 +340,10 @@ module Embulk
                 }.to_json
               ].join("\r\n")
 
-              tickets.each do |ticket|
-                mock(page_builder).add([ticket["id"], ticket["tags"]])
-              end
+              first_ticket = tickets[0]
+              second_ticket = tickets[1]
+              mock(page_builder).add([first_ticket["id"], first_ticket["tags"]])
+              mock(page_builder).add([second_ticket["id"], second_ticket["tags"]]).never
               mock(page_builder).finish
 
               @plugin.run

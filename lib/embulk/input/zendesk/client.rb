@@ -215,22 +215,27 @@ module Embulk
         end
 
         def extract_valid_json_from_chunk(chunk)
+          # Drip JSON objects from incomplete string
+          #
+          # e.g.:
+          # chunk = '{"ticket_events":[{"foo":1},{"foo":2},{"fo'
+          # extract_valid_json_from_chunk(chunk) #=>  ['{"foo":1}', '{"foo":2}']
           result = []
-          s = StringScanner.new(chunk.scrub.gsub(%r!^{".*?":\[!,"")) # omit '{"tickets":[' prefix. See test/fixtures/tickets.json
+
+          # omit '{"tickets":[' prefix. See test/fixtures/tickets.json for actual response.
+          s = StringScanner.new(chunk.scrub.gsub(%r!^{".*?":\[!,""))
           while !s.eos?
             opener = s.scan(/{/)
             break unless opener
-            buf = opener
-            while buf.count("{") != buf.count("}")
-              content = s.scan(/.*?}/)
-              unless content
-                buf = nil
+            buf = opener # Initialize `buf` as "{"
+            while content = s.scan(/.*?}/) # grab data from start to next "}"
+              buf << content
+              if (JSON.parse(buf) rescue false) # if JSON.parse success, `buf` is valid JSON. we'll take it.
+                result << buf.dup
                 break
               end
-              buf << content
             end
-            result << buf.dup if buf
-            s.scan(/[^{]*/)
+            s.scan(/[^{]*/) # skip until next "{". `chunk` has comma separeted objects like  '},{'. skip that comma.
           end
           result
         end

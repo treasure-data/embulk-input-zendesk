@@ -6,7 +6,7 @@
   "updated_at":       "2011-05-05T10:38:52Z",
   "type":             "incident",
   "subject":          "Help, my printer is on fire!",
-  "raw_subject":      "{{dc.printer_on_fire}}",
+  "raw_subject":      "{{dc.printer_on_fire}} }{",
   "description":      "The fire is very colorful.",
   "priority":         "high",
   "status":           "open",

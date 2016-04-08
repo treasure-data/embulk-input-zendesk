@@ -1,3 +1,7 @@
+## 0.1.4 - 2016-04-08
+
+* [enhancement] Correct preview data [#9](https://github.com/treasure-data/embulk-input-zendesk/pull/9)
+
 ## 0.1.3 - 2016-03-15
 
 * [enhancement] Support more targets [#8](https://github.com/treasure-data/embulk-input-zendesk/pull/8)

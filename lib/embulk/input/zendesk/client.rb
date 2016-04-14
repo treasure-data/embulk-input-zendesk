@@ -150,7 +150,7 @@ module Embulk
             config.log_level = nil
             config.dont_rescues = [Embulk::DataError, Embulk::ConfigError]
             config.sleep = lambda{|n| @config[:retry_initial_wait_sec]* (2 ** (n-1)) }
-            config.prefer_original_backtrace = true
+            config.raise_original_error = true
           end
         end
 

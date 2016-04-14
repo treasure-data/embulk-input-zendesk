@@ -150,6 +150,7 @@ module Embulk
             config.log_level = nil
             config.dont_rescues = [Embulk::DataError, Embulk::ConfigError]
             config.sleep = lambda{|n| @config[:retry_initial_wait_sec]* (2 ** (n-1)) }
+            config.raise_original_error = true
           end
         end
 
@@ -251,14 +252,15 @@ module Embulk
           case status_code
           when 200, 404
             # 404 would be returned e.g. ticket comments are empty (on fetch_subresource method)
-          when 400, 401
-            raise Embulk::ConfigError.new("[#{status_code}] #{body}")
           when 409
             raise "[#{status_code}] temporally failure."
           when 429
             # rate limit
             retry_after = headers["Retry-After"]
             wait_rate_limit(retry_after.to_i)
+          when 400..500
+            # Won't retry for 4xx range errors except above. Almost they should be ConfigError e.g. 403 Forbidden
+            raise Embulk::ConfigError.new("[#{status_code}] #{body}")
           when 500, 503
             # 503 is possible rate limit
             retry_after = headers["Retry-After"]
@@ -268,7 +270,7 @@ module Embulk
               raise "[#{status_code}] temporally failure."
             end
           else
-            raise "Server returns unknown status code (#{status_code})"
+            raise "Server returns unknown status code (#{status_code}) #{body}"
           end
         end
       end

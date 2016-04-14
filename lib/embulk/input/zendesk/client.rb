@@ -270,7 +270,7 @@ module Embulk
               raise "[#{status_code}] temporally failure."
             end
           else
-            raise "Server returns unknown status code (#{status_code})"
+            raise "Server returns unknown status code (#{status_code}) #{body}"
           end
         end
       end

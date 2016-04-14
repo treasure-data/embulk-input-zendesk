@@ -316,13 +316,13 @@ module Embulk
             @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 2, retry_initial_wait_sec: 0)
           end
 
-          def stub_response(status, headers = [])
+          def stub_response(status, headers = [], body_json = nil)
+            headers << "Content-Type: application/json"
             @httpclient.test_loopback_http_response << [
               "HTTP/1.1 #{status}",
-              "Content-Type: application/json",
               headers.join("\r\n"),
               "",
-              {
+              body_json || {
                 tickets: []
               }.to_json
             ].join("\r\n")
@@ -398,8 +398,9 @@ module Embulk
           end
 
           test "Unhandled response code (555)" do
-            stub_response(555)
-            assert_raise(RuntimeError.new("Server returns unknown status code (555)")) do
+            error_body = {error: "FATAL ERROR"}.to_json
+            stub_response(555, [], error_body)
+            assert_raise(RuntimeError.new("Server returns unknown status code (555) #{error_body}")) do
               client.tickets(&proc{})
             end
           end

@@ -351,6 +351,13 @@ module Embulk
             end
           end
 
+          test "403 forbidden" do
+            stub_response(403)
+            assert_raise(ConfigError) do
+              client.tickets(&proc{})
+            end
+          end
+
           test "409" do
             stub_response(409)
             assert_raise(StandardError) do

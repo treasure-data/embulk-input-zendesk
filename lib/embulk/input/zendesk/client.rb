@@ -252,14 +252,15 @@ module Embulk
           case status_code
           when 200, 404
             # 404 would be returned e.g. ticket comments are empty (on fetch_subresource method)
-          when 400, 401
-            raise Embulk::ConfigError.new("[#{status_code}] #{body}")
           when 409
             raise "[#{status_code}] temporally failure."
           when 429
             # rate limit
             retry_after = headers["Retry-After"]
             wait_rate_limit(retry_after.to_i)
+          when 400..500
+            # Won't retry for 4xx range errors except above. Almost they should be ConfigError e.g. 403 Forbidden
+            raise Embulk::ConfigError.new("[#{status_code}] #{body}")
           when 500, 503
             # 503 is possible rate limit
             retry_after = headers["Retry-After"]

@@ -1,3 +1,6 @@
+## 0.1.5 - 2016-04-14
+* [enhancement] Mitigate debug pain when many retry then error [#10](https://github.com/treasure-data/embulk-input-zendesk/pull/10)
+
 ## 0.1.4 - 2016-04-08
 
 * [enhancement] Correct preview data [#9](https://github.com/treasure-data/embulk-input-zendesk/pull/9)

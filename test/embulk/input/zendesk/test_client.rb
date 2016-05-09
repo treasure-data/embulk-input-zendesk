@@ -15,7 +15,7 @@ module Embulk
         include FixtureHelper
         include CaptureIo
 
-        sub_test_case "tickets" do
+        sub_test_case "tickets (incremental export)" do
           sub_test_case "partial" do
             def client
               @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
@@ -48,6 +48,42 @@ module Embulk
               client.tickets(&handler)
             end
           end
+        end
+
+        sub_test_case "ticket_metrics (non-incremental export)" do
+          sub_test_case "partial" do
+            def client
+              @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
+            end
+
+            setup do
+              stub(Embulk).logger { Logger.new(File::NULL) }
+              @httpclient = client.httpclient
+              stub(client).httpclient { @httpclient }
+            end
+
+            test "fetch ticket_metrics first page only" do
+              records = [
+                {"id" => 1},
+                {"id" => 2},
+              ]
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  ticket_metrics: records,
+                  next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
+                }.to_json
+              ].join("\r\n")
+
+              handler = proc { }
+              records.each do |record|
+                mock(handler).call(record)
+              end
+              client.ticket_metrics(true, &handler)
+            end
+          end
 
           sub_test_case "all" do
             def client
@@ -60,29 +96,46 @@ module Embulk
               stub(client).httpclient { @httpclient }
             end
 
-            test "fetch tickets" do
-              tickets = [
+            test "fetch ticket_metrics all page" do
+              records = [
                 {"id" => 1},
                 {"id" => 2},
+              ]
+              second_results = [
+                {"id" => 3}
               ]
               @httpclient.test_loopback_http_response << [
                 "HTTP/1.1 200",
                 "Content-Type: application/json",
                 "",
                 {
-                  tickets: tickets
+                  ticket_metrics: records,
+                  next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
+                }.to_json
+              ].join("\r\n")
+
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  ticket_metrics: second_results,
+                  next_page: nil,
                 }.to_json
               ].join("\r\n")
 
               handler = proc { }
-              tickets.each do |ticket|
-                mock(handler).call(ticket)
+              records.each do |record|
+                mock(handler).call(record)
               end
-              client.tickets(false, &handler)
+              second_results.each do |record|
+                mock(handler).call(record)
+              end
+              client.ticket_metrics(false, &handler)
             end
 
             test "fetch tickets without duplicated" do
-              tickets = [
+              records = [
                 {"id" => 1},
                 {"id" => 2},
                 {"id" => 1},
@@ -93,13 +146,13 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  tickets: tickets
+                  ticket_metrics: records
                 }.to_json
               ].join("\r\n")
 
               handler = proc { }
               mock(handler).call(anything).twice
-              client.tickets(false, &handler)
+              client.ticket_metrics(false, &handler)
             end
 
             test "fetch tickets with next_page" do
@@ -110,9 +163,8 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  tickets: [{"id" => 1}],
-                  count: 1000,
-                  end_time: end_time,
+                  ticket_metrics: [{"id" => 1}],
+                  next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
                 }.to_json
               ].join("\r\n")
 
@@ -121,7 +173,7 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  tickets: [{"id" => 2}],
+                  ticket_metrics: [{"id" => 2}],
                   count: 2,
                 }.to_json
               ].join("\r\n")
@@ -131,7 +183,7 @@ module Embulk
 
               handler = proc { }
               mock(handler).call(anything).twice
-              client.tickets(false, &handler)
+              client.ticket_metrics(false, &handler)
             end
 
             test "raise DataError when invalid JSON response" do

@@ -71,7 +71,7 @@ module Embulk
         UNAVAILABLE_INCREMENTAL_EXPORT.each do |target|
           define_method(target) do |partial = true, start_time = 0, &block|
             path = "/api/v2/#{target}.json"
-            export(path, target, partial ? PARTIAL_RECORDS_SIZE : 1000, &block)
+            export(path, target, partial, &block)
           end
         end
 
@@ -89,11 +89,11 @@ module Embulk
 
         private
 
-        def export(path, key, per_page, &block)
-          # for `embulk guess` and `embulk preview` to fetch ~50 records only.
-          # incremental export API has supported only 1000 per page, it is too large to guess/preview
-          Embulk.logger.debug "#{path} with per_page: #{per_page}"
-          response = request(path, per_page: per_page)
+        def export(path, key, partial, page = 1, known_ids = [], &block)
+          per_page = partial ? PARTIAL_RECORDS_SIZE : 100 # 100 is maximum https://developer.zendesk.com/rest_api/docs/core/introduction#pagination
+          Embulk.logger.debug("#{path} with page=#{page}" + (partial ? " (partial)" : ""))
+
+          response = request(path, per_page: per_page, page: page)
 
           begin
             data = JSON.parse(response.body)
@@ -102,7 +102,15 @@ module Embulk
           end
 
           data[key].each do |record|
+            next if known_ids.include?(record["id"])
+            known_ids << record["id"]
+
             block.call record
+          end
+          return if partial
+
+          if data["next_page"]
+            return export(path, key, partial, page + 1, &block)
           end
 
           nil # this is necessary different with incremental_export

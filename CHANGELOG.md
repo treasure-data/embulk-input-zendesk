@@ -1,3 +1,6 @@
+## 0.1.6 - 2016-05-09
+* [fixed] Fix non-incremental export to fetch all records [#11](https://github.com/treasure-data/embulk-input-zendesk/pull/11)
+
 ## 0.1.5 - 2016-04-14
 * [enhancement] Mitigate debug pain when many retry then error [#10](https://github.com/treasure-data/embulk-input-zendesk/pull/10)
 

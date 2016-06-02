@@ -227,7 +227,7 @@ module Embulk
 
           sub_test_case "ticket_fields" do
             test "invoke export when partial=true" do
-              mock(client).export(anything, "ticket_fields", anything)
+              mock(client).export(anything, "ticket_fields")
               client.ticket_fields(true)
             end
 
@@ -239,7 +239,7 @@ module Embulk
 
           sub_test_case "ticket_forms" do
             test "invoke export when partial=true" do
-              mock(client).export(anything, "ticket_forms", anything)
+              mock(client).export(anything, "ticket_forms")
               client.ticket_forms(true)
             end
 

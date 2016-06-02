@@ -73,7 +73,7 @@ module Embulk
           define_method(target) do |partial = true, start_time = 0, &block|
             path = "/api/v2/#{target}.json"
             if partial
-              export(path, target, partial, &block)
+              export(path, target, &block)
             else
               export_parallel(path, target, &block)
             end
@@ -96,7 +96,7 @@ module Embulk
         private
 
         def export_parallel(path, key, workers = 5, &block)
-          per_page = 100
+          per_page = 100 # 100 is maximum https://developer.zendesk.com/rest_api/docs/core/introduction#pagination
           first_response = request(path, per_page: per_page, page: 1)
           first_fetched = JSON.parse(first_response.body)
           total_count = first_fetched["count"]
@@ -139,12 +139,12 @@ module Embulk
           records.uniq {|r| r["id"]}.each do |record|
             block.call record
           end
-          nil
+          nil # this is necessary different with incremental_export
         end
 
-        def export(path, key, partial, page = 1, known_ids = [], &block)
-          per_page = partial ? PARTIAL_RECORDS_SIZE : 100 # 100 is maximum https://developer.zendesk.com/rest_api/docs/core/introduction#pagination
-          Embulk.logger.info("Fetching #{path} with page=#{page}" + (partial ? " (partial)" : ""))
+        def export(path, key, page = 1, &block)
+          per_page = PARTIAL_RECORDS_SIZE
+          Embulk.logger.info("Fetching #{path} with page=#{page} (partial)")
 
           response = request(path, per_page: per_page, page: page)
 
@@ -155,18 +155,8 @@ module Embulk
           end
 
           data[key].each do |record|
-            next if known_ids.include?(record["id"])
-            known_ids << record["id"]
-
             block.call record
           end
-          return if partial
-
-          if data["next_page"]
-            return export(path, key, partial, page + 1, &block)
-          end
-
-          nil # this is necessary different with incremental_export
         end
 
         def incremental_export(path, key, start_time = 0, known_ids = [], partial = true, &block)

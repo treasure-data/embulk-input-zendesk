@@ -76,6 +76,7 @@ module Embulk
         end
 
         def fetch_subresource(record_id, base, target)
+          Embulk.logger.info "Fetching subresource #{target} of #{base}:#{record_id}"
           response = request("/api/v2/#{base}/#{record_id}/#{target}.json")
           return [] if response.status == 404
 
@@ -91,7 +92,7 @@ module Embulk
 
         def export(path, key, partial, page = 1, known_ids = [], &block)
           per_page = partial ? PARTIAL_RECORDS_SIZE : 100 # 100 is maximum https://developer.zendesk.com/rest_api/docs/core/introduction#pagination
-          Embulk.logger.debug("#{path} with page=#{page}" + (partial ? " (partial)" : ""))
+          Embulk.logger.info("Fetching #{path} with page=#{page}" + (partial ? " (partial)" : ""))
 
           response = request(path, per_page: per_page, page: page)
 
@@ -126,7 +127,7 @@ module Embulk
             rescue => e
               raise Embulk::DataError.new(e)
             end
-            Embulk.logger.debug "start_time:#{start_time} (#{Time.at(start_time)}) count:#{data["count"]} next_page:#{data["next_page"]} end_time:#{data["end_time"]} "
+            Embulk.logger.info "Fetched records from #{start_time} (#{Time.at(start_time)}) to #{data["end_time"]} (#{Time.at(data["end_time"])})"
             records = data[key]
           end
 

@@ -1,3 +1,6 @@
+## 0.1.7 - 2016-06-04
+* [enhancement] Improvements for non incremental export [#12](https://github.com/treasure-data/embulk-input-zendesk/pull/12)
+
 ## 0.1.6 - 2016-05-09
 * [fixed] Fix non-incremental export to fetch all records [#11](https://github.com/treasure-data/embulk-input-zendesk/pull/11)
 

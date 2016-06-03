@@ -82,7 +82,7 @@ module Embulk
             access_token: config.param("access_token", :string, default: nil),
             start_time: config.param("start_time", :string, default: nil),
             retry_limit: config.param("retry_limit", :integer, default: 5),
-            retry_initial_wait_sec: config.param("retry_initial_wait_sec", :integer, default: 1),
+            retry_initial_wait_sec: config.param("retry_initial_wait_sec", :integer, default: 4),
             incremental: config.param("incremental", :bool, default: true),
             schema: config.param(:columns, :array, default: []),
             includes: config.param(:includes, :array, default: []),

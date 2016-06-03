@@ -1,4 +1,5 @@
 require "strscan"
+require "thread"
 require "httpclient"
 
 module Embulk
@@ -71,11 +72,16 @@ module Embulk
         UNAVAILABLE_INCREMENTAL_EXPORT.each do |target|
           define_method(target) do |partial = true, start_time = 0, &block|
             path = "/api/v2/#{target}.json"
-            export(path, target, partial, &block)
+            if partial
+              export(path, target, &block)
+            else
+              export_parallel(path, target, &block)
+            end
           end
         end
 
         def fetch_subresource(record_id, base, target)
+          Embulk.logger.info "Fetching subresource #{target} of #{base}:#{record_id}"
           response = request("/api/v2/#{base}/#{record_id}/#{target}.json")
           return [] if response.status == 404
 
@@ -89,9 +95,56 @@ module Embulk
 
         private
 
-        def export(path, key, partial, page = 1, known_ids = [], &block)
-          per_page = partial ? PARTIAL_RECORDS_SIZE : 100 # 100 is maximum https://developer.zendesk.com/rest_api/docs/core/introduction#pagination
-          Embulk.logger.debug("#{path} with page=#{page}" + (partial ? " (partial)" : ""))
+        def export_parallel(path, key, workers = 5, &block)
+          per_page = 100 # 100 is maximum https://developer.zendesk.com/rest_api/docs/core/introduction#pagination
+          first_response = request(path, per_page: per_page, page: 1)
+          first_fetched = JSON.parse(first_response.body)
+          total_count = first_fetched["count"]
+          last_page_num = (total_count / per_page.to_f).ceil
+          Embulk.logger.info "#{key} records=#{total_count} last_page=#{last_page_num}"
+
+          queue = Queue.new
+          (2..last_page_num).each do |page|
+            queue << page
+          end
+          records = first_fetched[key]
+
+          mutex = Mutex.new
+          threads = workers.times.map do |n|
+            Thread.start do
+              loop do
+                break if queue.empty?
+                current_page = nil
+
+                begin
+                  Timeout.timeout(0.1) do
+                    # Somehow queue.pop(true) blocks... timeout is workaround for that
+                    current_page = queue.pop(true)
+                  end
+                rescue Timeout::Error, ThreadError => e
+                  break #=> ThreadError: queue empty
+                end
+
+                response = request(path, per_page: per_page, page: current_page)
+                fetched_records = extract_records_from_response(response, key)
+                mutex.synchronize do
+                  Embulk.logger.info "Fetched #{key} on page=#{current_page}"
+                  records.concat fetched_records
+                end
+              end
+            end
+          end
+          threads.each(&:join)
+
+          records.uniq {|r| r["id"]}.each do |record|
+            block.call record
+          end
+          nil # this is necessary different with incremental_export
+        end
+
+        def export(path, key, page = 1, &block)
+          per_page = PARTIAL_RECORDS_SIZE
+          Embulk.logger.info("Fetching #{path} with page=#{page} (partial)")
 
           response = request(path, per_page: per_page, page: page)
 
@@ -102,18 +155,8 @@ module Embulk
           end
 
           data[key].each do |record|
-            next if known_ids.include?(record["id"])
-            known_ids << record["id"]
-
             block.call record
           end
-          return if partial
-
-          if data["next_page"]
-            return export(path, key, partial, page + 1, &block)
-          end
-
-          nil # this is necessary different with incremental_export
         end
 
         def incremental_export(path, key, start_time = 0, known_ids = [], partial = true, &block)
@@ -126,7 +169,7 @@ module Embulk
             rescue => e
               raise Embulk::DataError.new(e)
             end
-            Embulk.logger.debug "start_time:#{start_time} (#{Time.at(start_time)}) count:#{data["count"]} next_page:#{data["next_page"]} end_time:#{data["end_time"]} "
+            Embulk.logger.info "Fetched records from #{start_time} (#{Time.at(start_time)})"
             records = data[key]
           end
 
@@ -148,6 +191,15 @@ module Embulk
             incremental_export(path, key, data["end_time"], known_ids, partial, &block)
           else
             data
+          end
+        end
+
+        def extract_records_from_response(response, key)
+          begin
+            data = JSON.parse(response.body)
+            data[key]
+          rescue => e
+            raise Embulk::DataError.new(e)
           end
         end
 

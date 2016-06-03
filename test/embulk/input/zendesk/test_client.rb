@@ -97,12 +97,9 @@ module Embulk
             end
 
             test "fetch ticket_metrics all page" do
-              records = [
-                {"id" => 1},
-                {"id" => 2},
-              ]
+              records = 100.times.map{|n| {"id"=> n}}
               second_results = [
-                {"id" => 3}
+                {"id" => 101}
               ]
               @httpclient.test_loopback_http_response << [
                 "HTTP/1.1 200",
@@ -110,6 +107,7 @@ module Embulk
                 "",
                 {
                   ticket_metrics: records,
+                  count: records.length + second_results.length,
                   next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
                 }.to_json
               ].join("\r\n")
@@ -120,6 +118,7 @@ module Embulk
                 "",
                 {
                   ticket_metrics: second_results,
+                  count: records.length + second_results.length,
                   next_page: nil,
                 }.to_json
               ].join("\r\n")
@@ -146,7 +145,8 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  ticket_metrics: records
+                  ticket_metrics: records,
+                  count: records.length,
                 }.to_json
               ].join("\r\n")
 
@@ -163,7 +163,8 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  ticket_metrics: [{"id" => 1}],
+                  ticket_metrics: 100.times.map{|n| {"id" => n}},
+                  count: 101,
                   next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
                 }.to_json
               ].join("\r\n")
@@ -173,8 +174,8 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  ticket_metrics: [{"id" => 2}],
-                  count: 2,
+                  ticket_metrics: [{"id" => 101}],
+                  count: 101,
                 }.to_json
               ].join("\r\n")
 
@@ -182,7 +183,7 @@ module Embulk
               @httpclient.test_loopback_http_response << response_2
 
               handler = proc { }
-              mock(handler).call(anything).twice
+              mock(handler).call(anything).times(101)
               client.ticket_metrics(false, &handler)
             end
 
@@ -226,24 +227,24 @@ module Embulk
 
           sub_test_case "ticket_fields" do
             test "invoke export when partial=true" do
-              mock(client).export(anything, "ticket_fields", anything)
+              mock(client).export(anything, "ticket_fields")
               client.ticket_fields(true)
             end
 
             test "invoke export when partial=false" do
-              mock(client).export(anything, "ticket_fields", anything)
+              mock(client).export_parallel(anything, "ticket_fields")
               client.ticket_fields(false)
             end
           end
 
           sub_test_case "ticket_forms" do
             test "invoke export when partial=true" do
-              mock(client).export(anything, "ticket_forms", anything)
+              mock(client).export(anything, "ticket_forms")
               client.ticket_forms(true)
             end
 
             test "invoke export when partial=false" do
-              mock(client).export(anything, "ticket_forms", anything)
+              mock(client).export_parallel(anything, "ticket_forms")
               client.ticket_forms(false)
             end
           end

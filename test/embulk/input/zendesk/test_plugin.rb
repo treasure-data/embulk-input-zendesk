@@ -353,6 +353,7 @@ module Embulk
           sub_test_case "run" do
             setup do
               stub(@plugin).preview? { false }
+              stub(Embulk).logger { Logger.new(File::NULL) }
             end
 
             test "call ticket_all method instead of tickets" do
@@ -416,6 +417,7 @@ module Embulk
                 ].join("\r\n")
                 stub(page_builder).add(anything)
                 stub(page_builder).finish
+                stub(Embulk).logger { Logger.new(File::NULL) }
               end
 
               sub_test_case "incremental: true" do
@@ -443,6 +445,7 @@ module Embulk
 
             sub_test_case "casting value" do
               setup do
+                stub(Embulk).logger { Logger.new(File::NULL) }
                 stub(@plugin).preview? { false }
                 @httpclient.test_loopback_http_response << [
                   "HTTP/1.1 200",

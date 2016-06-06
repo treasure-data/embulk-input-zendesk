@@ -30,7 +30,7 @@ Required Embulk version >= 0.8.1.
 - **access_token**: OAuth Access Token. required if `auth_method` is `oauth`. (string, default: `null`)
 - **start_time**: Start export from this time if present. (string, default: `null`)
 - **retry_limit**: Try to retry this times (integer, default: 5)
-- **retry_initial_wait_sec**: Wait seconds for exponential backoff initial value (integer, default: 1)
+- **retry_initial_wait_sec**: Wait seconds for exponential backoff initial value (integer, default: 4)
 - **incremental**:  If false, `start_time` in next.yml would not be updated that means you always fetch all of data from Zendesk with statically conditions. If true, `start_time` would be updated in next.yml. (bool, default: true)
 
 ## Example

@@ -20,6 +20,7 @@ module Embulk
 
         def httpclient
           httpclient = HTTPClient.new
+          httpclient.connect_timeout = 240 # default:60 is not enough for huge data
           # httpclient.debug_dev = STDOUT
           return set_auth(httpclient)
         end

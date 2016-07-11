@@ -375,12 +375,14 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  tickets: tickets
+                  tickets: tickets,
+                  count: tickets.length,
                 }.to_json
               ].join("\r\n")
 
               tickets.each do |ticket|
-                mock(page_builder).add([ticket["id"]])
+                # schema[:columns] is id and tags. tags should be nil
+                mock(page_builder).add([ticket["id"], nil])
               end
               mock(page_builder).finish
 
@@ -413,6 +415,7 @@ module Embulk
                   {
                     ticket_events: events,
                     end_time: end_time,
+                    count: events.length,
                   }.to_json
                 ].join("\r\n")
                 stub(page_builder).add(anything)
@@ -452,7 +455,8 @@ module Embulk
                   "Content-Type: application/json",
                   "",
                   {
-                    tickets: data
+                    tickets: data,
+                    count: data.length,
                   }.to_json
                 ].join("\r\n")
               end

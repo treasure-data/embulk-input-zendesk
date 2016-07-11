@@ -177,7 +177,7 @@ module Embulk
             rescue => e
               raise Embulk::DataError.new(e)
             end
-            Embulk.logger.info "Fetched records from start_time:#{start_time} (#{Time.at(start_time)}) within #{Time.now.to_i - start_fetching.to_i} seconds"
+            actual_fetched = 0
             records = data[key]
             records.each do |record|
               # de-duplicated records.
@@ -187,7 +187,9 @@ module Embulk
 
               known_ids << record["id"]
               block.call record
+              actual_fetched += 1
             end
+            Embulk.logger.info "Fetched #{actual_fetched} records from start_time:#{start_time} (#{Time.at(start_time)}) within #{Time.now.to_i - start_fetching.to_i} seconds"
             start_time = data["end_time"]
 
             # NOTE: If count is less than 1000, then stop paginating.

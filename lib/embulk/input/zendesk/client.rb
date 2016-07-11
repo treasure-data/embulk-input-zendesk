@@ -170,13 +170,14 @@ module Embulk
           end
 
           loop do
+            start_fetching = Time.now
             response = request(path, {start_time: start_time})
             begin
               data = JSON.parse(response.body)
             rescue => e
               raise Embulk::DataError.new(e)
             end
-            Embulk.logger.info "Fetched records from #{start_time} (#{Time.at(start_time)})"
+            Embulk.logger.info "Fetched records from start_time:#{start_time} (#{Time.at(start_time)}) within #{Time.now.to_i - start_fetching.to_i} seconds"
             records = data[key]
             records.each do |record|
               # de-duplicated records.

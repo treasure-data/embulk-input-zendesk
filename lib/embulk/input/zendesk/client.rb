@@ -163,7 +163,13 @@ module Embulk
         def incremental_export(path, key, start_time = 0, known_ids = [], partial = true, &block)
           if partial
             records = request_partial(path, {start_time: start_time}).first(5)
-          else
+            records.uniq{|r| r["id"]}.each do |record|
+              block.call record
+            end
+            return
+          end
+
+          loop do
             response = request(path, {start_time: start_time})
             begin
               data = JSON.parse(response.body)
@@ -172,26 +178,21 @@ module Embulk
             end
             Embulk.logger.info "Fetched records from #{start_time} (#{Time.at(start_time)})"
             records = data[key]
-          end
+            records.each do |record|
+              # de-duplicated records.
+              # https://developer.zendesk.com/rest_api/docs/core/incremental_export#usage-notes
+              # https://github.com/zendesk/zendesk_api_client_rb/issues/251
+              next if known_ids.include?(record["id"])
 
-          records.each do |record|
-            # de-duplicated records.
-            # https://developer.zendesk.com/rest_api/docs/core/incremental_export#usage-notes
-            # https://github.com/zendesk/zendesk_api_client_rb/issues/251
-            next if known_ids.include?(record["id"])
+              known_ids << record["id"]
+              block.call record
+            end
+            start_time = data["end_time"]
 
-            known_ids << record["id"]
-            block.call record
-          end
-          return if partial
-
-          # NOTE: If count is less than 1000, then stop paginating.
-          #       Otherwise, use the next_page URL to get the next page of results.
-          #       https://developer.zendesk.com/rest_api/docs/core/incremental_export#pagination
-          if data["count"] == 1000
-            incremental_export(path, key, data["end_time"], known_ids, partial, &block)
-          else
-            data
+            # NOTE: If count is less than 1000, then stop paginating.
+            #       Otherwise, use the next_page URL to get the next page of results.
+            #       https://developer.zendesk.com/rest_api/docs/core/incremental_export#pagination
+            break data if data["count"] < 1000
           end
         end
 

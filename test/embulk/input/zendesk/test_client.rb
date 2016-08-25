@@ -418,6 +418,20 @@ module Embulk
             end
           end
 
+          test "422 with Too recent start_time" do
+            stub_response(422, [], '{"error":"InvalidValue","description":"Too recent start_time. Use a start_time older than 5 minutes"}')
+            assert_nothing_raised do
+              client.tickets(&proc{})
+            end
+          end
+
+          test "422" do
+            stub_response(422)
+            assert_raise(ConfigError) do
+              client.tickets(&proc{})
+            end
+          end
+
           test "429" do
             after = "123"
             stub_response(429, ["Retry-After: #{after}"])

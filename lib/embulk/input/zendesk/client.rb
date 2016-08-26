@@ -319,6 +319,20 @@ module Embulk
             # 404 would be returned e.g. ticket comments are empty (on fetch_subresource method)
           when 409
             raise "[#{status_code}] temporally failure."
+          when 422
+            begin
+              payload = JSON.parse(body)
+              if payload["description"].start_with?("Too recent start_time.")
+                # That means "No records from start_time". We can recognize it same as 200.
+                return
+              end
+            rescue
+              # Failed to parse response.body as JSON
+              raise Embulk::ConfigError.new("[#{status_code}] #{body}")
+            end
+
+            # 422 and it isn't "Too recent start_time"
+            raise Embulk::ConfigError.new("[#{status_code}] #{body}")
           when 429
             # rate limit
             retry_after = headers["Retry-After"]

@@ -1,3 +1,6 @@
+## 0.1.9 - 2016-08-26
+* [fixed] Ignore '422: Too recent start_time' [#14](https://github.com/treasure-data/embulk-input-zendesk/pull/14)
+
 ## 0.1.8 - 2016-07-11
 
 * [enhancement] For huge data [#13](https://github.com/treasure-data/embulk-input-zendesk/pull/13)

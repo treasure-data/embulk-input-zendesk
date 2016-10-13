@@ -57,6 +57,11 @@ module Embulk
             if records.any? {|r| [Array, Hash].include?(r[hash[:name]].class) }
               hash[:type] = :json
             end
+            if hash[:name].match(/_id$/)
+              # NOTE: sometimes *_id will be guessed as timestamp format:%d%m%Y (e.g. 21031998), all *_id columns should be type:long
+              hash[:type] = :long
+              hash.delete(:format) # has it if type:timestamp
+            end
 
             hash
           end

@@ -127,6 +127,7 @@ module Embulk
             assert actual.include?(name: "tags", type: :json)
             assert actual.include?(name: "collaborator_ids", type: :json)
             assert actual.include?(name: "custom_fields", type: :json)
+            assert actual.include?(name: "group_id", type: :long)
             assert actual.include?(name: "satisfaction_rating", type: :json)
           end
         end

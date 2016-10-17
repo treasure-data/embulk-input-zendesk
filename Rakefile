@@ -1,5 +1,5 @@
 require "bundler/gem_tasks"
-require "everyleaf/embulk_helper/tasks"
+require "gem_release_helper/tasks"
 
 task default: :test
 
@@ -15,7 +15,7 @@ task :cov do
 end
 
 
-Everyleaf::EmbulkHelper::Tasks.install(
+GemReleaseHelper::Tasks.install(
   gemspec: "./embulk-input-zendesk.gemspec",
   github_name: "treasure-data/embulk-input-zendesk",
 )

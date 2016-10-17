@@ -1,3 +1,6 @@
+## 0.1.10 - 2016-10-17
+* [fixed] All `*_id` columns should be type:long [#15](https://github.com/treasure-data/embulk-input-zendesk/pull/15)
+
 ## 0.1.9 - 2016-08-26
 * [fixed] Ignore '422: Too recent start_time' [#14](https://github.com/treasure-data/embulk-input-zendesk/pull/14)
 

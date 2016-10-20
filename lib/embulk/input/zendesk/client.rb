@@ -180,6 +180,18 @@ module Embulk
             actual_fetched = 0
             records = data[key]
             records.each do |record|
+              # https://developer.zendesk.com/rest_api/docs/core/incremental_export#excluding-system-updates
+              # "generated_timestamp" will be updated when Zendesk internal changing
+              # "updated_at" will be updated when ticket data was changed
+              # start_time for query parameter will be processed on Zendesk with generated_timestamp,
+              # but it was calculated by record' updated_at time.
+              # So the doesn't changed record from previous import would be appear by Zendesk internal changes.
+              # We ignore record that has updated_at <= start_time
+              if start_time && record["generated_timestamp"] && record["updated_at"]
+                updated_at = Time.parse(record["updated_at"])
+                next if updated_at <= Time.at(start_time)
+              end
+
               # de-duplicated records.
               # https://developer.zendesk.com/rest_api/docs/core/incremental_export#usage-notes
               # https://github.com/zendesk/zendesk_api_client_rb/issues/251

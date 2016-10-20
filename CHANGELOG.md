@@ -1,3 +1,6 @@
+## 0.1.11 - 2016-10-20
+* [fixed] Ignore `updated_at` <= `start_time` record [#16](https://github.com/treasure-data/embulk-input-zendesk/pull/16)
+
 ## 0.1.10 - 2016-10-17
 * [fixed] All `*_id` columns should be type:long [#15](https://github.com/treasure-data/embulk-input-zendesk/pull/15)
 

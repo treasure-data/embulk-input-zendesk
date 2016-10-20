@@ -58,8 +58,8 @@ module Embulk
               hash[:type] = :json
             end
             if hash[:name].match(/_id$/)
-              # NOTE: sometimes *_id will be guessed as timestamp format:%d%m%Y (e.g. 21031998), all *_id columns should be type:long
-              hash[:type] = :long
+              # NOTE: sometimes *_id will be guessed as timestamp format:%d%m%Y (e.g. 21031998), all *_id columns should be type:string
+              hash[:type] = :string
               hash.delete(:format) # has it if type:timestamp
             end
 

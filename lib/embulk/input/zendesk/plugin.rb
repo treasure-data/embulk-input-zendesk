@@ -110,6 +110,7 @@ module Embulk
             args << @start_time.to_i
           end
 
+          fetching_start_at = Time.now
           last_data = client.public_send(method, *args) do |record|
             record = fetch_related_object(record)
             values = extract_values(record)
@@ -119,12 +120,17 @@ module Embulk
           page_builder.finish
 
           task_report = {}
-          if task[:incremental] && last_data && last_data["end_time"]
-            # NOTE: start_time compared as "=>", not ">".
-            #       If we will use end_time for next start_time, we got the same record that is last fetched
-            #       end_time + 1 is workaround for that
-            next_start_time = Time.at(last_data["end_time"] + 1)
-            task_report[:start_time] = next_start_time.strftime("%Y-%m-%d %H:%M:%S%z")
+          if task[:incremental]
+            if last_data && last_data["end_time"]
+              # NOTE: start_time compared as "=>", not ">".
+              #       If we will use end_time for next start_time, we got the same record that is last fetched
+              #       end_time + 1 is workaround for that
+              next_start_time = Time.at(last_data["end_time"] + 1)
+              task_report[:start_time] = next_start_time.strftime("%Y-%m-%d %H:%M:%S%z")
+            else
+              # Sometimes no record and no end_time fetched on the job, but we should generate start_time on config_diff.
+              task_report[:start_time] = fetching_start_at
+            end
           end
 
           return task_report

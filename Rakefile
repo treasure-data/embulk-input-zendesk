@@ -12,6 +12,7 @@ desc "Run tests with coverage"
 task :cov do
   ENV["COVERAGE"] = "1"
   ruby("--debug", "test/run-test.rb", "--use-color=yes", "--collector=dir")
+  bundle exec codeclimate-test-reporter
 end
 
 

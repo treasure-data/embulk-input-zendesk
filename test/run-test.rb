@@ -14,8 +14,8 @@ ENV["TEST_UNIT_MAX_DIFF_TARGET_STRING_SIZE"] ||= "5000"
 
 if ENV["COVERAGE"]
   if ENV["CI"]
-    require "codeclimate-test-reporter"
-    CodeClimate::TestReporter.start
+    require 'simplecov'
+    SimpleCov.start
   else
     require 'simplecov'
     SimpleCov.start 'test_frameworks'

@@ -24,5 +24,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rr', '~> 1.1.2'
   spec.add_development_dependency 'simplecov'
   spec.add_development_dependency 'gem_release_helper', "~> 1.0"
-  spec.add_development_dependency "codeclimate-test-reporter"
+  spec.add_development_dependency "codeclimate-test-reporter", "~> 0.6"
 end

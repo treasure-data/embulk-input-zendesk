@@ -15,6 +15,7 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency 'perfect_retry', '~> 0.5'
   spec.add_dependency 'httpclient'
+  spec.add_dependency 'thread'
   spec.add_development_dependency 'embulk', ['~> 0.8.1']
   spec.add_development_dependency 'bundler', ['~> 1.0']
   spec.add_development_dependency 'rake', ['>= 10.0']

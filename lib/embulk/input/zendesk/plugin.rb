@@ -1,5 +1,4 @@
 require 'perfect_retry'
-require 'thread'
 require 'thread/pool'
 
 module Embulk
@@ -138,7 +137,7 @@ module Embulk
         private
 
         def fetch_related_object(record)
-          pool = Thread.pool(5)
+          pool = Thread.pool(Client::THREADPOOL_SIZE)
           (task[:includes] || []).each do |ent|
             pool.process { record[ent] = client.fetch_subresource(record['id'], task[:target], ent) }
           end

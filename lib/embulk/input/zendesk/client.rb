@@ -1,5 +1,4 @@
 require "strscan"
-require "thread"
 require "httpclient"
 require 'thread/pool'
 
@@ -11,6 +10,7 @@ module Embulk
 
         PARTIAL_RECORDS_SIZE = 50
         PARTIAL_RECORDS_BYTE_SIZE = 50000
+        THREADPOOL_SIZE = 5
         AVAILABLE_INCREMENTAL_EXPORT = %w(tickets users organizations ticket_events).freeze
         UNAVAILABLE_INCREMENTAL_EXPORT = %w(ticket_fields ticket_forms ticket_metrics).freeze
         AVAILABLE_TARGETS = AVAILABLE_INCREMENTAL_EXPORT + UNAVAILABLE_INCREMENTAL_EXPORT
@@ -24,6 +24,10 @@ module Embulk
           httpclient.connect_timeout = 240 # default:60 is not enough for huge data
           # httpclient.debug_dev = STDOUT
           return set_auth(httpclient)
+        end
+
+        def pool
+          @pool ||= Thread.pool(THREADPOOL_SIZE)
         end
 
         def validate_config
@@ -170,7 +174,6 @@ module Embulk
             return
           end
 
-          pool = Thread.pool(5)
           last_data = loop do
             start_fetching = Time.now
             response = request(path, {start_time: start_time})

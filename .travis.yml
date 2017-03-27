@@ -15,7 +15,7 @@ before_install:
     fi
   - gem install bundler -v 1.10.6
 
-script: bundle exec rake cov && bundle exec codeclimate-test-reporter
+script: bundle exec rake cov
 
 rvm:
   - jruby-9.0.4.0

@@ -433,6 +433,23 @@ module Embulk
                   report = @plugin.run
                   assert_equal next_start_time, report[:start_time]
                 end
+
+                test "no record" do
+                  first_report = @plugin.run
+
+                  @httpclient.test_loopback_http_response << [
+                    "HTTP/1.1 200",
+                    "Content-Type: application/json",
+                    "",
+                    {
+                      ticket_events: [],
+                      count: 0,
+                    }.to_json
+                  ].join("\r\n")
+                  second_report = @plugin.run
+
+                  assert second_report.has_key?(:start_time)
+                end
               end
 
               sub_test_case "incremental: false" do

@@ -1,3 +1,6 @@
+## 0.1.13 - 2017-03-23
+* [fixed] Fix to generate config_diff when no data fetched [#18](https://github.com/treasure-data/embulk-input-zendesk/pull/18)
+
 ## 0.1.12 - 2016-10-20
 * [fixed] Fix `*_id` columns to be guessed as string. (e.g. external_id) [#17](https://github.com/treasure-data/embulk-input-zendesk/pull/17)
 

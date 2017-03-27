@@ -1,7 +1,7 @@
 
 Gem::Specification.new do |spec|
   spec.name          = "embulk-input-zendesk"
-  spec.version       = "0.1.12"
+  spec.version       = "0.1.13"
   spec.authors       = ["uu59", "muga", "sakama"]
   spec.summary       = "Zendesk input plugin for Embulk"
   spec.description   = "Loads records from Zendesk."
@@ -25,5 +25,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency 'rr', '~> 1.1.2'
   spec.add_development_dependency 'simplecov'
   spec.add_development_dependency 'gem_release_helper', "~> 1.0"
-  spec.add_development_dependency "codeclimate-test-reporter"
+  spec.add_development_dependency "codeclimate-test-reporter", "~> 0.6"
 end

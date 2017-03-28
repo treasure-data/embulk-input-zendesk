@@ -1,6 +1,6 @@
 require "strscan"
-require "thread"
 require "httpclient"
+require 'thread/pool'
 
 module Embulk
   module Input
@@ -10,6 +10,7 @@ module Embulk
 
         PARTIAL_RECORDS_SIZE = 50
         PARTIAL_RECORDS_BYTE_SIZE = 50000
+        THREADPOOL_SIZE = 5
         AVAILABLE_INCREMENTAL_EXPORT = %w(tickets users organizations ticket_events).freeze
         UNAVAILABLE_INCREMENTAL_EXPORT = %w(ticket_fields ticket_forms ticket_metrics).freeze
         AVAILABLE_TARGETS = AVAILABLE_INCREMENTAL_EXPORT + UNAVAILABLE_INCREMENTAL_EXPORT
@@ -23,6 +24,10 @@ module Embulk
           httpclient.connect_timeout = 240 # default:60 is not enough for huge data
           # httpclient.debug_dev = STDOUT
           return set_auth(httpclient)
+        end
+
+        def pool
+          @pool ||= Thread.pool(THREADPOOL_SIZE)
         end
 
         def validate_config
@@ -111,7 +116,7 @@ module Embulk
           records = first_fetched[key]
 
           mutex = Mutex.new
-          threads = workers.times.map do |n|
+          threads = Array.new(workers) do |_|
             Thread.start do
               loop do
                 break if queue.empty?
@@ -122,7 +127,7 @@ module Embulk
                     # Somehow queue.pop(true) blocks... timeout is workaround for that
                     current_page = queue.pop(true)
                   end
-                rescue Timeout::Error, ThreadError => e
+                rescue Timeout::Error, ThreadError
                   break #=> ThreadError: queue empty
                 end
 
@@ -169,7 +174,7 @@ module Embulk
             return
           end
 
-          loop do
+          last_data = loop do
             start_fetching = Time.now
             response = request(path, {start_time: start_time})
             begin
@@ -198,7 +203,7 @@ module Embulk
               next if known_ids.include?(record["id"])
 
               known_ids << record["id"]
-              block.call record
+              pool.process { yield(record) }
               actual_fetched += 1
             end
             Embulk.logger.info "Fetched #{actual_fetched} records from start_time:#{start_time} (#{Time.at(start_time)}) within #{Time.now.to_i - start_fetching.to_i} seconds"
@@ -209,6 +214,9 @@ module Embulk
             #       https://developer.zendesk.com/rest_api/docs/core/incremental_export#pagination
             break data if data["count"] < 1000
           end
+
+          pool.shutdown
+          last_data
         end
 
         def extract_records_from_response(response, key)

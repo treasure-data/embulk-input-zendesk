@@ -1,4 +1,5 @@
-require "perfect_retry"
+require 'perfect_retry'
+require 'thread/pool'
 
 module Embulk
   module Input
@@ -110,11 +111,14 @@ module Embulk
             args << @start_time.to_i
           end
 
+          mutex = Mutex.new
           fetching_start_at = Time.now
           last_data = client.public_send(method, *args) do |record|
             record = fetch_related_object(record)
             values = extract_values(record)
-            page_builder.add(values)
+            mutex.synchronize do
+              page_builder.add(values)
+            end
             break if preview? # NOTE: preview take care only 1 record. subresources fetching is slow.
           end
           page_builder.finish
@@ -139,9 +143,11 @@ module Embulk
         private
 
         def fetch_related_object(record)
+          pool = Thread.pool(Client::THREADPOOL_SIZE)
           (task[:includes] || []).each do |ent|
-            record[ent] = client.fetch_subresource(record["id"], task[:target], ent)
+            pool.process { record[ent] = client.fetch_subresource(record['id'], task[:target], ent) }
           end
+          pool.shutdown
           record
         end
 

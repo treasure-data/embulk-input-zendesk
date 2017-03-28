@@ -1,3 +1,6 @@
+## 0.1.14 - 2017-03-28
+* [enhancement] Concurrent fetching base target and related objects [#19](https://github.com/treasure-data/embulk-input-zendesk/pull/19)
+
 ## 0.1.13 - 2017-03-23
 * [fixed] Fix to generate config_diff when no data fetched [#18](https://github.com/treasure-data/embulk-input-zendesk/pull/18)
 

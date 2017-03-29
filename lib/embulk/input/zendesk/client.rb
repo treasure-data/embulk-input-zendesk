@@ -378,13 +378,12 @@ module Embulk
 
         # JRuby named spawn thread with runtime absolute path, this method is to avoid that info in logs
         def rename_jruby_thread(thread)
-          if defined?(JRuby)
-            thread_r = JRuby.reference(thread)
-            native_name = thread_r.native_thread.name
-            # https://github.com/jruby/jruby/blob/9.0.4.0/core/src/main/java/org/jruby/RubyThread.java#L563
-            path_index = native_name.index(':') || 0
-            thread_r.native_thread.name = native_name[0..path_index-1]
-          end
+          return unless defined?(JRuby)
+          thread_r = JRuby.reference(thread)
+          native_name = thread_r.native_thread.name
+          # https://github.com/jruby/jruby/blob/9.0.4.0/core/src/main/java/org/jruby/RubyThread.java#L563
+          path_index = native_name.index(':') || 0
+          thread_r.native_thread.name = native_name[0..path_index-1]
         end
       end
     end

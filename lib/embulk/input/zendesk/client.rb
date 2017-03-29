@@ -87,6 +87,7 @@ module Embulk
         end
 
         def fetch_subresource(record_id, base, target)
+          rename_jruby_thread(Thread.current)
           Embulk.logger.info "Fetching subresource #{target} of #{base}:#{record_id}"
           response = request("/api/v2/#{base}/#{record_id}/#{target}.json")
           return [] if response.status == 404
@@ -117,7 +118,7 @@ module Embulk
 
           mutex = Mutex.new
           threads = Array.new(workers) do |_|
-            Thread.start do
+            thread = Thread.start do
               loop do
                 break if queue.empty?
                 current_page = nil
@@ -139,6 +140,8 @@ module Embulk
                 end
               end
             end
+            rename_jruby_thread(thread)
+            thread
           end
           threads.each(&:join)
 
@@ -370,6 +373,17 @@ module Embulk
             end
           else
             raise "Server returns unknown status code (#{status_code}) #{body}"
+          end
+        end
+
+        # JRuby named spawn thread with runtime absolute path, this method is to avoid that info in logs
+        def rename_jruby_thread(thread)
+          if defined?(JRuby)
+            thread_r = JRuby.reference(thread)
+            native_name = thread_r.native_thread.name
+            # https://github.com/jruby/jruby/blob/9.0.4.0/core/src/main/java/org/jruby/RubyThread.java#L563
+            path_index = native_name.index(':') || 0
+            thread_r.native_thread.name = native_name[0..path_index-1]
           end
         end
       end

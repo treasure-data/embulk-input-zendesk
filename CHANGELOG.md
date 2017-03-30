@@ -1,3 +1,6 @@
+## 0.1.15 - 2017-03-30
+* [fixed] Rename JRuby thread, to not expose runtime path [#21](https://github.com/treasure-data/embulk-input-zendesk/pull/21)
+
 ## 0.1.14 - 2017-03-28
 * [enhancement] Concurrent fetching base target and related objects [#19](https://github.com/treasure-data/embulk-input-zendesk/pull/19)
 

@@ -97,9 +97,9 @@ module Embulk
             end
 
             test "fetch ticket_metrics all page" do
-              records = 100.times.map{|n| {"id"=> n}}
+              records = 100.times.map{|n| {"id"=> n, "ticket_id"=>n+1}}
               second_results = [
-                {"id" => 101}
+                {"id" => 101, "ticket_id" => 101}
               ]
               @httpclient.test_loopback_http_response << [
                 "HTTP/1.1 200",
@@ -123,6 +123,17 @@ module Embulk
                 }.to_json
               ].join("\r\n")
 
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: 101.times.map{|n| {"id" => n+1}},
+                  count: 101,
+                  next_page: nil,
+                }.to_json
+              ].join("\r\n")
+
               handler = proc { }
               records.each do |record|
                 mock(handler).call(record)
@@ -135,10 +146,10 @@ module Embulk
 
             test "fetch tickets without duplicated" do
               records = [
-                {"id" => 1},
-                {"id" => 2},
-                {"id" => 1},
-                {"id" => 1},
+                {"id" => 1, "ticket_id" => 100},
+                {"id" => 2, "ticket_id" => 200},
+                {"id" => 1, "ticket_id" => 100},
+                {"id" => 1, "ticket_id" => 100},
               ]
               @httpclient.test_loopback_http_response << [
                 "HTTP/1.1 200",
@@ -150,12 +161,23 @@ module Embulk
                 }.to_json
               ].join("\r\n")
 
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: [{"id" => 100}, {"id" => 200}],
+                  count: 2,
+                  next_page: nil,
+                }.to_json
+              ].join("\r\n")
+
               handler = proc { }
               mock(handler).call(anything).twice
               client.ticket_metrics(false, &handler)
             end
 
-            test "fetch tickets with next_page" do
+            test "fetch ticket_metrics with next_page" do
               end_time = Time.now.to_i
 
               response_1 = [
@@ -163,7 +185,7 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  ticket_metrics: 100.times.map{|n| {"id" => n}},
+                  ticket_metrics: 100.times.map{|n| {"id" => n, "ticket_id" => n+1}},
                   count: 101,
                   next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
                 }.to_json
@@ -174,16 +196,81 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  ticket_metrics: [{"id" => 101}],
+                  ticket_metrics: [{"id" => 101, "ticket_id" => 101}],
                   count: 101,
+                }.to_json
+              ].join("\r\n")
+
+              response_3 = [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: 101.times.map{|n| {"id" => n+1}},
+                  count: 101,
+                  next_page: nil,
                 }.to_json
               ].join("\r\n")
 
               @httpclient.test_loopback_http_response << response_1
               @httpclient.test_loopback_http_response << response_2
+              @httpclient.test_loopback_http_response << response_3
 
               handler = proc { }
               mock(handler).call(anything).times(101)
+              client.ticket_metrics(false, &handler)
+            end
+
+            test "fetch missing ticket_metrics by comparing with list of all tickets" do
+              end_time = Time.now.to_i
+
+              response_1 = [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  ticket_metrics: 100.times.map{|n| {"id" => n, "ticket_id" => n+1}},
+                  count: 101,
+                  next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
+                }.to_json
+              ].join("\r\n")
+
+              response_2 = [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  ticket_metrics: [{"id" => 101, "ticket_id" => 101}],
+                  count: 101,
+                }.to_json
+              ].join("\r\n")
+
+              response_3 = [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: 102.times.map{|n| {"id" => n+1}},
+                  count: 102,
+                  next_page: nil,
+                }.to_json
+              ].join("\r\n")
+
+              # mock missing metrics: /api/v2/tickets/102/metrics.json
+              response_4 = [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                { ticket_metric: {"id" => 102, "ticket_id" => 102} }.to_json
+              ].join("\r\n")
+
+              @httpclient.test_loopback_http_response << response_1
+              @httpclient.test_loopback_http_response << response_2
+              @httpclient.test_loopback_http_response << response_3
+              @httpclient.test_loopback_http_response << response_4
+
+              handler = proc { }
+              mock(handler).call(anything).times(102)
               client.ticket_metrics(false, &handler)
             end
 
@@ -232,7 +319,8 @@ module Embulk
             end
 
             test "invoke export when partial=false" do
-              mock(client).export_parallel(anything, "ticket_fields")
+              # Added default `start_time`
+              mock(client).export_parallel(anything, "ticket_fields", 0)
               client.ticket_fields(false)
             end
           end
@@ -244,7 +332,8 @@ module Embulk
             end
 
             test "invoke export when partial=false" do
-              mock(client).export_parallel(anything, "ticket_forms")
+              # Added default `start_time`
+              mock(client).export_parallel(anything, "ticket_forms", 0)
               client.ticket_forms(false)
             end
           end

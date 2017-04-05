@@ -23,7 +23,7 @@ module Embulk
           httpclient = HTTPClient.new
           httpclient.connect_timeout = 240 # default:60 is not enough for huge data
           # httpclient.debug_dev = STDOUT
-          return set_auth(httpclient)
+          set_auth(httpclient)
         end
 
         def pool
@@ -81,7 +81,7 @@ module Embulk
             if partial
               export(path, target, &block)
             else
-              export_parallel(path, target, &block)
+              export_parallel(path, target, start_time, &block)
             end
           end
         end
@@ -102,7 +102,7 @@ module Embulk
 
         private
 
-        def export_parallel(path, key, workers = 5, &block)
+        def export_parallel(path, key, start_time = 0, &block)
           per_page = 100 # 100 is maximum https://developer.zendesk.com/rest_api/docs/core/introduction#pagination
           first_response = request(path, per_page: per_page, page: 1)
           first_fetched = JSON.parse(first_response.body)
@@ -110,44 +110,45 @@ module Embulk
           last_page_num = (total_count / per_page.to_f).ceil
           Embulk.logger.info "#{key} records=#{total_count} last_page=#{last_page_num}"
 
-          queue = Queue.new
-          (2..last_page_num).each do |page|
-            queue << page
-          end
           records = first_fetched[key]
-
           mutex = Mutex.new
-          threads = Array.new(workers) do |_|
-            thread = Thread.start do
-              loop do
-                break if queue.empty?
-                current_page = nil
-
-                begin
-                  Timeout.timeout(0.1) do
-                    # Somehow queue.pop(true) blocks... timeout is workaround for that
-                    current_page = queue.pop(true)
-                  end
-                rescue Timeout::Error, ThreadError
-                  break #=> ThreadError: queue empty
-                end
-
-                response = request(path, per_page: per_page, page: current_page)
-                fetched_records = extract_records_from_response(response, key)
-                mutex.synchronize do
-                  Embulk.logger.info "Fetched #{key} on page=#{current_page}"
-                  records.concat fetched_records
-                end
+          (2..last_page_num).each do |page|
+            pool.process do
+              rename_jruby_thread(Thread.current)
+              response = request(path, per_page: per_page, page: page)
+              fetched_records = extract_records_from_response(response, key)
+              mutex.synchronize do
+                Embulk.logger.info "Fetched #{key} on page=#{page} >>> size: #{fetched_records.length}"
+                records.concat fetched_records
               end
             end
-            rename_jruby_thread(thread)
-            thread
           end
-          threads.each(&:join)
 
-          records.uniq {|r| r["id"]}.each do |record|
+          pool.wait(:done)
+
+          known_ticket_ids = []
+          records.uniq { |r| r['id'] }.each do |record|
+            # known_ticket_ids: collect fetched ticket IDs, to exclude in next step
+            known_ticket_ids << record['ticket_id'] if key == 'ticket_metrics'
             block.call record
           end
+
+          # If target is 'ticket_metrics'
+          # need to double check with list of all tickets and pull missing ones
+          # Not explicitly stated in documents, but here is Zendesk support's response:
+          # > The ticket_metrics.json endpoint (list) will return live tickets. What you are experiencing is the cutoff of archived tickets.
+          # > I recommend the usage of the Incremental Exports api endpoint for retrieving "All" tickets from the beginning of time.
+          # > The ticket metrics api would be possibly better used by supplying a ticket ID to get the metrics of the particular ticket you wish to get get metrics on.
+          if key == 'ticket_metrics'
+            incremental_export('/api/v2/incremental/tickets', 'tickets', start_time, known_ticket_ids, false) do |ticket|
+              pool.process do
+                response = request("/api/v2/tickets/#{ticket['id']}/metrics.json")
+                metrics = JSON.parse(response.body)
+                block.call metrics['ticket_metric'] if metrics['ticket_metric']
+              end
+            end
+          end
+          pool.shutdown
           nil # this is necessary different with incremental_export
         end
 

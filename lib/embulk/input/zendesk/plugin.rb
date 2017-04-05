@@ -137,22 +137,26 @@ module Embulk
             end
           end
 
-          return task_report
+          task_report
         end
 
         private
 
         def fetch_related_object(record)
-          pool = Thread.pool(Client::THREADPOOL_SIZE)
-          (task[:includes] || []).each do |ent|
+          return record unless task[:includes] && !task[:includes].empty?
+          task[:includes].each do |ent|
             pool.process { record[ent] = client.fetch_subresource(record['id'], task[:target], ent) }
           end
-          pool.shutdown
+          pool.wait(:done)
           record
         end
 
         def client
           Client.new(task)
+        end
+
+        def pool
+          @pool ||= Thread.pool([Client::THREADPOOL_SIZE, (task[:includes] || []).length].max)
         end
 
         def preview?

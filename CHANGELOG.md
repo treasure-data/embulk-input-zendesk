@@ -1,3 +1,7 @@
+## 0.2.0 - 2017-04-07
+* [fixed] `time_metrics` is cutoff (archived), need to compare with list of all `tickets` [#23](https://github.com/treasure-data/embulk-input-zendesk/pull/23)
+* [enhancement] Switch to thread pool for `export_parallel()` method [#23](https://github.com/treasure-data/embulk-input-zendesk/pull/23)
+
 ## 0.1.15 - 2017-03-30
 * [fixed] Rename JRuby thread, to not expose runtime path [#21](https://github.com/treasure-data/embulk-input-zendesk/pull/21)
 

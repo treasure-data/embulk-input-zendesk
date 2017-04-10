@@ -110,28 +110,28 @@ module Embulk
           last_page_num = (total_count / per_page.to_f).ceil
           Embulk.logger.info "#{key} records=#{total_count} last_page=#{last_page_num}"
 
-          records = first_fetched[key]
-          mutex = Mutex.new
+          known_ticket_ids = []
+          first_fetched[key].uniq { |r| r['id'] }.each do |record|
+            block.call record
+            # known_ticket_ids: collect fetched ticket IDs, to exclude in next step
+            known_ticket_ids << record['ticket_id'] if key == 'ticket_metrics'
+          end
+
           (2..last_page_num).each do |page|
             pool.process do
               rename_jruby_thread(Thread.current)
               response = request(path, per_page: per_page, page: page)
               fetched_records = extract_records_from_response(response, key)
-              mutex.synchronize do
-                Embulk.logger.info "Fetched #{key} on page=#{page} >>> size: #{fetched_records.length}"
-                records.concat fetched_records
+              Embulk.logger.info "Fetched #{key} on page=#{page} >>> size: #{fetched_records.length}"
+              fetched_records.uniq { |r| r['id'] }.each do |record|
+                block.call record
+                # known_ticket_ids: collect fetched ticket IDs, to exclude in next step
+                known_ticket_ids << record['ticket_id'] if key == 'ticket_metrics'
               end
             end
           end
 
           pool.wait(:done)
-
-          known_ticket_ids = []
-          records.uniq { |r| r['id'] }.each do |record|
-            # known_ticket_ids: collect fetched ticket IDs, to exclude in next step
-            known_ticket_ids << record['ticket_id'] if key == 'ticket_metrics'
-            block.call record
-          end
 
           # If target is 'ticket_metrics'
           # need to double check with list of all tickets and pull missing ones
@@ -140,7 +140,7 @@ module Embulk
           # > I recommend the usage of the Incremental Exports api endpoint for retrieving "All" tickets from the beginning of time.
           # > The ticket metrics api would be possibly better used by supplying a ticket ID to get the metrics of the particular ticket you wish to get get metrics on.
           if key == 'ticket_metrics'
-            incremental_export('/api/v2/incremental/tickets', 'tickets', start_time, known_ticket_ids, false) do |ticket|
+            incremental_export('/api/v2/incremental/tickets.json', 'tickets', start_time, known_ticket_ids, false) do |ticket|
               pool.process do
                 response = request("/api/v2/tickets/#{ticket['id']}/metrics.json")
                 metrics = JSON.parse(response.body)

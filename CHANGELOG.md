@@ -1,3 +1,6 @@
+## 0.2.1 - 2017-04-11
+* [fixed] Mem leak in `export_parallel()` method [#25](https://github.com/treasure-data/embulk-input-zendesk/pull/25)
+
 ## 0.2.0 - 2017-04-07
 * [fixed] `time_metrics` is cutoff (archived), need to compare with list of all `tickets` [#23](https://github.com/treasure-data/embulk-input-zendesk/pull/23)
 * [enhancement] Switch to thread pool for `export_parallel()` method [#23](https://github.com/treasure-data/embulk-input-zendesk/pull/23)

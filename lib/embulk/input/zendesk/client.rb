@@ -20,10 +20,16 @@ module Embulk
         end
 
         def httpclient
-          httpclient = HTTPClient.new
-          httpclient.connect_timeout = 240 # default:60 is not enough for huge data
-          # httpclient.debug_dev = STDOUT
-          set_auth(httpclient)
+          # multi-threading + retry can create lot of instances, and each will keep connecting
+          # re-using instance in multi threads can help to omit cleanup code
+          @httpclient ||=
+            begin
+              clnt = HTTPClient.new
+              clnt.connect_timeout = 240 # default:60 is not enough for huge data
+              clnt.receive_timeout = 240 # better change default receive_timeout too
+              # httpclient.debug_dev = STDOUT
+              set_auth(clnt)
+            end
         end
 
         def pool

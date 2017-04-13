@@ -609,6 +609,13 @@ module Embulk
           end
         end
 
+        sub_test_case "should not create new instance of httpclient" do
+          test "not create new instance when re-call" do
+            client = Client.new(login_url: login_url, auth_method: "token", username: username, token: token)
+            assert client.httpclient == client.httpclient
+          end
+        end
+
         def login_url
           "http://example.com"
         end

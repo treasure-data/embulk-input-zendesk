@@ -1,3 +1,6 @@
+## 0.2.2 - 2017-04-14
+* [enhancement] Improve `httpclient` usage: re-use client instance [#27](https://github.com/treasure-data/embulk-input-zendesk/pull/27)
+
 ## 0.2.1 - 2017-04-11
 * [fixed] Mem leak in `export_parallel()` method [#25](https://github.com/treasure-data/embulk-input-zendesk/pull/25)
 

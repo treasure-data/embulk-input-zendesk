@@ -211,7 +211,10 @@ module Embulk
               next if known_ids.include?(record["id"])
 
               known_ids << record["id"]
-              pool.process { yield(record) }
+              pool.process {
+                rename_jruby_thread(Thread.current)
+                yield(record)
+              }
               actual_fetched += 1
             end
             Embulk.logger.info "Fetched #{actual_fetched} records from start_time:#{start_time} (#{Time.at(start_time)}) within #{Time.now.to_i - start_fetching.to_i} seconds"

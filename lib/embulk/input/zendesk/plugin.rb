@@ -121,7 +121,7 @@ module Embulk
             mutex.synchronize do
               page_builder.add(values)
               buf_size += 1
-              if buf_size > BUFFER_SIZE
+              if buf_size >= BUFFER_SIZE
                 page_builder.flush
                 buf_size = 0
                 Embulk.logger.info "Flushed #{BUFFER_SIZE} records of #{task[:target]}"

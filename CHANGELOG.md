@@ -1,3 +1,6 @@
+## 0.2.3 - 2017-04-18
+* [enhancement] Add flushing to `page_builder` [#29](https://github.com/treasure-data/embulk-input-zendesk/pull/29)
+
 ## 0.2.2 - 2017-04-14
 * [enhancement] Improve `httpclient` usage: re-use client instance [#27](https://github.com/treasure-data/embulk-input-zendesk/pull/27)
 

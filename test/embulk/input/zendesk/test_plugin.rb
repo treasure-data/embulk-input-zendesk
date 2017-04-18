@@ -549,6 +549,42 @@ module Embulk
             end
           end
 
+          sub_test_case "flush each 10k records" do
+            setup do
+              stub(Embulk).logger { Logger.new(File::NULL) }
+              stub(@plugin).preview? { false }
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: (1..20000).map { |i| { 'id' => i } },
+                  count: 20000,
+                  end_time: 0,
+                }.to_json
+              ].join("\r\n")
+              # to stop pagination (count < 1000)
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  tickets: [{ 'id' => 20001 }],
+                  count: 1,
+                  end_time: 0,
+                }.to_json
+              ].join("\r\n")
+            end
+
+            test "flush is called twice" do
+              mock(page_builder).add(anything).times(20001)
+              mock(page_builder).flush.times(2)
+              mock(page_builder).finish
+
+              @plugin.run
+            end
+          end
+
         end
 
         def yml

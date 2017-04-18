@@ -147,11 +147,9 @@ module Embulk
           # > The ticket metrics api would be possibly better used by supplying a ticket ID to get the metrics of the particular ticket you wish to get get metrics on.
           if key == 'ticket_metrics'
             incremental_export('/api/v2/incremental/tickets.json', 'tickets', start_time, known_ticket_ids, false) do |ticket|
-              pool.process do
-                response = request("/api/v2/tickets/#{ticket['id']}/metrics.json")
-                metrics = JSON.parse(response.body)
-                block.call metrics['ticket_metric'] if metrics['ticket_metric']
-              end
+              response = request("/api/v2/tickets/#{ticket['id']}/metrics.json")
+              metrics = JSON.parse(response.body)
+              block.call metrics['ticket_metric'] if metrics['ticket_metric']
             end
           end
           pool.shutdown
@@ -213,7 +211,10 @@ module Embulk
               next if known_ids.include?(record["id"])
 
               known_ids << record["id"]
-              pool.process { yield(record) }
+              pool.process {
+                rename_jruby_thread(Thread.current)
+                yield(record)
+              }
               actual_fetched += 1
             end
             Embulk.logger.info "Fetched #{actual_fetched} records from start_time:#{start_time} (#{Time.at(start_time)}) within #{Time.now.to_i - start_fetching.to_i} seconds"

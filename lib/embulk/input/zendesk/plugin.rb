@@ -1,6 +1,8 @@
 require 'perfect_retry'
 require 'thread/pool'
 
+Thread::Pool.abort_on_exception = true
+
 module Embulk
   module Input
     module Zendesk

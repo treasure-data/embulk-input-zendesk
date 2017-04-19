@@ -166,7 +166,15 @@ module Embulk
         end
 
         def pool
-          @pool ||= Thread.pool([Client::THREADPOOL_SIZE, (task[:includes] || []).length].max)
+          includes_length = (task[:includes] || []).length
+          @pool ||=
+            begin
+              if includes_length < Client::THREADPOOL_MIN_SIZE
+                Thread.pool(includes_length)
+              else
+                Thread.pool(Client::THREADPOOL_MIN_SIZE, Client::THREADPOOL_MAX_SIZE)
+              end
+            end
         end
 
         def preview?

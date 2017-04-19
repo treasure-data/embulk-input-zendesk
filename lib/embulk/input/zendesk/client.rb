@@ -10,7 +10,8 @@ module Embulk
 
         PARTIAL_RECORDS_SIZE = 50
         PARTIAL_RECORDS_BYTE_SIZE = 50000
-        THREADPOOL_SIZE = 5
+        THREADPOOL_MIN_SIZE = 50
+        THREADPOOL_MAX_SIZE = 100
         AVAILABLE_INCREMENTAL_EXPORT = %w(tickets users organizations ticket_events).freeze
         UNAVAILABLE_INCREMENTAL_EXPORT = %w(ticket_fields ticket_forms ticket_metrics).freeze
         AVAILABLE_TARGETS = AVAILABLE_INCREMENTAL_EXPORT + UNAVAILABLE_INCREMENTAL_EXPORT
@@ -33,7 +34,7 @@ module Embulk
         end
 
         def pool
-          @pool ||= Thread.pool(THREADPOOL_SIZE)
+          @pool ||= Thread.pool(THREADPOOL_MIN_SIZE, THREADPOOL_MAX_SIZE)
         end
 
         def validate_config
@@ -123,6 +124,7 @@ module Embulk
             known_ticket_ids << record['ticket_id'] if key == 'ticket_metrics'
           end
 
+          lock = Mutex.new
           (2..last_page_num).each do |page|
             pool.process do
               rename_jruby_thread(Thread.current)
@@ -132,7 +134,7 @@ module Embulk
               fetched_records.uniq { |r| r['id'] }.each do |record|
                 block.call record
                 # known_ticket_ids: collect fetched ticket IDs, to exclude in next step
-                known_ticket_ids << record['ticket_id'] if key == 'ticket_metrics'
+                lock.synchronize { known_ticket_ids << record['ticket_id'] if key == 'ticket_metrics' }
               end
             end
           end

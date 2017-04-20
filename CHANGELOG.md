@@ -1,3 +1,6 @@
+## 0.2.4 - 2017-04-20
+* [fixed] Fix thread pool bottleneck [#31](https://github.com/treasure-data/embulk-input-zendesk/pull/31)
+
 ## 0.2.3 - 2017-04-18
 * [enhancement] Add flushing to `page_builder` [#29](https://github.com/treasure-data/embulk-input-zendesk/pull/29)
 

@@ -1,6 +1,6 @@
 require "strscan"
 require "httpclient"
-require 'thread/pool'
+require 'concurrent'
 
 module Embulk
   module Input
@@ -10,8 +10,6 @@ module Embulk
 
         PARTIAL_RECORDS_SIZE = 50
         PARTIAL_RECORDS_BYTE_SIZE = 50000
-        THREADPOOL_MIN_SIZE = 50
-        THREADPOOL_MAX_SIZE = 100
         AVAILABLE_INCREMENTAL_EXPORT = %w(tickets users organizations ticket_events).freeze
         UNAVAILABLE_INCREMENTAL_EXPORT = %w(ticket_fields ticket_forms ticket_metrics).freeze
         AVAILABLE_TARGETS = AVAILABLE_INCREMENTAL_EXPORT + UNAVAILABLE_INCREMENTAL_EXPORT
@@ -33,8 +31,13 @@ module Embulk
             end
         end
 
-        def pool
-          @pool ||= Thread.pool(THREADPOOL_MIN_SIZE, THREADPOOL_MAX_SIZE)
+        def get_pool
+          Concurrent::ThreadPoolExecutor.new(
+            min_threads: 10,
+            max_threads: 100,
+            max_queue: 10_000,
+            fallback_policy: :caller_runs
+          )
         end
 
         def validate_config
@@ -94,7 +97,6 @@ module Embulk
         end
 
         def fetch_subresource(record_id, base, target)
-          rename_jruby_thread(Thread.current)
           Embulk.logger.info "Fetching subresource #{target} of #{base}:#{record_id}"
           response = request("/api/v2/#{base}/#{record_id}/#{target}.json")
           return [] if response.status == 404
@@ -125,21 +127,22 @@ module Embulk
           end
 
           lock = Mutex.new
+          pool = get_pool
           (2..last_page_num).each do |page|
-            pool.process do
-              rename_jruby_thread(Thread.current)
+            pool.post do
               response = request(path, per_page: per_page, page: page)
               fetched_records = extract_records_from_response(response, key)
               Embulk.logger.info "Fetched #{key} on page=#{page} >>> size: #{fetched_records.length}"
               fetched_records.uniq { |r| r['id'] }.each do |record|
                 block.call record
                 # known_ticket_ids: collect fetched ticket IDs, to exclude in next step
-                lock.synchronize { known_ticket_ids << record['ticket_id'] if key == 'ticket_metrics' }
+                lock.synchronize { known_ticket_ids << record['ticket_id'] } if key == 'ticket_metrics'
               end
             end
           end
 
-          pool.wait(:done)
+          pool.shutdown
+          pool.wait_for_termination
 
           # If target is 'ticket_metrics'
           # need to double check with list of all tickets and pull missing ones
@@ -154,7 +157,6 @@ module Embulk
               block.call metrics['ticket_metric'] if metrics['ticket_metric']
             end
           end
-          pool.shutdown
           nil # this is necessary different with incremental_export
         end
 
@@ -184,6 +186,7 @@ module Embulk
             return
           end
 
+          pool = get_pool
           last_data = loop do
             start_fetching = Time.now
             response = request(path, {start_time: start_time})
@@ -213,10 +216,7 @@ module Embulk
               next if known_ids.include?(record["id"])
 
               known_ids << record["id"]
-              pool.process {
-                rename_jruby_thread(Thread.current)
-                yield(record)
-              }
+              pool.post { yield(record) }
               actual_fetched += 1
             end
             Embulk.logger.info "Fetched #{actual_fetched} records from start_time:#{start_time} (#{Time.at(start_time)}) within #{Time.now.to_i - start_fetching.to_i} seconds"
@@ -229,6 +229,7 @@ module Embulk
           end
 
           pool.shutdown
+          pool.wait_for_termination
           last_data
         end
 
@@ -386,15 +387,6 @@ module Embulk
           end
         end
 
-        # JRuby named spawn thread with runtime absolute path, this method is to avoid that info in logs
-        def rename_jruby_thread(thread)
-          return unless defined?(JRuby)
-          thread_r = JRuby.reference(thread)
-          native_name = thread_r.native_thread.name
-          # https://github.com/jruby/jruby/blob/9.0.4.0/core/src/main/java/org/jruby/RubyThread.java#L563
-          path_index = native_name.index(':') || 0
-          thread_r.native_thread.name = native_name[0..path_index-1]
-        end
       end
     end
   end

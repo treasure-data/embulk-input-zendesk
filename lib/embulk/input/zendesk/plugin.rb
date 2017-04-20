@@ -1,14 +1,10 @@
 require 'perfect_retry'
-require 'thread/pool'
-
-Thread::Pool.abort_on_exception = true
 
 module Embulk
   module Input
     module Zendesk
       class Plugin < InputPlugin
         ::Embulk::Plugin.register_input("zendesk", self)
-        BUFFER_LENGTH = 10000 # flush each 10k records
 
         def self.transaction(config, &control)
           task = config_to_task(config)
@@ -116,18 +112,11 @@ module Embulk
 
           mutex = Mutex.new
           fetching_start_at = Time.now
-          buf_size = 0
           last_data = client.public_send(method, *args) do |record|
             record = fetch_related_object(record)
             values = extract_values(record)
             mutex.synchronize do
               page_builder.add(values)
-              buf_size += 1
-              if buf_size >= BUFFER_LENGTH
-                page_builder.flush
-                buf_size = 0
-                Embulk.logger.info "Flushed #{BUFFER_LENGTH} records of #{task[:target]}"
-              end
             end
             break if preview? # NOTE: preview take care only 1 record. subresources fetching is slow.
           end
@@ -155,26 +144,13 @@ module Embulk
         def fetch_related_object(record)
           return record unless task[:includes] && !task[:includes].empty?
           task[:includes].each do |ent|
-            pool.process { record[ent] = client.fetch_subresource(record['id'], task[:target], ent) }
+            record[ent] = client.fetch_subresource(record['id'], task[:target], ent)
           end
-          pool.wait(:done)
           record
         end
 
         def client
           Client.new(task)
-        end
-
-        def pool
-          includes_length = (task[:includes] || []).length
-          @pool ||=
-            begin
-              if includes_length < Client::THREADPOOL_MIN_SIZE
-                Thread.pool(includes_length)
-              else
-                Thread.pool(Client::THREADPOOL_MIN_SIZE, Client::THREADPOOL_MAX_SIZE)
-              end
-            end
         end
 
         def preview?

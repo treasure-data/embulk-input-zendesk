@@ -577,6 +577,7 @@ module Embulk
             end
 
             test "flush is called twice" do
+              omit("This test is no longer valid, flushing is removed now")
               mock(page_builder).add(anything).times(20001)
               mock(page_builder).flush.times(2)
               mock(page_builder).finish

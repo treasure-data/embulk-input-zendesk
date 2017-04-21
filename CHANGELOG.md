@@ -1,3 +1,6 @@
+## 0.2.5 - 2017-04-21
+* [enhancement] Replace `thread` gem with `concurrent-ruby`, it's more robust and has better queue management [#33](https://github.com/treasure-data/embulk-input-zendesk/pull/33)
+
 ## 0.2.4 - 2017-04-20
 * [fixed] Fix thread pool bottleneck [#31](https://github.com/treasure-data/embulk-input-zendesk/pull/31)
 

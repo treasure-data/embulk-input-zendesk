@@ -82,8 +82,18 @@ module Embulk
         end
 
         def self.config_to_task(config)
+          login_url = config.param("login_url", :string)
+          valid_url = /^(https?:\/\/)?[a-z0-9]+([\-\.]{1}[a-z0-9]+)*\.[a-z]{2,5}(:[0-9]{1,5})?(\/.*)?$/ix
+          unless valid_url.match(login_url)
+            raise Embulk::ConfigError.new("Invalid Login URL: #{login_url}")
+          end
+          # Auto add HTTPS scheme if none exists
+          if login_url !~ /^https?:\/\//
+            Embulk.logger.warn "Missing URI scheme, auto prefix with 'https://'"
+            login_url = 'https://' + login_url
+          end
           {
-            login_url: config.param("login_url", :string),
+            login_url: login_url,
             auth_method: config.param("auth_method", :string, default: "basic"),
             target: config.param("target", :string),
             username: config.param("username", :string, default: nil),

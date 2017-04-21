@@ -160,6 +160,7 @@ module Embulk
           nil # this is necessary different with incremental_export
         end
 
+        # this method is used for Preview
         def export(path, key, page = 1, &block)
           per_page = PARTIAL_RECORDS_SIZE
           Embulk.logger.info("Fetching #{path} with page=#{page} (partial)")

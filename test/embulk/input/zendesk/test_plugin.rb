@@ -586,6 +586,36 @@ module Embulk
             end
           end
 
+          sub_test_case ".config_to_task" do
+            data do
+              [
+                ['http:/example.com', 'http:/example.com'],
+                ['htt://example.com', 'htt://example.com'],
+                ['http://.example.com', 'http://.example.com'],
+                ['://example.com', '://example.com'],
+                ['http://example.', 'http://example.'],
+              ]
+            end
+            test "verify `login_url`" do |login_url|
+              conf = YAML.load fixture_load(yml)
+              conf['in']['login_url'] = login_url
+              config = Embulk::DataSource.new(conf['in'])
+              assert_raise Embulk::ConfigError do
+                Plugin.config_to_task(config)
+              end
+            end
+
+            test "auto add URI scheme to `login_url`" do
+              conf = YAML.load fixture_load(yml)
+              conf['in']['login_url'] = 'example.com'
+              config = Embulk::DataSource.new(conf['in'])
+              assert_nothing_raised do
+                task = Plugin.config_to_task(config)
+                assert_equal task[:login_url], 'https://example.com'
+              end
+            end
+          end
+
         end
 
         def yml

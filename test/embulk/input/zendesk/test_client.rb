@@ -6,7 +6,7 @@ require "embulk/input/zendesk"
 require "override_assert_raise"
 require "fixture_helper"
 require "capture_io"
-
+require "concurrent/atomic/atomic_fixnum"
 module Embulk
   module Input
     module Zendesk
@@ -49,7 +49,40 @@ module Embulk
             end
           end
         end
-
+        sub_test_case "ticket_metrics incremental export" do
+          def client
+            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
+          end
+          setup do
+            stub(Embulk).logger { Logger.new(File::NULL) }
+            @httpclient = client.httpclient
+            stub(client).httpclient { @httpclient }
+          end
+          test "fetch ticket_metrics with start_time set" do
+            records = 100.times.map{|n| {"id"=> n, "ticket_id"=>n+1}}
+            start_time = 1488535542
+            @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                    metric_sets: records,
+                    count: records.size,
+                    next_page: nil,
+                }.to_json
+            ].join("\r\n")
+            # lock = Mutex.new
+            result_array = records
+            counter=Concurrent::AtomicFixnum.new(0)
+            handler = proc { |record|
+              assert_include(result_array,record)
+              counter.increment
+            }
+            proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json", {:include => "metric_sets", :start_time => start_time}, anything)
+            client.ticket_metrics(false, start_time, &handler)
+            assert_equal(counter.value, result_array.size)
+          end
+        end
         sub_test_case "ticket_metrics (non-incremental export)" do
           sub_test_case "partial" do
             def client
@@ -73,7 +106,8 @@ module Embulk
                 "",
                 {
                   ticket_metrics: records,
-                  next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
+                  next_page: "https://treasuredata.zendesk.com/api/v2/incremental/tickets
+.json?include=metric_sets&start_time=1488535542",
                 }.to_json
               ].join("\r\n")
 
@@ -101,14 +135,16 @@ module Embulk
               second_results = [
                 {"id" => 101, "ticket_id" => 101}
               ]
+              end_time = 1488535542
               @httpclient.test_loopback_http_response << [
                 "HTTP/1.1 200",
                 "Content-Type: application/json",
                 "",
                 {
-                  ticket_metrics: records,
-                  count: records.length + second_results.length,
-                  next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
+                  metric_sets: records,
+                  count: 1000,
+                  next_page: "#{login_url}/api/v2/incremental/tickets.json?include=metric_sets&start_time=1488535542",
+                  end_time: end_time
                 }.to_json
               ].join("\r\n")
 
@@ -117,34 +153,27 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  ticket_metrics: second_results,
-                  count: records.length + second_results.length,
+                  metric_sets: second_results,
+                  count: second_results.size,
                   next_page: nil,
                 }.to_json
               ].join("\r\n")
+              # lock = Mutex.new
+              result_array = records + second_results
+              counter=Concurrent::AtomicFixnum.new(0)
+              handler = proc { |record|
+                  assert_include(result_array,record)
+                  counter.increment
+              }
 
-              @httpclient.test_loopback_http_response << [
-                "HTTP/1.1 200",
-                "Content-Type: application/json",
-                "",
-                {
-                  tickets: 101.times.map{|n| {"id" => n+1}},
-                  count: 101,
-                  next_page: nil,
-                }.to_json
-              ].join("\r\n")
+              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json", {:include => "metric_sets", :start_time => 0}, anything)
+              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json", {:include => "metric_sets",:start_time => end_time}, anything)
 
-              handler = proc { }
-              records.each do |record|
-                mock(handler).call(record)
-              end
-              second_results.each do |record|
-                mock(handler).call(record)
-              end
               client.ticket_metrics(false, &handler)
+              assert_equal(counter.value, result_array.size)
             end
 
-            test "fetch tickets without duplicated" do
+            test "fetch tickets metrics without duplicated" do
               records = [
                 {"id" => 1, "ticket_id" => 100},
                 {"id" => 2, "ticket_id" => 200},
@@ -156,38 +185,27 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  ticket_metrics: records,
+                  metric_sets: records,
                   count: records.length,
                 }.to_json
               ].join("\r\n")
-
-              @httpclient.test_loopback_http_response << [
-                "HTTP/1.1 200",
-                "Content-Type: application/json",
-                "",
-                {
-                  tickets: [{"id" => 100}, {"id" => 200}],
-                  count: 2,
-                  next_page: nil,
-                }.to_json
-              ].join("\r\n")
-
-              handler = proc { }
-              mock(handler).call(anything).twice
+              counter = Concurrent::AtomicFixnum.new(0)
+              handler = proc {counter.increment}
               client.ticket_metrics(false, &handler)
+              assert_equal(2,counter.value)
             end
 
             test "fetch ticket_metrics with next_page" do
-              end_time = Time.now.to_i
-
+              end_time = 1488535542
               response_1 = [
                 "HTTP/1.1 200",
                 "Content-Type: application/json",
                 "",
                 {
-                  ticket_metrics: 100.times.map{|n| {"id" => n, "ticket_id" => n+1}},
-                  count: 101,
-                  next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
+                  metric_sets: 100.times.map{|n| {"id" => n, "ticket_id" => n+1}},
+                  count: 1001,
+                  end_time: end_time,
+                  next_page: "#{login_url}/api/v2/incremental/tickets.json?include=metric_sets&start_time=1488535542",
                 }.to_json
               ].join("\r\n")
 
@@ -196,82 +214,20 @@ module Embulk
                 "Content-Type: application/json",
                 "",
                 {
-                  ticket_metrics: [{"id" => 101, "ticket_id" => 101}],
+                  metric_sets: [{"id" => 101, "ticket_id" => 101}],
                   count: 101,
                 }.to_json
               ].join("\r\n")
 
-              response_3 = [
-                "HTTP/1.1 200",
-                "Content-Type: application/json",
-                "",
-                {
-                  tickets: 101.times.map{|n| {"id" => n+1}},
-                  count: 101,
-                  next_page: nil,
-                }.to_json
-              ].join("\r\n")
 
               @httpclient.test_loopback_http_response << response_1
               @httpclient.test_loopback_http_response << response_2
-              @httpclient.test_loopback_http_response << response_3
-
-              handler = proc { }
-              mock(handler).call(anything).times(101)
+              counter = Concurrent::AtomicFixnum.new(0)
+              handler = proc { counter.increment }
+              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json",{:include=>"metric_sets", :start_time=>0},anything)
+              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json",{:include=>"metric_sets", :start_time=>end_time},anything)
               client.ticket_metrics(false, &handler)
-            end
-
-            test "fetch missing ticket_metrics by comparing with list of all tickets" do
-              end_time = Time.now.to_i
-
-              response_1 = [
-                "HTTP/1.1 200",
-                "Content-Type: application/json",
-                "",
-                {
-                  ticket_metrics: 100.times.map{|n| {"id" => n, "ticket_id" => n+1}},
-                  count: 101,
-                  next_page: "https://treasuredata.zendesk.com/api/v2/ticket_metrics.json?page=2",
-                }.to_json
-              ].join("\r\n")
-
-              response_2 = [
-                "HTTP/1.1 200",
-                "Content-Type: application/json",
-                "",
-                {
-                  ticket_metrics: [{"id" => 101, "ticket_id" => 101}],
-                  count: 101,
-                }.to_json
-              ].join("\r\n")
-
-              response_3 = [
-                "HTTP/1.1 200",
-                "Content-Type: application/json",
-                "",
-                {
-                  tickets: 102.times.map{|n| {"id" => n+1}},
-                  count: 102,
-                  next_page: nil,
-                }.to_json
-              ].join("\r\n")
-
-              # mock missing metrics: /api/v2/tickets/102/metrics.json
-              response_4 = [
-                "HTTP/1.1 200",
-                "Content-Type: application/json",
-                "",
-                { ticket_metric: {"id" => 102, "ticket_id" => 102} }.to_json
-              ].join("\r\n")
-
-              @httpclient.test_loopback_http_response << response_1
-              @httpclient.test_loopback_http_response << response_2
-              @httpclient.test_loopback_http_response << response_3
-              @httpclient.test_loopback_http_response << response_4
-
-              handler = proc { }
-              mock(handler).call(anything).times(102)
-              client.ticket_metrics(false, &handler)
+              assert_equal(101, counter.value)
             end
 
             test "raise DataError when invalid JSON response" do

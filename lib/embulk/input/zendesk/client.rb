@@ -10,8 +10,8 @@ module Embulk
 
         PARTIAL_RECORDS_SIZE = 50
         PARTIAL_RECORDS_BYTE_SIZE = 50000
-        AVAILABLE_INCREMENTAL_EXPORT = %w(tickets users organizations ticket_events).freeze
-        UNAVAILABLE_INCREMENTAL_EXPORT = %w(ticket_fields ticket_forms ticket_metrics).freeze
+        AVAILABLE_INCREMENTAL_EXPORT = %w(tickets users organizations ticket_events ticket_metrics).freeze
+        UNAVAILABLE_INCREMENTAL_EXPORT = %w(ticket_fields ticket_forms).freeze
         AVAILABLE_TARGETS = AVAILABLE_INCREMENTAL_EXPORT + UNAVAILABLE_INCREMENTAL_EXPORT
 
         def initialize(config)
@@ -84,6 +84,24 @@ module Embulk
           end
         end
 
+        # Ticket metrics will need to be export using both the non incremental and incremental on ticket
+        # We provide support by filter out ticket_metrics with created at smaller than start time
+        # while passing the incremental start time to the incremental ticket/ticket_metrics export
+        %w(ticket_metrics).each do |target|
+          define_method(target) do |partial = true, start_time = 0, &block|
+            path = "/api/v2/incremental/tickets.json"
+            if partial
+              path = "/api/v2/#{target}.json"
+              # If partial export then we need to use the old end point. Since new end point return both ticket and
+              # ticket metric with ticket come first so the current approach that cut off the response packet won't work
+              # Since partial is only use for preview and guess so this should be fine
+              export(path, target, &block)
+            else
+              incremental_export(path, "metric_sets", start_time, [], partial,{include: "metric_sets"}, &block)
+            end
+          end
+        end
+
         # they have non-incremental API only
         UNAVAILABLE_INCREMENTAL_EXPORT.each do |target|
           define_method(target) do |partial = true, start_time = 0, &block|
@@ -119,14 +137,11 @@ module Embulk
           last_page_num = (total_count / per_page.to_f).ceil
           Embulk.logger.info "#{key} records=#{total_count} last_page=#{last_page_num}"
 
-          known_ticket_ids = []
           first_fetched[key].uniq { |r| r['id'] }.each do |record|
             block.call record
             # known_ticket_ids: collect fetched ticket IDs, to exclude in next step
-            known_ticket_ids << record['ticket_id'] if key == 'ticket_metrics'
           end
 
-          lock = Mutex.new
           pool = get_pool
           (2..last_page_num).each do |page|
             pool.post do
@@ -135,8 +150,6 @@ module Embulk
               Embulk.logger.info "Fetched #{key} on page=#{page} >>> size: #{fetched_records.length}"
               fetched_records.uniq { |r| r['id'] }.each do |record|
                 block.call record
-                # known_ticket_ids: collect fetched ticket IDs, to exclude in next step
-                lock.synchronize { known_ticket_ids << record['ticket_id'] } if key == 'ticket_metrics'
               end
             end
           end
@@ -144,19 +157,6 @@ module Embulk
           pool.shutdown
           pool.wait_for_termination
 
-          # If target is 'ticket_metrics'
-          # need to double check with list of all tickets and pull missing ones
-          # Not explicitly stated in documents, but here is Zendesk support's response:
-          # > The ticket_metrics.json endpoint (list) will return live tickets. What you are experiencing is the cutoff of archived tickets.
-          # > I recommend the usage of the Incremental Exports api endpoint for retrieving "All" tickets from the beginning of time.
-          # > The ticket metrics api would be possibly better used by supplying a ticket ID to get the metrics of the particular ticket you wish to get get metrics on.
-          if key == 'ticket_metrics'
-            incremental_export('/api/v2/incremental/tickets.json', 'tickets', start_time, known_ticket_ids, false) do |ticket|
-              response = request("/api/v2/tickets/#{ticket['id']}/metrics.json")
-              metrics = JSON.parse(response.body)
-              block.call metrics['ticket_metric'] if metrics['ticket_metric']
-            end
-          end
           nil # this is necessary different with incremental_export
         end
 
@@ -177,9 +177,9 @@ module Embulk
           end
         end
 
-        def incremental_export(path, key, start_time = 0, known_ids = [], partial = true, &block)
+        def incremental_export(path, key, start_time = 0, known_ids = [], partial = true,query = {}, &block)
           if partial
-            records = request_partial(path, {start_time: start_time}).first(5)
+            records = request_partial(path, query.merge({start_time: start_time})).first(5)
             records.uniq{|r| r["id"]}.each do |record|
               block.call record
             end
@@ -189,7 +189,7 @@ module Embulk
           pool = get_pool
           last_data = loop do
             start_fetching = Time.now
-            response = request(path, {start_time: start_time})
+            response = request(path, query.merge({start_time: start_time}))
             begin
               data = JSON.parse(response.body)
             rescue => e

@@ -1,3 +1,6 @@
+## 0.2.6 - 2017-05-23
+* [enhancement] Enable incremental loading for ticket_metrics
+
 ## 0.2.5 - 2017-04-21
 * [enhancement] Replace `thread` gem with `concurrent-ruby`, it's more robust and has better queue management [#33](https://github.com/treasure-data/embulk-input-zendesk/pull/33)
 

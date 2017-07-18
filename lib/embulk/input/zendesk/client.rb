@@ -183,7 +183,7 @@ module Embulk
                 actual_fetched = 0
                 data = JSON.parse(response.body)
                 # no key found in response occasionally => retry
-                raise TempError unless data.key? key
+                raise TempError, "No '#{key}' found in JSON response" unless data.key? key
                 data[key].each do |record|
                   # https://developer.zendesk.com/rest_api/docs/core/incremental_export#excluding-system-updates
                   # "generated_timestamp" will be updated when Zendesk internal changing
@@ -385,9 +385,9 @@ module Embulk
           pool.wait_for_termination
           Embulk.logger.debug "ThreadPool shutdown? #{pool.shutdown?}"
         end
+      end
 
-        class TempError < StandardError
-        end
+      class TempError < StandardError
       end
     end
   end

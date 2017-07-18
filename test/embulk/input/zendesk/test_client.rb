@@ -572,6 +572,63 @@ module Embulk
           end
         end
 
+        sub_test_case "ensure thread pool is shutdown with/without errors, retry for TempError" do
+          def client
+            @client ||= Client.new(login_url: login_url, auth_method: "oauth", access_token: access_token, retry_limit: 1, retry_initial_wait_sec: 0)
+          end
+
+          setup do
+            stub(Embulk).logger { Logger.new(File::NULL) }
+            @httpclient = client.httpclient
+            stub(client).httpclient { @httpclient }
+            @pool = Concurrent::ThreadPoolExecutor.new
+            stub(client).create_pool { @pool }
+          end
+          test "should shutdown pool - without error" do
+            @httpclient.test_loopback_http_response << [
+              "HTTP/1.1 200",
+              "Content-Type: application/json",
+              "",
+              {
+                ticket_fields: [{ id: 1 }],
+                count: 1
+              }.to_json
+            ].join("\r\n")
+            handler = proc { }
+            client.ticket_fields(false, &handler)
+            assert_equal(true, @pool.shutdown?)
+          end
+
+          test "should shutdown pool - with TempError (retry)" do
+            response = [
+              "HTTP/1.1 200",
+              "Content-Type: application/json",
+              "",
+              { }.to_json # no required key: `tickets`, raise TempError
+            ].join("\r\n")
+            @httpclient.test_loopback_http_response << response
+            @httpclient.test_loopback_http_response << response # retry 1
+            assert_raise(TempError) do
+              client.tickets(false)
+            end
+            assert_equal(true, @pool.shutdown?)
+          end
+
+          test "should shutdown pool - with DataError (no retry)" do
+            response = [
+              "HTTP/1.1 400", # unhandled error, wrapped in DataError
+              "Content-Type: application/json",
+              "",
+              { }.to_json
+            ].join("\r\n")
+            @httpclient.test_loopback_http_response << response
+            assert_raise(DataError) do
+              client.tickets(false)
+            end
+            assert_equal(true, @pool.shutdown?)
+          end
+        end
+
         def login_url
           "http://example.com"
         end

@@ -1,3 +1,7 @@
+## 0.2.7 - 2017-07-19
+* [fixed] Ensure thread pool is shutdown [#38](https://github.com/treasure-data/embulk-input-zendesk/pull/38)
+* [enhancement] Add retry for temporary error: missing required key from JSON response
+
 ## 0.2.6 - 2017-05-23
 * [enhancement] Enable incremental loading for ticket_metrics
 

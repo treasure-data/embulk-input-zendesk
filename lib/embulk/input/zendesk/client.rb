@@ -154,6 +154,7 @@ module Embulk
 
           begin
             data = JSON.parse(response.body)
+            raise "Invalid data format: #{key} must be array" unless data.key?(key) && data[key].is_a?(Array)
           rescue => e
             raise Embulk::DataError.new(e)
           end

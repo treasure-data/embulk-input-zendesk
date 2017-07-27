@@ -599,7 +599,7 @@ module Embulk
             assert_equal(true, @pool.shutdown?)
           end
 
-          test "should shutdown pool - with TempError (retry)" do
+          test "should shutdown pool - retry TempError and raise DataError" do
             response = [
               "HTTP/1.1 200",
               "Content-Type: application/json",
@@ -608,7 +608,7 @@ module Embulk
             ].join("\r\n")
             @httpclient.test_loopback_http_response << response
             @httpclient.test_loopback_http_response << response # retry 1
-            assert_raise(TempError) do
+            assert_raise(DataError) do
               client.tickets(false)
             end
             assert_equal(true, @pool.shutdown?)

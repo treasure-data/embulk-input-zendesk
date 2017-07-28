@@ -1,3 +1,7 @@
+## 0.2.8 - 2017-07-28
+* [fixed] Raise `DataError` instead of `TempError` after giving up for `TempError` [#40](https://github.com/treasure-data/embulk-input-zendesk/pull/40)
+* [enhancement] Only rescue `TempError` when executing thread pool, only create/shutdown pool once during retry, move retry to inside of `execute_thread_pool`
+
 ## 0.2.7 - 2017-07-19
 * [fixed] Ensure thread pool is shutdown [#38](https://github.com/treasure-data/embulk-input-zendesk/pull/38)
 * [enhancement] Add retry for temporary error: missing required key from JSON response

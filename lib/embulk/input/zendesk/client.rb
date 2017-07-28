@@ -130,16 +130,14 @@ module Embulk
             block.call record
           end
 
-          retryer.with_retry do
-            execute_thread_pool do |pool|
-              (2..last_page_num).each do |page|
-                pool.post do
-                  response = request(path, per_page: per_page, page: page)
-                  fetched_records = extract_records_from_response(response, key)
-                  Embulk.logger.info "Fetched #{key} on page=#{page} >>> size: #{fetched_records.length}"
-                  fetched_records.uniq { |r| r['id'] }.each do |record|
-                    block.call record
-                  end
+          execute_thread_pool do |pool|
+            (2..last_page_num).each do |page|
+              pool.post do
+                response = request(path, per_page: per_page, page: page)
+                fetched_records = extract_records_from_response(response, key)
+                Embulk.logger.info "Fetched #{key} on page=#{page} >>> size: #{fetched_records.length}"
+                fetched_records.uniq { |r| r['id'] }.each do |record|
+                  block.call record
                 end
               end
             end
@@ -156,6 +154,7 @@ module Embulk
 
           begin
             data = JSON.parse(response.body)
+            raise "Invalid data format: #{key} must be array" unless data.key?(key) && data[key].is_a?(Array)
           rescue => e
             raise Embulk::DataError.new(e)
           end
@@ -175,45 +174,43 @@ module Embulk
             return
           end
 
-          retryer.with_retry do
-            execute_thread_pool do |pool|
-              loop do
-                start_fetching = Time.now
-                response = request(path, query)
-                actual_fetched = 0
-                data = JSON.parse(response.body)
-                # no key found in response occasionally => retry
-                raise TempError, "No '#{key}' found in JSON response" unless data.key? key
-                data[key].each do |record|
-                  # https://developer.zendesk.com/rest_api/docs/core/incremental_export#excluding-system-updates
-                  # "generated_timestamp" will be updated when Zendesk internal changing
-                  # "updated_at" will be updated when ticket data was changed
-                  # start_time for query parameter will be processed on Zendesk with generated_timestamp,
-                  # but it was calculated by record' updated_at time.
-                  # So the doesn't changed record from previous import would be appear by Zendesk internal changes.
-                  # We ignore record that has updated_at <= start_time
-                  if start_time && record["generated_timestamp"] && record["updated_at"]
-                    updated_at = Time.parse(record["updated_at"])
-                    next if updated_at <= Time.at(start_time)
-                  end
-
-                  # de-duplicated records.
-                  # https://developer.zendesk.com/rest_api/docs/core/incremental_export#usage-notes
-                  # https://github.com/zendesk/zendesk_api_client_rb/issues/251
-                  next if known_ids.include?(record["id"])
-
-                  known_ids << record["id"]
-                  pool.post { block.call record }
-                  actual_fetched += 1
+          execute_thread_pool do |pool|
+            loop do
+              start_fetching = Time.now
+              response = request(path, query)
+              actual_fetched = 0
+              data = JSON.parse(response.body)
+              # no key found in response occasionally => retry
+              raise TempError, "No '#{key}' found in JSON response" unless data.key? key
+              data[key].each do |record|
+                # https://developer.zendesk.com/rest_api/docs/core/incremental_export#excluding-system-updates
+                # "generated_timestamp" will be updated when Zendesk internal changing
+                # "updated_at" will be updated when ticket data was changed
+                # start_time for query parameter will be processed on Zendesk with generated_timestamp,
+                # but it was calculated by record' updated_at time.
+                # So the doesn't changed record from previous import would be appear by Zendesk internal changes.
+                # We ignore record that has updated_at <= start_time
+                if start_time && record["generated_timestamp"] && record["updated_at"]
+                  updated_at = Time.parse(record["updated_at"])
+                  next if updated_at <= Time.at(start_time)
                 end
-                Embulk.logger.info "Fetched #{actual_fetched} records from start_time:#{start_time} (#{Time.at(start_time)}) within #{Time.now.to_i - start_fetching.to_i} seconds"
-                start_time = data["end_time"]
 
-                # NOTE: If count is less than 1000, then stop paginating.
-                #       Otherwise, use the next_page URL to get the next page of results.
-                #       https://developer.zendesk.com/rest_api/docs/core/incremental_export#pagination
-                break data if data["count"] < 1000
+                # de-duplicated records.
+                # https://developer.zendesk.com/rest_api/docs/core/incremental_export#usage-notes
+                # https://github.com/zendesk/zendesk_api_client_rb/issues/251
+                next if known_ids.include?(record["id"])
+
+                known_ids << record["id"]
+                pool.post { block.call record }
+                actual_fetched += 1
               end
+              Embulk.logger.info "Fetched #{actual_fetched} records from start_time:#{start_time} (#{Time.at(start_time)}) within #{Time.now.to_i - start_fetching.to_i} seconds"
+              start_time = data["end_time"]
+
+              # NOTE: If count is less than 1000, then stop paginating.
+              #       Otherwise, use the next_page URL to get the next page of results.
+              #       https://developer.zendesk.com/rest_api/docs/core/incremental_export#pagination
+              break data if data["count"] < 1000
             end
           end
         end
@@ -374,16 +371,21 @@ module Embulk
 
         def execute_thread_pool(&block)
           pool = create_pool
-          block.call pool
-        rescue TempError => t
-          raise t
+          pr = PerfectRetry.new do |config|
+            config.limit = @config[:retry_limit]
+            config.logger = Embulk.logger
+            config.log_level = nil
+            config.rescues = [TempError]
+            config.sleep = lambda{|n| @config[:retry_initial_wait_sec]* (2 ** (n-1)) }
+          end
+          pr.with_retry { block.call(pool) }
         rescue => e
           raise Embulk::DataError.new(e)
         ensure
-          Embulk.logger.debug 'ThreadPool shutting down...'
+          Embulk.logger.info 'ThreadPool shutting down...'
           pool.shutdown
           pool.wait_for_termination
-          Embulk.logger.debug "ThreadPool shutdown? #{pool.shutdown?}"
+          Embulk.logger.info "ThreadPool shutdown? #{pool.shutdown?}"
         end
       end
 

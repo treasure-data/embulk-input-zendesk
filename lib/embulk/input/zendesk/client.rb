@@ -165,9 +165,8 @@ module Embulk
         end
 
         def incremental_export(path, key, start_time = 0, known_ids = [], partial = true, query = {}, &block)
-          query.merge!(start_time: start_time)
           if partial
-            records = request_partial(path, query).first(5)
+            records = request_partial(path, query.merge(start_time: start_time)).first(5)
             records.uniq{|r| r["id"]}.each do |record|
               block.call record
             end
@@ -177,7 +176,7 @@ module Embulk
           execute_thread_pool do |pool|
             loop do
               start_fetching = Time.now
-              response = request(path, query)
+              response = request(path, query.merge(start_time: start_time))
               actual_fetched = 0
               data = JSON.parse(response.body)
               # no key found in response occasionally => retry

@@ -78,7 +78,7 @@ module Embulk
               assert_include(result_array,record)
               counter.increment
             }
-            proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json", {:include => "metric_sets", :start_time => start_time}, anything)
+            proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json", {:include => "metric_sets", :start_time => start_time}, anything, false)
             client.ticket_metrics(false, start_time, &handler)
             assert_equal(counter.value, result_array.size)
           end
@@ -166,8 +166,8 @@ module Embulk
                   counter.increment
               }
 
-              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json", {:include => "metric_sets", :start_time => 0}, anything)
-              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json", {:include => "metric_sets",:start_time => end_time}, anything)
+              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json", {:include => "metric_sets", :start_time => 0}, anything, false)
+              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json", {:include => "metric_sets",:start_time => end_time}, anything, false)
 
               client.ticket_metrics(false, &handler)
               assert_equal(counter.value, result_array.size)
@@ -224,8 +224,8 @@ module Embulk
               @httpclient.test_loopback_http_response << response_2
               counter = Concurrent::AtomicFixnum.new(0)
               handler = proc { counter.increment }
-              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json",{:include=>"metric_sets", :start_time=>0},anything)
-              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json",{:include=>"metric_sets", :start_time=>end_time},anything)
+              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json",{:include=>"metric_sets", :start_time=>0},anything, false)
+              proxy(@httpclient).get("#{login_url}/api/v2/incremental/tickets.json",{:include=>"metric_sets", :start_time=>end_time},anything, false)
               client.ticket_metrics(false, &handler)
               assert_equal(101, counter.value)
             end

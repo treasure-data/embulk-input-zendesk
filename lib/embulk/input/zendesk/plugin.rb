@@ -96,6 +96,9 @@ module Embulk
             incremental: config.param("incremental", :bool, default: true),
             schema: config.param(:columns, :array, default: []),
             includes: config.param(:includes, :array, default: []),
+            app_marketplace_integration_name: config.param("app_marketplace_integration_name", :string, default: nil),
+            app_marketplace_org_id: config.param("app_marketplace_org_id", :string, default: nil),
+            app_marketplace_app_id: config.param("app_marketplace_app_id", :string, default: nil)
           }
         end
 

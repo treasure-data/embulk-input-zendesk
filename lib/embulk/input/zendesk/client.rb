@@ -255,9 +255,18 @@ module Embulk
           u = URI.parse(config[:login_url])
           u.path = path
 
+          # https://help.zendesk.com/hc/en-us/articles/115010249348-Announcing-Updated-Apps-Marketplace-API-Header-Requirementsmerg
+          extheader = {}
+
+          if config[:app_marketplace_integration_name] && config[:app_marketplace_org_id] && config[:app_marketplace_app_id]
+            extheader = {'X-Zendesk-Marketplace-Name' => config[:app_marketplace_integration_name],
+                         'X-Zendesk-Marketplace-Organization-Id' => config[:app_marketplace_org_id],
+                         'X-Zendesk-Marketplace-App-Id' => config[:app_marketplace_app_id]}
+          end
+
           retryer.with_retry do
             Embulk.logger.debug "Fetching #{u.to_s}"
-            response = httpclient.get(u.to_s, query, follow_redirect: true)
+            response = httpclient.get(u.to_s, query, extheader, follow_redirect: true)
 
             handle_response(response.status, response.headers, response.body)
             response
@@ -271,11 +280,20 @@ module Embulk
           u = URI.parse(config[:login_url])
           u.path = path
 
+          # https://help.zendesk.com/hc/en-us/articles/115010249348-Announcing-Updated-Apps-Marketplace-API-Header-Requirementsmerg
+          extheader = {}
+
+          if config[:app_marketplace_integration_name] && config[:app_marketplace_org_id] && config[:app_marketplace_app_id]
+            extheader = {'X-Zendesk-Marketplace-Name' => config[:app_marketplace_integration_name],
+                         'X-Zendesk-Marketplace-Organization-Id' => config[:app_marketplace_org_id],
+                         'X-Zendesk-Marketplace-App-Id' => config[:app_marketplace_app_id]}
+          end
+
           retryer.with_retry do
             Embulk.logger.debug "Fetching #{u.to_s}"
             buf = ""
             auth_retry = 0
-            httpclient.get(u.to_s, query, follow_redirect: true) do |message, chunk|
+            httpclient.get(u.to_s, query, extheader, follow_redirect: true) do |message, chunk|
               if message.status == 401
                 # First request will fail by 401 because not included credentials.
                 # HTTPClient will retry request with credentials.

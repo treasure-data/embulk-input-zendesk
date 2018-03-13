@@ -266,7 +266,7 @@ module Embulk
 
           retryer.with_retry do
             Embulk.logger.debug "Fetching #{u.to_s}"
-            response = httpclient.get(u.to_s, query, extheader, false)
+            response = httpclient.get(u.to_s, query, extheader)
 
             handle_response(response.status, response.headers, response.body)
             response
@@ -293,7 +293,7 @@ module Embulk
             Embulk.logger.debug "Fetching #{u.to_s}"
             buf = ""
             auth_retry = 0
-            httpclient.get(u.to_s, query, extheader, false) do |message, chunk|
+            httpclient.get(u.to_s, query, extheader) do |message, chunk|
               if message.status == 401
                 # First request will fail by 401 because not included credentials.
                 # HTTPClient will retry request with credentials.

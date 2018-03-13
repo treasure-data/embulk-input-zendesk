@@ -50,6 +50,26 @@ module Embulk
               run_with("invalid_lack_username.yml")
             end
           end
+
+          test "run with valid.yml (app_marketplace) contains three properties" do
+            assert_nothing_raised do
+              run_with("valid_app_marketplace.yml")
+            end
+          end
+
+          test "run with invalid lack one of app marketplace properties" do
+            # NOTE: will be raised Java::OrgEmbulkExec::PartialExecutionException, not ConfigError. It is Embulk internally exception handling matter.
+            assert_raise do
+              run_with("invalid_app_marketplace_lack_one_property.yml")
+            end
+          end
+
+          test "run with invalid lack two of app marketplace properties" do
+            # NOTE: will be raised Java::OrgEmbulkExec::PartialExecutionException, not ConfigError. It is Embulk internally exception handling matter.
+            assert_raise do
+              run_with("invalid_app_marketplace_lack_two_property.yml")
+            end
+          end
         end
 
         sub_test_case ".transaction" do

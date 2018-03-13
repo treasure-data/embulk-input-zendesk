@@ -43,6 +43,7 @@ module Embulk
         def validate_config
           validate_credentials
           validate_target
+          validate_app_marketplace
         end
 
         def validate_credentials
@@ -65,6 +66,15 @@ module Embulk
         def validate_target
           unless AVAILABLE_TARGETS.include?(config[:target])
             raise Embulk::ConfigError.new("target: '#{config[:target]}' is not supported. Supported targets are #{AVAILABLE_TARGETS.join(", ")}.")
+          end
+        end
+
+        def validate_app_marketplace
+          valid = config[:app_marketplace_integration_name] && config[:app_marketplace_org_id] && config[:app_marketplace_app_id]
+          valid = valid || (!config[:app_marketplace_integration_name] && !config[:app_marketplace_org_id] && !config[:app_marketplace_app_id])
+
+          unless valid
+             raise Embulk::ConfigError.new("All of app_marketplace_integration_name, app_marketplace_org_id, app_marketplace_app_id are required to fill out for Apps Marketplace API header")
           end
         end
 
@@ -255,9 +265,18 @@ module Embulk
           u = URI.parse(config[:login_url])
           u.path = path
 
+          # https://help.zendesk.com/hc/en-us/articles/115010249348-Announcing-Updated-Apps-Marketplace-API-Header-Requirementsmerg
+          extheader = {}
+
+          if config[:app_marketplace_integration_name] && config[:app_marketplace_org_id] && config[:app_marketplace_app_id]
+            extheader = {"X-Zendesk-Marketplace-Name" => config[:app_marketplace_integration_name],
+                         "X-Zendesk-Marketplace-Organization-Id" => config[:app_marketplace_org_id],
+                         "X-Zendesk-Marketplace-App-Id" => config[:app_marketplace_app_id]}
+          end
+
           retryer.with_retry do
             Embulk.logger.debug "Fetching #{u.to_s}"
-            response = httpclient.get(u.to_s, query, follow_redirect: true)
+            response = httpclient.get(u.to_s, query, extheader)
 
             handle_response(response.status, response.headers, response.body)
             response
@@ -271,11 +290,20 @@ module Embulk
           u = URI.parse(config[:login_url])
           u.path = path
 
+          # https://help.zendesk.com/hc/en-us/articles/115010249348-Announcing-Updated-Apps-Marketplace-API-Header-Requirementsmerg
+          extheader = {}
+
+          if config[:app_marketplace_integration_name] && config[:app_marketplace_org_id] && config[:app_marketplace_app_id]
+            extheader = {"X-Zendesk-Marketplace-Name" => config[:app_marketplace_integration_name],
+                         "X-Zendesk-Marketplace-Organization-Id" => config[:app_marketplace_org_id],
+                         "X-Zendesk-Marketplace-App-Id" => config[:app_marketplace_app_id]}
+          end
+
           retryer.with_retry do
             Embulk.logger.debug "Fetching #{u.to_s}"
             buf = ""
             auth_retry = 0
-            httpclient.get(u.to_s, query, follow_redirect: true) do |message, chunk|
+            httpclient.get(u.to_s, query, extheader) do |message, chunk|
               if message.status == 401
                 # First request will fail by 401 because not included credentials.
                 # HTTPClient will retry request with credentials.

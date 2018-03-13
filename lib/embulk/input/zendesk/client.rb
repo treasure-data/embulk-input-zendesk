@@ -43,6 +43,7 @@ module Embulk
         def validate_config
           validate_credentials
           validate_target
+          validate_app_marketplace
         end
 
         def validate_credentials
@@ -65,6 +66,15 @@ module Embulk
         def validate_target
           unless AVAILABLE_TARGETS.include?(config[:target])
             raise Embulk::ConfigError.new("target: '#{config[:target]}' is not supported. Supported targets are #{AVAILABLE_TARGETS.join(", ")}.")
+          end
+        end
+
+        def validate_app_marketplace
+          valid = config[:app_marketplace_integration_name] && config[:app_marketplace_org_id] && config[:app_marketplace_app_id]
+          valid = valid || (!config[:app_marketplace_integration_name] && !config[:app_marketplace_org_id] && !config[:app_marketplace_app_id])
+
+          unless valid
+             raise Embulk::ConfigError.new("All of app_marketplace_integration_name, app_marketplace_org_id, app_marketplace_app_id are required to fill out for Apps Marketplace API header")
           end
         end
 

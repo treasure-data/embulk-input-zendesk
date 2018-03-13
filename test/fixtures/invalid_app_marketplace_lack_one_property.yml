@@ -1,0 +1,13 @@
+in:
+  type: zendesk
+  login_url: "https://example.zendesk.com/"
+  auth_method: basic
+  target: tickets
+  username: foo@example.com
+  password: password
+  app_marketplace_integration_name: App Name for Zendesk
+  app_marketplace_org_id: 12345
+  columns:
+    - {name: id, type: string}
+out:
+  type: "null"

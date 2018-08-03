@@ -1,3 +1,6 @@
+## 0.2.10 - 2018-03-26
+* [enhancement] Add Zendesk market place header
+
 ## 0.2.9 - 2017-08-03
 * [fixed] `start_time` is not merged to `query`, causing infinite loop [#42](https://github.com/treasure-data/embulk-input-zendesk/pull/42)
 

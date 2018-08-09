@@ -1,3 +1,6 @@
+## 0.2.11 - 2018-15-26
+* [enhancement] Rate limit is fail fast instead of retry for guess/preview mode
+
 ## 0.2.10 - 2018-03-26
 * [enhancement] Add Zendesk market place header
 

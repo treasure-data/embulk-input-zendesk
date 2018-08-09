@@ -482,6 +482,14 @@ module Embulk
             stub_response(429, ["Retry-After: #{after}"])
             mock(client).sleep after.to_i
             assert_throw(:retry) do
+              client.tickets(false, &proc{})
+            end
+          end
+
+          test "429 guess/preview fail fast" do
+            after = "123"
+            stub_response(429, ["Retry-After: #{after}"])
+            assert_raise(DataError.new("Rate Limited. Waiting #{after} seconds to re-run")) do
               client.tickets(&proc{})
             end
           end
@@ -505,6 +513,14 @@ module Embulk
             stub_response(503, ["Retry-After: #{after}"])
             mock(client).sleep after.to_i
             assert_throw(:retry) do
+              client.tickets(false, &proc{})
+            end
+          end
+
+          test "503 with Retry-After guess/preview fail fast" do
+            after = "123"
+            stub_response(503, ["Retry-After: #{after}"])
+            assert_raise(DataError.new("Rate Limited. Waiting #{after} seconds to re-run")) do
               client.tickets(&proc{})
             end
           end

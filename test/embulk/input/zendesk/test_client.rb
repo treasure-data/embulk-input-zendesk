@@ -1,6 +1,7 @@
 require "embulk"
 Embulk.setup
 
+require "set"
 require "yaml"
 require "embulk/input/zendesk"
 require "override_assert_raise"
@@ -258,12 +259,12 @@ module Embulk
 
           sub_test_case "ticket_events" do
             test "invoke incremental_export when partial=true" do
-              mock(client).incremental_export(anything, "ticket_events", anything, [], true)
+              mock(client).incremental_export(anything, "ticket_events", anything, Set.new, true)
               client.ticket_events(true)
             end
 
             test "invoke incremental_export when partial=false" do
-              mock(client).incremental_export(anything, "ticket_events", anything, [], false)
+              mock(client).incremental_export(anything, "ticket_events", anything, Set.new, false)
               client.ticket_events(false)
             end
           end

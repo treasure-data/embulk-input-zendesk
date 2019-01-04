@@ -1,7 +1,7 @@
 
 Gem::Specification.new do |spec|
   spec.name          = "embulk-input-zendesk"
-  spec.version       = "0.2.11"
+  spec.version       = "0.2.12"
   spec.authors       = ["uu59", "muga", "sakama"]
   spec.summary       = "Zendesk input plugin for Embulk"
   spec.description   = "Loads records from Zendesk."
@@ -17,7 +17,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'httpclient'
   spec.add_dependency 'concurrent-ruby'
   spec.add_development_dependency 'embulk', ['~> 0.8.1']
-  spec.add_development_dependency 'bundler', ['~> 1.0']
+  spec.add_development_dependency 'bundler', ['~> 1.0', '< 2.0']
   spec.add_development_dependency 'rake', ['>= 10.0']
   spec.add_development_dependency 'pry'
   spec.add_development_dependency 'test-unit', '~> 3.1.5'

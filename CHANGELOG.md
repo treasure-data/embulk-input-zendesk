@@ -1,3 +1,6 @@
+## 0.2.12 - 2019-01-04
+* [enhancement] Fix performance issue [#47](https://github.com/treasure-data/embulk-input-zendesk/pull/47)
+
 ## 0.2.11 - 2018-15-26
 * [enhancement] Rate limit is fail fast instead of retry for guess/preview mode
 

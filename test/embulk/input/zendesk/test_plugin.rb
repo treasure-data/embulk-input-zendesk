@@ -379,7 +379,7 @@ module Embulk
 
             test "call ticket_all method instead of tickets" do
               mock(@client).export.never
-              mock(@client).incremental_export(anything, "tickets", 0, [], false) { [] }
+              mock(@client).incremental_export(anything, "tickets", 0, Set.new, false) { [] }
               mock(page_builder).finish
 
               @plugin.run

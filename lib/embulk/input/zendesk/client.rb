@@ -1,6 +1,7 @@
 require "strscan"
 require "httpclient"
 require 'concurrent'
+require 'set'
 
 module Embulk
   module Input
@@ -83,7 +84,7 @@ module Embulk
         %w(tickets ticket_events users organizations).each do |target|
           define_method(target) do |partial = true, start_time = 0, &block|
             # Always use incremental_export. There is some difference between incremental_export and export.
-            incremental_export("/api/v2/incremental/#{target}.json", target, start_time, [], partial, &block)
+            incremental_export("/api/v2/incremental/#{target}.json", target, start_time, Set.new, partial, &block)
           end
         end
 
@@ -97,7 +98,7 @@ module Embulk
             # Since partial is only use for preview and guess so this should be fine
             export('/api/v2/ticket_metrics.json', 'ticket_metrics', &block)
           else
-            incremental_export('/api/v2/incremental/tickets.json', 'metric_sets', start_time, [], partial, { include: 'metric_sets' }, &block)
+            incremental_export('/api/v2/incremental/tickets.json', 'metric_sets', start_time, Set.new, partial, { include: 'metric_sets' }, &block)
           end
         end
 
@@ -174,7 +175,7 @@ module Embulk
           end
         end
 
-        def incremental_export(path, key, start_time = 0, known_ids = [], partial = true, query = {}, &block)
+        def incremental_export(path, key, start_time = 0, known_ids = Set.new, partial = true, query = {}, &block)
           if partial
             records = request_partial(path, query.merge(start_time: start_time)).first(5)
             records.uniq{|r| r["id"]}.each do |record|

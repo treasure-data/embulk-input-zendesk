@@ -196,6 +196,28 @@ module Embulk
               assert_equal(2,counter.value)
             end
 
+            test "allows to fetch tickets metrics *with* duplicated" do
+              records = [
+                {"id" => 1, "ticket_id" => 100},
+                {"id" => 2, "ticket_id" => 200},
+                {"id" => 1, "ticket_id" => 100},
+                {"id" => 1, "ticket_id" => 100},
+              ]
+              @httpclient.test_loopback_http_response << [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  metric_sets: records,
+                  count: records.length,
+                }.to_json
+              ].join("\r\n")
+              counter = Concurrent::AtomicFixnum.new(0)
+              handler = proc {counter.increment}
+              client.ticket_metrics(false, 0, false, &handler)
+              assert_equal(4,counter.value)
+            end
+
             test "fetch ticket_metrics with next_page" do
               end_time = 1488535542
               response_1 = [
@@ -259,12 +281,12 @@ module Embulk
 
           sub_test_case "ticket_events" do
             test "invoke incremental_export when partial=true" do
-              mock(client).incremental_export(anything, "ticket_events", anything, Set.new, true)
+              mock(client).incremental_export(anything, "ticket_events", anything, true, Set.new, true)
               client.ticket_events(true)
             end
 
             test "invoke incremental_export when partial=false" do
-              mock(client).incremental_export(anything, "ticket_events", anything, Set.new, false)
+              mock(client).incremental_export(anything, "ticket_events", anything, true, Set.new, false)
               client.ticket_events(false)
             end
           end

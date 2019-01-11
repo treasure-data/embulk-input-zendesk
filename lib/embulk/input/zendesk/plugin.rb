@@ -94,6 +94,7 @@ module Embulk
             retry_limit: config.param("retry_limit", :integer, default: 5),
             retry_initial_wait_sec: config.param("retry_initial_wait_sec", :integer, default: 4),
             incremental: config.param("incremental", :bool, default: true),
+            dedup: config.param("dedup", :bool, default: true),
             schema: config.param(:columns, :array, default: []),
             includes: config.param(:includes, :array, default: []),
             app_marketplace_integration_name: config.param("app_marketplace_integration_name", :string, default: nil),
@@ -111,6 +112,11 @@ module Embulk
           args = [preview?]
           if @start_time
             args << @start_time.to_i
+          end
+
+          # de-dup may lead to OOM
+          if !task[:dedup].nil? && !task[:dedup]
+            args << false
           end
 
           mutex = Mutex.new

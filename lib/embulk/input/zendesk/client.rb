@@ -185,7 +185,7 @@ module Embulk
           end
 
           if !dedup
-            Embulk.logger.warn("!!!You've chosen to disable de-duplicate records, result may contain duplicated data!!!")
+            Embulk.logger.warn("!!! You've selected to skip de-duplicating records, result may contain duplicated data !!!")
           end
 
           execute_thread_pool do |pool|

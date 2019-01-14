@@ -544,7 +544,7 @@ module Embulk
               test "Nothing passed to client" do
                 stub(page_builder).finish
 
-                mock(@client).tickets(false)
+                mock(@client).tickets(false, 0)
                 @plugin.run
               end
             end

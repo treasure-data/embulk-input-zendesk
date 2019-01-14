@@ -110,13 +110,11 @@ module Embulk
         def run
           method = task[:target]
           args = [preview?]
-          if @start_time
-            args << @start_time.to_i
-          end
+          args << (@start_time || 0).to_i
 
           # de-dup may lead to OOM
           if !task[:dedup].nil? && !task[:dedup]
-            args += [@start_time || 0, false]
+            args << false
           end
 
           mutex = Mutex.new

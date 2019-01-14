@@ -31,7 +31,8 @@ Required Embulk version >= 0.8.1.
 - **start_time**: Start export from this time if present. (string, default: `null`)
 - **retry_limit**: Try to retry this times (integer, default: 5)
 - **retry_initial_wait_sec**: Wait seconds for exponential backoff initial value (integer, default: 4)
-- **incremental**:  If false, `start_time` in next.yml would not be updated that means you always fetch all of data from Zendesk with statically conditions. If true, `start_time` would be updated in next.yml. (bool, default: true)
+- **incremental**: If false, `start_time` in next.yml would not be updated that means you always fetch all of data from Zendesk with statically conditions. If true, `start_time` would be updated in next.yml. (bool, default: `true`)
+- **dedup**: Zendesk incremental API is not designed to protect against duplication. In order to de-dup records, plugin has to cache fetched IDs in memory. If you're importing a large dataset (eg. tens of millions of records), it can lead to OOM error, depends on your configured heap size. In such cases, you can set this option to `false`, but keep in mind that result may contain duplicated records. (bool, default: `true`)
 - **app_marketplace_integration_name**: Invisible to user, only requires to be a part of the Zendesk Apps Marketplace. This should be used to name of the integration.
 - **app_marketplace_org_id**: Invisible to user, only requires to be a part of the Zendesk Apps Marketplace. This should be the Organization ID for your organization from the new developer portal.
 - **app_marketplace_app_id**: Invisible to user, only requires to be a part of the Zendesk Apps Marketplace. This is the “App ID” that will be assigned to you when you submit your app.

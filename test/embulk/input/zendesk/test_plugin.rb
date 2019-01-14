@@ -340,7 +340,7 @@ module Embulk
 
             test "call tickets method instead of ticket_all" do
               mock(@client).export.never
-              mock(@client).incremental_export(anything, "tickets", anything, anything, anything) { [] }
+              mock(@client).incremental_export(anything, "tickets", anything, anything, anything, anything) { [] }
               mock(page_builder).finish
 
               @plugin.run
@@ -379,7 +379,7 @@ module Embulk
 
             test "call ticket_all method instead of tickets" do
               mock(@client).export.never
-              mock(@client).incremental_export(anything, "tickets", 0, Set.new, false) { [] }
+              mock(@client).incremental_export(anything, "tickets", 0, true, Set.new, false) { [] }
               mock(page_builder).finish
 
               @plugin.run
@@ -544,7 +544,7 @@ module Embulk
               test "Nothing passed to client" do
                 stub(page_builder).finish
 
-                mock(@client).tickets(false)
+                mock(@client).tickets(false, 0)
                 @plugin.run
               end
             end

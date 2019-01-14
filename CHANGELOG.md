@@ -1,3 +1,6 @@
+## 0.2.13 - 2019-01-14
+* [enhancement] Add `dedup` option, in order to avoid OOM when importing large dataset [#48](https://github.com/treasure-data/embulk-input-zendesk/pull/48)
+
 ## 0.2.12 - 2019-01-04
 * [enhancement] Fix performance issue [#47](https://github.com/treasure-data/embulk-input-zendesk/pull/47)
 

@@ -116,7 +116,7 @@ module Embulk
 
           # de-dup may lead to OOM
           if !task[:dedup].nil? && !task[:dedup]
-            args << false
+            args += [@start_time || 0, false]
           end
 
           mutex = Mutex.new

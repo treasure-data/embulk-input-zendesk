@@ -1,3 +1,6 @@
+## 0.2.14 - 2019-01-25
+* [fixed] Disable pagination and add `dedup` option for non-incremental targets [#49](https://github.com/treasure-data/embulk-input-zendesk/pull/49)
+
 ## 0.2.13 - 2019-01-14
 * [enhancement] Add `dedup` option, in order to avoid OOM when importing large dataset [#48](https://github.com/treasure-data/embulk-input-zendesk/pull/48)
 

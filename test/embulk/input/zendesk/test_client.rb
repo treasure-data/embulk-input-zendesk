@@ -107,8 +107,7 @@ module Embulk
                 "",
                 {
                   ticket_metrics: records,
-                  next_page: "https://treasuredata.zendesk.com/api/v2/incremental/tickets
-.json?include=metric_sets&start_time=1488535542",
+                  next_page: "https://treasuredata.zendesk.com/api/v2/incremental/tickets.json?include=metric_sets&start_time=1488535542",
                 }.to_json
               ].join("\r\n")
 
@@ -299,7 +298,7 @@ module Embulk
 
             test "invoke export when partial=false" do
               # Added default `start_time`
-              mock(client).export_parallel(anything, "ticket_fields", 0)
+              mock(client).export_parallel(anything, "ticket_fields", 0, true, false) # new args: `dedup`, `paging`
               client.ticket_fields(false)
             end
           end
@@ -312,8 +311,38 @@ module Embulk
 
             test "invoke export when partial=false" do
               # Added default `start_time`
-              mock(client).export_parallel(anything, "ticket_forms", 0)
+              mock(client).export_parallel(anything, "ticket_forms", 0, true, false) # new args: `dedup`, `paging`)
               client.ticket_forms(false)
+            end
+          end
+
+          sub_test_case "no pagination" do
+            data("ticket_fields", "ticket_fields")
+            data("ticket_forms", "ticket_forms")
+            test "non-incremental targets" do |target|
+              response = [
+                "HTTP/1.1 200",
+                "Content-Type: application/json",
+                "",
+                {
+                  target => 200.times.map{|n| {"id" => n}},
+                  count: 200,
+                  next_page: nil,
+                  previous_page: nil,
+                }.to_json
+              ].join("\r\n")
+
+              # mock multiple responses, to simulate real API behavior
+              @httpclient.test_loopback_http_response << response
+              @httpclient.test_loopback_http_response << response
+              counter = Concurrent::AtomicFixnum.new(0)
+              handler = proc { counter.increment }
+              # validate expected target
+              proxy(@httpclient).get("#{login_url}/api/v2/#{target}.json",anything,anything)
+              # (`partial`, `start_time`, `default`, `block`)
+              client.public_send(target, false, 0, true, &handler)
+              # only ingest 200 records
+              assert_equal(200, counter.value)
             end
           end
         end
@@ -629,12 +658,12 @@ module Embulk
               "Content-Type: application/json",
               "",
               {
-                ticket_fields: [{ id: 1 }],
+                tickets: [{ id: 1 }],
                 count: 1
               }.to_json
             ].join("\r\n")
             handler = proc { }
-            client.ticket_fields(false, &handler)
+            client.tickets(false, &handler)
             assert_equal(true, @pool.shutdown?)
           end
 

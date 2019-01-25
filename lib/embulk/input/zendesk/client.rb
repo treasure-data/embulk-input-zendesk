@@ -104,12 +104,12 @@ module Embulk
 
         # they have non-incremental API only
         UNAVAILABLE_INCREMENTAL_EXPORT.each do |target|
-          define_method(target) do |partial = true, start_time = 0, &block|
+          define_method(target) do |partial = true, start_time = 0, dedup = true, &block|
             path = "/api/v2/#{target}.json"
             if partial
               export(path, target, &block)
             else
-              export_parallel(path, target, start_time, &block)
+              export_parallel(path, target, start_time, dedup, false, &block)
             end
           end
         end
@@ -129,26 +129,27 @@ module Embulk
 
         private
 
-        def export_parallel(path, key, start_time = 0, &block)
+        def export_parallel(path, key, start_time = 0, dedup = true, paging = true, &block)
           per_page = 100 # 100 is maximum https://developer.zendesk.com/rest_api/docs/core/introduction#pagination
           first_response = request(path, false, per_page: per_page, page: 1)
           first_fetched = JSON.parse(first_response.body)
           total_count = first_fetched["count"]
           last_page_num = (total_count / per_page.to_f).ceil
-          Embulk.logger.info "#{key} records=#{total_count} last_page=#{last_page_num}"
+          Embulk.logger.info "#{key} records=#{total_count} last_page=#{paging ? last_page_num : 1}"
 
-          first_fetched[key].uniq { |r| r['id'] }.each do |record|
-            block.call record
-          end
+          handler = lambda { |records| records.each { |r| block.call r } }
+          handler.call(dedup ? first_fetched[key].uniq { |r| r['id'] } : first_fetched[key])
 
-          execute_thread_pool do |pool|
-            (2..last_page_num).each do |page|
-              pool.post do
-                response = request(path, false, per_page: per_page, page: page)
-                fetched_records = extract_records_from_response(response, key)
-                Embulk.logger.info "Fetched #{key} on page=#{page} >>> size: #{fetched_records.length}"
-                fetched_records.uniq { |r| r['id'] }.each do |record|
-                  block.call record
+          # stop if endpoints have no pagination, ie. API returns all records
+          # `ticket_fields`, `ticket_forms`
+          if paging
+            execute_thread_pool do |pool|
+              (2..last_page_num).each do |page|
+                pool.post do
+                  response = request(path, false, per_page: per_page, page: page)
+                  fetched_records = extract_records_from_response(response, key)
+                  Embulk.logger.info "Fetched #{key} on page=#{page} >>> size: #{fetched_records.length}"
+                  handler.call(dedup ? fetched_records.uniq { |r| r['id'] } : fetched_records)
                 end
               end
             end

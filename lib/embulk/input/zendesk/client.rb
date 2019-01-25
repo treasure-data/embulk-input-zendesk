@@ -137,8 +137,8 @@ module Embulk
           last_page_num = (total_count / per_page.to_f).ceil
           Embulk.logger.info "#{key} records=#{total_count} last_page=#{paging ? last_page_num : 1}"
 
-          consumer = lambda { |records| records.each { |r| block.call r } }
-          dedup ? consumer.call(first_fetched[key].uniq { |r| r['id'] }) : consumer.call(first_fetched[key])
+          handler = lambda { |records| records.each { |r| block.call r } }
+          handler.call(dedup ? first_fetched[key].uniq { |r| r['id'] } : first_fetched[key])
 
           # stop if endpoints have no pagination, ie. API returns all records
           # `ticket_fields`, `ticket_forms`
@@ -149,7 +149,7 @@ module Embulk
                   response = request(path, false, per_page: per_page, page: page)
                   fetched_records = extract_records_from_response(response, key)
                   Embulk.logger.info "Fetched #{key} on page=#{page} >>> size: #{fetched_records.length}"
-                  dedup ? consumer.call(fetched_records.uniq { |r| r['id'] }) : consumer.call(fetched_records)
+                  handler.call(dedup ? fetched_records.uniq { |r| r['id'] } : fetched_records)
                 end
               end
             end

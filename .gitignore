@@ -4,3 +4,12 @@
 /.bundle/
 /Gemfile.lock
 /coverage/
+*.gemspec
+.gradle/
+/classpath/
+build/
+.idea
+/.settings/
+/.metadata/
+.classpath
+.project

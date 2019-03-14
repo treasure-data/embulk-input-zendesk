@@ -1,9 +1,0 @@
-in:
-  type: zendesk
-  login_url: "https://example.zendesk.com/"
-  auth_method: blah
-  password: password
-  columns:
-    - {name: id, type: string}
-out:
-  type: "null"

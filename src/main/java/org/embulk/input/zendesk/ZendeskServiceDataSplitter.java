@@ -11,9 +11,9 @@ public class ZendeskServiceDataSplitter<T extends RestClientInputTaskBase> exten
 {
     ZendeskSupportAPIService zendeskSupportAPIService;
 
-    public ZendeskServiceDataSplitter(final ZendeskSupportAPIService zendeskSupportAPiService)
+    public ZendeskServiceDataSplitter(final ZendeskSupportAPIService zendeskSupportAPIService)
     {
-        this.zendeskSupportAPIService = zendeskSupportAPiService;
+        this.zendeskSupportAPIService = zendeskSupportAPIService;
     }
 
     @Override

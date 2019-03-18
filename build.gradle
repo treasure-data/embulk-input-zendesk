@@ -25,7 +25,7 @@ configurations {
     provided
 }
 
-version = "0.1.1"
+version = "0.2.14"
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
@@ -132,3 +132,9 @@ end
     }
 }
 clean { delete "${project.name}.gemspec" }
+
+test {
+    testLogging {
+        events "passed", "skipped", "failed"
+    }
+}

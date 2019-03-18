@@ -3,6 +3,8 @@ package org.embulk.input.zendesk.models;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import org.embulk.config.ConfigException;
 
+import java.util.Arrays;
+
 public enum AuthenticationMethod
 {
     BASIC, OAUTH, TOKEN;
@@ -10,17 +12,12 @@ public enum AuthenticationMethod
     @JsonCreator
     public static AuthenticationMethod fromString(final String value)
     {
-        final String normalizedValue = value.trim().toLowerCase();
-
-        switch (normalizedValue) {
-            case "basic":
-                return AuthenticationMethod.BASIC;
-            case "oauth":
-                return AuthenticationMethod.OAUTH;
-            case "token":
-                return AuthenticationMethod.TOKEN;
-            default:
-                throw new ConfigException(String.format("Authentication mode %s is not supported", value));
+        try {
+            return AuthenticationMethod.valueOf(value.trim().toUpperCase());
+        }
+        catch (IllegalArgumentException e) {
+            throw new ConfigException("Unsupported Authentication mode '" + value + "', supported values: '"
+                    + Arrays.toString(Target.values()) + "'");
         }
     }
 }

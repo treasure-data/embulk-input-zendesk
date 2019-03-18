@@ -24,9 +24,7 @@ public class JacksonTimestampValueLocator extends JacksonValueLocator
             final OffsetDateTime dateTime = OffsetDateTime.parse(record.get(name).asText());
             final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT)
                     .withZone(ZoneOffset.UTC);
-
             record.put(name, dateTimeFormatter.format(dateTime.toInstant()));
-
             return record.get(name);
         }
         else {

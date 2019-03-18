@@ -30,14 +30,16 @@ public class ZendeskConstants
     public static class Url
     {
         public static final String API = "api/v2";
-        public static final String API_INCREMENTAL = "api/v2/incremental";
+        public static final String API_INCREMENTAL = API + "/incremental";
     }
 
     public static class Misc
     {
         public static final String JAVA_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
         public static final String RUBY_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%N%z";
+        public static final String ISO_INSTANT = "yyyy-MM-dd'T'HH:mm:ss'Z'";
         public static final String SHORT_DATE_FORMAT = "yyyy-MM-dd";
+        public static final String DEFAULT_START_TIME = "1970-01-01T00:00:00Z";
 
         public static final long READ_TIMEOUT_IN_MILLIS_FOR_PREVIEW = 10000;
         public static final int RECORDS_SIZE_PER_PAGE = 100;

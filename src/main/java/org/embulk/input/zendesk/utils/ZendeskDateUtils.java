@@ -1,41 +1,44 @@
 package org.embulk.input.zendesk.utils;
 
-import com.google.common.base.Joiner;
-import org.embulk.config.ConfigException;
+import org.embulk.spi.DataException;
 
 import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+
 import java.util.List;
 
 public class ZendeskDateUtils
 {
-    public static void parse(final String value, final List<String> supportedFormats)
-            throws ConfigException
+    public static boolean isSupportedTimeFormat(final String value, final List<String> supportedFormats)
     {
         for (final String fmt : supportedFormats) {
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern(fmt).withZone(ZoneOffset.UTC);
+            final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(fmt);
             try {
-                ZonedDateTime.parse(value, formatter);
-                return;
+                formatter.parse(value);
+                return true;
             }
             catch (final DateTimeParseException e) {
                 // Do nothing
             }
         }
-        throw new ConfigException("Unsupported DateTime value: '" + value + "', supported formats: [" + Joiner.on(",").join(supportedFormats) + "]");
+        return false;
     }
 
     private ZendeskDateUtils()
     {
     }
 
-    public static long toTimeStamp(final String time)
+    public static long isoToEpochSecond(final String time)
     {
-        OffsetDateTime offsetDateTime = OffsetDateTime.parse(time);
-        offsetDateTime.format(DateTimeFormatter.ISO_INSTANT);
-        return offsetDateTime.atZoneSameInstant(ZoneOffset.UTC).toInstant().getEpochSecond();
+        if (isSupportedTimeFormat(time, Arrays.asList(ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.ISO_INSTANT))) {
+            final OffsetDateTime offsetDateTime = OffsetDateTime.parse(time);
+            offsetDateTime.format(DateTimeFormatter.ISO_INSTANT);
+            return offsetDateTime.toInstant().getEpochSecond();
+        }
+        else {
+            throw new DataException("Fail to parse value '" + time + "' follow format " + DateTimeFormatter.ISO_INSTANT.toString());
+        }
     }
 }

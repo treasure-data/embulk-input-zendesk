@@ -2,7 +2,6 @@ package org.embulk.input.zendesk;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.eclipse.jetty.client.HttpResponseException;
 import org.embulk.base.restclient.RestClientInputPluginDelegate;
@@ -18,12 +17,9 @@ import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
-import org.embulk.input.zendesk.clients.ZendeskRestClient;
-import org.embulk.input.zendesk.clients.ZendeskRestClientImpl;
 import org.embulk.input.zendesk.models.AuthenticationMethod;
 import org.embulk.input.zendesk.models.Target;
-import org.embulk.input.zendesk.services.ZendeskSupportAPiService;
-import org.embulk.input.zendesk.services.ZendeskSupportAPiServiceImpl;
+import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
 import org.embulk.input.zendesk.utils.JacksonTimestampValueLocator;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
@@ -35,8 +31,6 @@ import org.embulk.spi.PageBuilder;
 import org.embulk.spi.Schema;
 import org.embulk.spi.type.Type;
 import org.embulk.spi.type.Types;
-import org.embulk.util.retryhelper.jetty92.DefaultJetty92ClientCreator;
-import org.embulk.util.retryhelper.jetty92.Jetty92RetryHelper;
 import org.slf4j.Logger;
 
 import javax.validation.constraints.Max;
@@ -46,7 +40,6 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -57,12 +50,9 @@ import java.util.stream.Collectors;
 
 public class ZendeskInputPluginDelegate implements RestClientInputPluginDelegate<ZendeskInputPluginDelegate.PluginTask>
 {
-    private static final Logger logger = Exec.getLogger(ZendeskInputPluginDelegate.class);
-
     public interface PluginTask extends RestClientInputTaskBase
     {
         @Config("login_url")
-        @ConfigDefault("https://abc.zendesk.com")
         String getLoginUrl();
 
         @Config("auth_method")
@@ -93,21 +83,21 @@ public class ZendeskInputPluginDelegate implements RestClientInputPluginDelegate
         Optional<String> getStartTime();
 
         @Min(1)
-        @Max(10)
+        @Max(30)
         @Config("retry_limit")
         @ConfigDefault("5")
         int getRetryLimit();
 
         @Min(1)
-        @Max(50)
+        @Max(3600)
         @Config("retry_initial_wait_sec")
-        @ConfigDefault("2000")
+        @ConfigDefault("5")
         int getRetryInitialWaitSec();
 
         @Min(30)
         @Max(300)
         @Config("max_retry_wait_sec")
-        @ConfigDefault("60000")
+        @ConfigDefault("60")
         int getMaxRetryWaitSec();
 
         @Min(3)
@@ -144,18 +134,15 @@ public class ZendeskInputPluginDelegate implements RestClientInputPluginDelegate
         @ConfigDefault("[]")
         List<String> getPreviousRecords();
 
-        @Config("page")
-        @ConfigDefault("0")
-        int getPage();
-
-        void setPage(int page);
+        void setStartTime(String startTime);
 
         Schema getSchema();
 
         void setSchema(Schema schema);
     }
+    private static final Logger logger = Exec.getLogger(ZendeskInputPluginDelegate.class);
 
-    private ZendeskSupportAPiService zendeskSupportAPiService;
+    private ZendeskSupportAPIService zendeskSupportAPIService;
 
     @Override
     public ConfigDiff buildConfigDiff(final PluginTask task, final Schema schema, final int taskCount,
@@ -174,7 +161,6 @@ public class ZendeskInputPluginDelegate implements RestClientInputPluginDelegate
                     configDiff.set(ZendeskConstants.Field.START_TIME,
                             offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT)));
                 }
-
                 if (taskReport.has(ZendeskConstants.Field.PREVIOUS_RECORDS)) {
                     configDiff.set(ZendeskConstants.Field.PREVIOUS_RECORDS,
                             taskReport.get(JsonNode.class, ZendeskConstants.Field.PREVIOUS_RECORDS));
@@ -190,23 +176,102 @@ public class ZendeskInputPluginDelegate implements RestClientInputPluginDelegate
         validateHost(task.getLoginUrl());
         validateAppMarketPlace(task.getAppMarketPlaceIntegrationName().isPresent(), task.getAppMarketPlaceAppId().isPresent(),
                 task.getAppMarketPlaceOrgId().isPresent());
+        validateCredentials(task);
+        validateInclude(task.getIncludes(), task.getTarget());
+        validateIncremental(task);
+    }
 
-        zendeskSupportAPiService = getZendeskV2SupportAPiService(getZendeskV2RestClient(task), task);
+    private void validateHost(final String loginUrl)
+    {
+        Matcher matcher = Pattern.compile(ZendeskConstants.Regex.HOST).matcher(loginUrl);
+        if (!matcher.matches()) {
+            throw new ConfigException(String.format("Login URL, '%s', is unmatched expectation. " +
+                    "It should be followed this format: https://abc.zendesk.com/", loginUrl));
+        }
+    }
 
-        validateCriteria(task);
+    private void validateInclude(final List<String> includes, final Target target)
+    {
+        if (includes != null && !includes.isEmpty()) {
+            if (!ZendeskUtils.isSupportInclude(target)) {
+                logger.warn("Target: '{}' doesn't support include size loading. Option include will be ignored", target.toString());
+            }
+        }
+    }
 
-        if (task.getIncludes() != null && !task.getIncludes().isEmpty()) {
-            validateInclude(task.getTarget());
+    private void validateCredentials(final PluginTask task)
+    {
+        switch (task.getAuthenticationMethod()) {
+            case OAUTH:
+                if (!task.getAccessToken().isPresent()) {
+                    throw new ConfigException(String.format("Missing required credentials for authenticated by '%s'",
+                            task.getAuthenticationMethod().name()));
+                }
+                break;
+            case TOKEN:
+                if (!task.getUsername().isPresent() || !task.getToken().isPresent()) {
+                    throw new ConfigException(String.format("Missing required credentials for authenticated by '%s'",
+                            task.getAuthenticationMethod().name()));
+                }
+                break;
+            case BASIC:
+                if (!task.getUsername().isPresent() || !task.getPassword().isPresent()) {
+                    throw new ConfigException(String.format("Missing required credentials for authenticated by '%s'",
+                            task.getAuthenticationMethod().name()));
+                }
+                break;
+            default:
+                throw new ConfigException("Unknown authentication method");
         }
 
+        // Validate credentials by sending one request to users.json. It Should always have at least one user
+        try {
+            getZendeskSupportAPIService(task).getData(String.format("%s/%s/users.json?per_page=1", task.getLoginUrl(),
+                    ZendeskConstants.Url.API), 0, false);
+        }
+        catch (final HttpResponseException ex) {
+            if (ex.getResponse().getStatus() == 401) {
+                throw new ConfigException("Invalid credential. Error 401: can't authenticate");
+            }
+        }
+    }
+
+    private void validateAppMarketPlace(final boolean isAppMarketIntegrationNamePresent, final boolean isAppMarketAppIdPresent,
+                                        final boolean isAppMarketOrgIdPresent)
+    {
+        final boolean isAllAvailable = isAppMarketIntegrationNamePresent && isAppMarketAppIdPresent && isAppMarketOrgIdPresent;
+        final boolean isAllUnAvailable = !isAppMarketIntegrationNamePresent && !isAppMarketAppIdPresent && !isAppMarketOrgIdPresent;
+        // All or nothing needed
+        if (!(isAllAvailable || isAllUnAvailable)) {
+            throw new ConfigException("All of app_marketplace_integration_name, app_marketplace_org_id, app_marketplace_app_id " +
+                    "are required to fill out for Apps Marketplace API header");
+        }
+    }
+
+    private void validateIncremental(final PluginTask task)
+    {
         if (task.getIncremental()) {
-            validateIncremental(task.getStartTime(), task.getTarget());
-            if (!task.getDedup()) {
+            if (task.getDedup()) {
                 logger.warn("You've selected to skip de-duplicating records, result may contain duplicated data");
+            }
+            if (!ZendeskUtils.isSupportIncremental(task.getTarget())) {
+                throw new ConfigException(String.format("Unsupported incremental options for target '%s'",
+                        task.getTarget().toString()));
+            }
+            // validate start time format
+            if (!task.getStartTime().isPresent()) {
+                throw new ConfigException("start_time is required for incremental mode");
+            }
+            else {
+                if (!ZendeskDateUtils.isSupportedTimeFormat(task.getStartTime().get(),
+                        ImmutableList.of(ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.SHORT_DATE_FORMAT))) {
+                    // it followed the logic in the old version
+                    task.setStartTime(ZendeskConstants.Misc.DEFAULT_START_TIME);
+                }
             }
         }
         else {
-            if (task.getTarget() == Target.TICKET_EVENTS) {
+            if (Target.TICKET_EVENTS.equals(task.getTarget())) {
                 throw new ConfigException("Zendesk doesn't support non incremental endpoint for ticket_events. " +
                         "Please rerun this job in incremental mode");
             }
@@ -217,160 +282,34 @@ public class ZendeskInputPluginDelegate implements RestClientInputPluginDelegate
         }
     }
 
-    private void validateHost(final String loginUrl)
-    {
-        Matcher matcher = Pattern.compile(ZendeskConstants.Regex.HOST).matcher(loginUrl);
-        if (!matcher.matches()) {
-            throw new ConfigException(String.format("Login URL, %s,is unmatched expectation. " +
-                    "It should be follow this format: https://abc.zendesk.com", loginUrl));
-        }
-    }
-
-    private void validateInclude(final Target target)
-    {
-        if (!ZendeskUtils.isSupportInclude(target)) {
-            logger.warn("Target: {} doesn't support include size loading. Option include will be ignored ", target.toString());
-        }
-    }
-
-    private void validateCriteria(final PluginTask task)
-    {
-        switch (task.getAuthenticationMethod()) {
-            case OAUTH:
-                if (!task.getAccessToken().isPresent()) {
-                    throw new ConfigException(String.format("Missing required credentials for %s",
-                            task.getAuthenticationMethod().name()));
-                }
-                break;
-            case TOKEN:
-                if (!task.getUsername().isPresent() || !task.getToken().isPresent()) {
-                    throw new ConfigException(String.format("Missing required credentials for %s",
-                            task.getAuthenticationMethod().name()));
-                }
-                break;
-            case BASIC:
-                if (!task.getUsername().isPresent() || !task.getPassword().isPresent()) {
-                    throw new ConfigException(String.format("Missing required credentials for %s",
-                            task.getAuthenticationMethod().name()));
-                }
-                break;
-            default:
-                throw new ConfigException("Unknown authentication method");
-        }
-
-        // Validate criteria by sending one request to users.json. It Should always have at least one user
-        try {
-            zendeskSupportAPiService.getData(String.format("%s/%s/users.json?per_page=1", task.getLoginUrl(), ZendeskConstants.Url.API),
-                    0, false);
-        }
-        catch (final HttpResponseException ex) {
-            if (ex.getResponse().getStatus() == 401) {
-                throw new ConfigException("Invalid credential. Error 401: can't authenticate");
-            }
-        }
-    }
-
-    private void validateAppMarketPlace(boolean isAppMarketIntegrationNamePresent, boolean isAppMarketAppIdPresent,
-                                        boolean isAppMarketOrgIdPresent)
-    {
-        // All or nothing needed
-        if (!((isAppMarketIntegrationNamePresent && isAppMarketAppIdPresent && isAppMarketOrgIdPresent)
-                || (!isAppMarketIntegrationNamePresent && !isAppMarketAppIdPresent && !isAppMarketOrgIdPresent))) {
-            throw new ConfigException("All of app_marketplace_integration_name, app_marketplace_org_id, app_marketplace_app_id " +
-                    "are required to fill out for Apps Marketplace API header");
-        }
-    }
-
-    private void validateIncremental(final Optional<String> startTime, final Target target)
-    {
-        if (!ZendeskUtils.isSupportIncremental(target)) {
-            throw new ConfigException(String.format("Unsupported incremental options for target %s",
-                    target.toString()));
-        }
-
-        // validate start time format
-        if (startTime.isPresent()) {
-            ZendeskDateUtils.parse(startTime.get(),
-                    ImmutableList.of(ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.SHORT_DATE_FORMAT));
-        }
-    }
-
     @Override
     public TaskReport ingestServiceData(final PluginTask task, final RecordImporter recordImporter, final int taskIndex,
                                         final PageBuilder pageBuilder)
     {
         final TaskReport taskReport = Exec.newTaskReport();
-
         // Page start from 1 => page = taskIndex + 1
-        final JsonNode result = zendeskSupportAPiService.getData("", taskIndex + 1, false);
-        final String targetJsonString = task.getTarget().getJsonName();
+        final JsonNode result = getZendeskSupportAPIService(task).getData("", taskIndex + 1, false);
+        final String targetJsonName = task.getTarget().getJsonName();
 
-        if (!result.has(targetJsonString) || !result.get(targetJsonString).isArray()) {
-            throw new DataException(String.format("Missing %s from Zendesk API response", targetJsonString));
+        if (!result.has(targetJsonName) || !result.get(targetJsonName).isArray()) {
+            throw new DataException(String.format("Missing '%s' from Zendesk API response", targetJsonName));
         }
 
-        final Iterator<JsonNode> iterator = result.get(targetJsonString).elements();
-        final Target target = task.getTarget();
+        final Iterator<JsonNode> iterator = result.get(targetJsonName).elements();
 
         if (task.getIncremental()) {
             final long endTimeStamp = result.get(ZendeskConstants.Field.END_TIME).asLong();
-
-            // if count >= 1000 -> next incremental available
-            final boolean isNextIncrementalAvailable = result.get(ZendeskConstants.Field.COUNT).asInt() >= ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL;
-
-            final List<String> previousRecordsList = task.getPreviousRecords().isEmpty()
-                    ? task.getPreviousRecords()
-                    : new ArrayList<>();
-
-            boolean isStopDedup = false;
+            final int numberOfRecords = result.get(ZendeskConstants.Field.COUNT).asInt();
+            final boolean isNextIncrementalAvailable = numberOfRecords >= ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL;
 
             final ImmutableList.Builder<String> dedupRecordsBuilder = new ImmutableList.Builder<>();
-
-            while (iterator.hasNext()) {
-                JsonNode jsonNode = iterator.next();
-
-                // For incremental, sort by updated_date. So just need to store some record have the same updated_at as end_time
-                if (task.getDedup()) {
-                    long updatedAtTimeStamp = ZendeskDateUtils.toTimeStamp(jsonNode.get(ZendeskConstants.Field.UPDATED_AT).asText());
-
-                    if (isStopDedup) {
-                        fetchData(jsonNode, target, task.getIncludes(), recordImporter, pageBuilder);
-                    }
-                    else {
-                        // only check record have the same updated_at timestamp as start_time
-                        if (!isDuplicatedRecord(previousRecordsList, jsonNode.get(ZendeskConstants.Field.ID).asText())) {
-                            fetchData(jsonNode, target, task.getIncludes(), recordImporter, pageBuilder);
-                        }
-                        if (task.getStartTime().isPresent()) {
-                            isStopDedup = isLaterThanStartTime(task.getStartTime().get(), updatedAtTimeStamp);
-                        }
-                    }
-
-                    if (isNextIncrementalAvailable) {
-                        if (endTimeStamp == updatedAtTimeStamp) {
-                            dedupRecordsBuilder.add(jsonNode.get(ZendeskConstants.Field.ID).asText());
-                        }
-                    }
-                }
-                else {
-                    fetchData(jsonNode, target, task.getIncludes(), recordImporter, pageBuilder);
-                }
-
-                // only need to run one hit if in preview mode
-                if (Exec.isPreview()) {
-                    break;
-                }
-            }
-
-            if (isNextIncrementalAvailable) {
-                taskReport.set(ZendeskConstants.Field.START_TIME, endTimeStamp);
-                taskReport.set(ZendeskConstants.Field.PREVIOUS_RECORDS, dedupRecordsBuilder.build());
-            }
+            importDataForIncremental(iterator, task, isNextIncrementalAvailable, dedupRecordsBuilder, endTimeStamp, recordImporter, pageBuilder);
+            storeInformationForNextRun(isNextIncrementalAvailable, endTimeStamp, dedupRecordsBuilder, taskReport);
         }
         else {
             while (iterator.hasNext()) {
-                fetchData(iterator.next(), target, task.getIncludes(), recordImporter, pageBuilder);
-
+                fetchData(iterator.next(), task, recordImporter, pageBuilder);
+                // only need to run one hit if in preview mode
                 if (Exec.isPreview()) {
                     break;
                 }
@@ -379,154 +318,208 @@ public class ZendeskInputPluginDelegate implements RestClientInputPluginDelegate
         return taskReport;
     }
 
+    private void importDataForIncremental(final Iterator<JsonNode> iterator, final PluginTask task, final boolean isNextIncrementalAvailable,
+                                          final ImmutableList.Builder<String> dedupRecordsBuilder, final long incrementalEndTimeToEpochSecond,
+                                          final RecordImporter recordImporter, final PageBuilder pageBuilder)
+    {
+        final List<String> previousRecordsList = task.getPreviousRecords();
+
+        boolean isStopDedup = false;
+
+        while (iterator.hasNext()) {
+            final JsonNode recordJsonNode = iterator.next();
+
+            // For incremental, records sorted by updated_at.
+            // So we just need to store some records, which have the same updated_at time as end_time for de-duplication
+            if (task.getDedup()) {
+                final String recordId = recordJsonNode.get(ZendeskConstants.Field.ID).asText();
+                final String recordUpdatedAtTime = recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).asText();
+                final long recordUpdatedAtToEpochSecond = ZendeskDateUtils.isoToEpochSecond(recordUpdatedAtTime);
+
+                if (isStopDedup) {
+                    fetchData(recordJsonNode, task, recordImporter, pageBuilder);
+                }
+                else {
+                    boolean isDuplicatedRecord = previousRecordsList.contains(recordId);
+                    if (!isDuplicatedRecord) {
+                        fetchData(recordJsonNode, task, recordImporter, pageBuilder);
+                    }
+                    // validate whether we have to check duplication for next records
+                    isStopDedup = isRequiredForFurtherChecking(task.getStartTime(), recordUpdatedAtToEpochSecond);
+                }
+
+                addRecordIdForNextRun(isNextIncrementalAvailable, incrementalEndTimeToEpochSecond, recordUpdatedAtToEpochSecond,
+                        dedupRecordsBuilder, recordId);
+            }
+            else {
+                fetchData(recordJsonNode, task, recordImporter, pageBuilder);
+            }
+            // only need to run one hit if in preview mode
+            if (Exec.isPreview()) {
+                break;
+            }
+        }
+    }
+
+    private void storeInformationForNextRun(final boolean isNextIncrementalAvailable, final long endTimeStamp,
+                                            final ImmutableList.Builder<String> dedupRecordsBuilder, final TaskReport taskReport)
+    {
+        if (isNextIncrementalAvailable) {
+            taskReport.set(ZendeskConstants.Field.START_TIME, endTimeStamp);
+            taskReport.set(ZendeskConstants.Field.PREVIOUS_RECORDS, dedupRecordsBuilder.build());
+        }
+    }
+
+    private void addRecordIdForNextRun(final boolean isNextIncrementalAvailable, final long incrementalEndTimeToEpochSecond,
+                                         final long recordUpdatedTimeToEpochSecond,
+                                         final ImmutableList.Builder<String> dedupRecordsBuilder, final String recordId)
+    {
+        if (isNextIncrementalAvailable) {
+            if (incrementalEndTimeToEpochSecond == recordUpdatedTimeToEpochSecond) {
+                dedupRecordsBuilder.add(recordId);
+            }
+        }
+    }
+
     @Override
     public ServiceDataSplitter<PluginTask> buildServiceDataSplitter(final PluginTask task)
     {
-        return new ZendeskServiceDataSplitter<>(zendeskSupportAPiService);
+        return new ZendeskServiceDataSplitter(getZendeskSupportAPIService(task));
     }
 
     @Override
     public ServiceResponseMapper<? extends ValueLocator> buildServiceResponseMapper(final PluginTask task)
     {
         final JacksonServiceResponseMapper.Builder builder = JacksonServiceResponseMapper.builder();
-        zendeskSupportAPiService = getZendeskV2SupportAPiService(getZendeskV2RestClient(task), task);
 
         if (task.getSchema() == null) {
+            final JsonNode jsonNode = getZendeskSupportAPIService(task).getData("", 0, true);
+
             final Schema.Builder targetSchemaBuilder = new Schema.Builder();
+            final String targetName = task.getTarget().toString();
 
-            JsonNode jsonNode = zendeskSupportAPiService.getData("", 0, true);
-
-            String targetJsonString = task.getTarget().toString();
-
-            if (jsonNode.get(targetJsonString).isArray()) {
-                final Iterator<JsonNode> iterator = jsonNode.get(targetJsonString).elements();
-                // We always preview with only 1 record by option per_page=1
-                if (iterator.hasNext()) {
-                    final Iterator<Map.Entry<String, JsonNode>> iter = iterator.next().fields();
-
-                    while (iter.hasNext()) {
-                        final Map.Entry<String, JsonNode> entry = iter.next();
-                        final Type columnType = ZendeskUtils.getColumnType(entry.getKey(), entry.getValue());
-
-                        targetSchemaBuilder.add(entry.getKey(), columnType);
-
-                        if (columnType == Types.TIMESTAMP) {
-                            builder.add(new JacksonTimestampValueLocator(entry.getKey()), entry.getKey(), columnType,
-                                    ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
-                        }
-                        else {
-                            builder.add(entry.getKey(), columnType);
-                        }
-                    }
-
-                    if (isSupportInclude(task.getTarget(), task.getIncludes())) {
-                        for (String include : task.getIncludes()) {
-                            targetSchemaBuilder.add(include, Types.JSON);
-                            builder.add(include, Types.JSON);
-                        }
-                    }
-                }
+            if (jsonNode.get(targetName).isArray()) {
+                addAllColumnsToSchema(jsonNode, task.getTarget(), task.getIncludes(), targetSchemaBuilder, builder);
             }
             task.setSchema(targetSchemaBuilder.build());
         }
+        // when running in non-incremental mode, we run in multiple threads.
+        // We just need to build schema one and reuse.
         else  {
-            List<Column> columns = task.getSchema().getColumns();
+            final List<Column> columns = task.getSchema().getColumns();
             for (Column column : columns) {
-                if (column.getType() != Types.TIMESTAMP) {
-                    builder.add(column.getName(), column.getType());
-                }
-                else {
+                if (Types.TIMESTAMP.equals(column.getType())) {
                     builder.add(new JacksonTimestampValueLocator(column.getName()), column.getName(), column.getType(),
                             ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
                 }
+                else {
+                    builder.add(column.getName(), column.getType());
+                }
             }
         }
+
         return builder.build();
     }
-
-    @VisibleForTesting
-    protected static ZendeskRestClient getZendeskV2RestClient(final PluginTask task)
+    private void addAllColumnsToSchema(final JsonNode jsonNode, final Target target, final List<String> includes,
+                                       final Schema.Builder targetSchemaBuilder, final JacksonServiceResponseMapper.Builder builder)
     {
-        int retryLimit = Exec.isPreview() ? 1 : task.getRetryLimit();
-        final Jetty92RetryHelper retryHelper = new Jetty92RetryHelper(retryLimit, task.getRetryInitialWaitSec() * 1000,
-                task.getMaxRetryWaitSec() * 1000,
-                new DefaultJetty92ClientCreator(task.getConnectionTimeout() * 1000, task.getConnectionTimeout() * 1000));
-        return new ZendeskRestClientImpl(retryHelper, task);
+        final Iterator<JsonNode> iterator = jsonNode.get(target.toString()).elements();
+        // We always preview with only 1 record by option per_page=1
+        if (iterator.hasNext()) {
+            final Iterator<Map.Entry<String, JsonNode>> iter = iterator.next().fields();
+            while (iter.hasNext()) {
+                addSingleColumnToSchema(iter.next(), targetSchemaBuilder, builder);
+            }
+            addIncludedObjectsToSchema(target, includes, targetSchemaBuilder, builder);
+        }
     }
 
-    @VisibleForTesting
-    protected static ZendeskSupportAPiService getZendeskV2SupportAPiService(final ZendeskRestClient zendeskRestClient, final PluginTask task)
+    private void addSingleColumnToSchema(final Map.Entry<String, JsonNode> entry, final Schema.Builder targetSchemaBuilder,
+                                         final JacksonServiceResponseMapper.Builder builder)
     {
-        return new ZendeskSupportAPiServiceImpl(zendeskRestClient, task);
-    }
+        final Type columnType = ZendeskUtils.getColumnType(entry.getKey(), entry.getValue());
+        targetSchemaBuilder.add(entry.getKey(), columnType);
 
-    private boolean isLaterThanStartTime(String startTime, long time)
-    {
-        return time > ZendeskDateUtils.toTimeStamp(startTime);
-    }
-
-    private boolean isDuplicatedRecord(List<String> previousRecords, String recordId)
-    {
-        return previousRecords.contains(recordId);
-    }
-
-    private boolean isSupportInclude(Target target, List<String> includes)
-    {
-        return includes != null && !includes.isEmpty() && ZendeskUtils.isSupportInclude(target);
-    }
-
-    private void fetchData(final JsonNode jsonNode, final Target target, final List<String> includes,
-                           final RecordImporter recordImporter, final PageBuilder pageBuilder)
-    {
-        if (isSupportInclude(target, includes)) {
-            fetchRelatedObjects(jsonNode, target, includes, recordImporter, pageBuilder);
+        if (Types.TIMESTAMP.equals(columnType)) {
+            builder.add(new JacksonTimestampValueLocator(entry.getKey()), entry.getKey(), columnType,
+                    ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
         }
         else {
-            recordImporter.importRecord(new JacksonServiceRecord((ObjectNode) getDataToImport(target, jsonNode)), pageBuilder);
+            builder.add(entry.getKey(), columnType);
         }
     }
 
-    private void fetchRelatedObjects(final JsonNode jsonNode, final Target target, final List<String> includes,
-                              final RecordImporter recordImporter, final PageBuilder pageBuilder)
+    private void addIncludedObjectsToSchema(final Target target, final List<String> includes, final Schema.Builder targetSchemaBuilder,
+                                            final JacksonServiceResponseMapper.Builder builder)
+    {
+        if (ZendeskUtils.isSupportInclude(target, includes)) {
+            for (String include : includes) {
+                targetSchemaBuilder.add(include, Types.JSON);
+                builder.add(include, Types.JSON);
+            }
+        }
+    }
+
+    private void fetchData(final JsonNode jsonNode, final PluginTask task, final RecordImporter recordImporter,
+                           final PageBuilder pageBuilder)
+    {
+        if (ZendeskUtils.isSupportInclude(task.getTarget(), task.getIncludes())) {
+            fetchRelatedObjects(jsonNode, task, recordImporter, pageBuilder);
+        }
+        else {
+            recordImporter.importRecord(new JacksonServiceRecord((ObjectNode) getDataToImport(task.getTarget(), jsonNode)), pageBuilder);
+        }
+    }
+
+    private void fetchRelatedObjects(final JsonNode jsonNode, final PluginTask task, final RecordImporter recordImporter,
+                                     final PageBuilder pageBuilder)
     {
         // remove .json in url
-        String url = jsonNode.get("url").asText().trim();
-
-        if (url.length() > 5) {
-            url = url.substring(0, url.length() - 5);
-        }
-        else {
-            throw new DataException("Error when parsing url to fetch includes for " + jsonNode);
-        }
+        final String url = jsonNode.get("url").asText().trim().replaceFirst("\\.json", "");
 
         final StringBuilder builder = new StringBuilder(url);
 
+        Target target = task.getTarget();
         if (ZendeskUtils.isSupportInclude(target)) {
             builder.append("?include=");
-            builder.append(includes
+            builder.append(task.getIncludes()
                     .stream()
                     .map(String::trim)
                     .collect(Collectors.joining(",")));
         }
 
-        final JsonNode result = zendeskSupportAPiService.getData(builder.toString(), 0, false);
+        final JsonNode result = getZendeskSupportAPIService(task).getData(builder.toString(), 0, false);
 
-        JsonNode targetJsonNode = result.get(target.getSingleFieldName());
+        final JsonNode targetJsonNode = result.get(target.getSingleFieldName());
 
-        for (String include : includes) {
+        for (String include : task.getIncludes()) {
             JsonNode includeJsonNode = result.get(include);
             if (includeJsonNode != null) {
                 ((ObjectNode) targetJsonNode).putPOJO(include, includeJsonNode);
             }
         }
-
         recordImporter.importRecord(new JacksonServiceRecord((ObjectNode) targetJsonNode), pageBuilder);
     }
 
-    private JsonNode getDataToImport(Target target, JsonNode jsonNode)
+    private JsonNode getDataToImport(final Target target, final JsonNode jsonNode)
     {
-        return target == Target.TICKET_METRICS
+        return Target.TICKET_METRICS.equals(target)
                 ? jsonNode.get("metric_set")
                 : jsonNode;
+    }
+
+    private ZendeskSupportAPIService getZendeskSupportAPIService(final PluginTask task)
+    {
+        if (zendeskSupportAPIService == null) {
+            zendeskSupportAPIService = new ZendeskSupportAPIService(task);
+        }
+        return zendeskSupportAPIService;
+    }
+
+    private boolean isRequiredForFurtherChecking(final Optional<String> startTime, final long recordUpdatedAtTime)
+    {
+        // Because records sorted by updated_at.
+        // When updated_at of one record is larger than start_time, we don't need to check further
+        return  startTime.isPresent() && recordUpdatedAtTime > ZendeskDateUtils.isoToEpochSecond(startTime.get());
     }
 }

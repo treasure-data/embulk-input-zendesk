@@ -30,7 +30,8 @@ public enum Target
             return Target.valueOf(value.trim().toUpperCase());
         }
         catch (IllegalArgumentException e) {
-            throw new ConfigException("Unsupported 'target': " + value + ", supported values: " + Arrays.toString(Target.values()));
+            throw new ConfigException("Unsupported target '" + value + "', supported values: '"
+                    + Arrays.toString(Target.values()) + "'");
         }
     }
 

@@ -3,51 +3,38 @@ package org.embulk.input.zendesk;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.embulk.base.restclient.RestClientInputTaskBase;
 import org.embulk.base.restclient.ServiceDataSplitter;
-import org.embulk.input.zendesk.services.ZendeskSupportAPiService;
+import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.spi.Schema;
 
 public class ZendeskServiceDataSplitter<T extends RestClientInputTaskBase> extends ServiceDataSplitter<T>
 {
-    ZendeskSupportAPiService zendeskSupportAPiService;
+    ZendeskSupportAPIService zendeskSupportAPIService;
 
-    public ZendeskServiceDataSplitter(ZendeskSupportAPiService zendeskSupportAPiService)
+    public ZendeskServiceDataSplitter(final ZendeskSupportAPIService zendeskSupportAPiService)
     {
-        this.zendeskSupportAPiService = zendeskSupportAPiService;
+        this.zendeskSupportAPIService = zendeskSupportAPiService;
     }
 
     @Override
-    public int numberToSplitWithHintingInTask(T taskToHint)
+    public int numberToSplitWithHintingInTask(final T taskToHint)
     {
-        ZendeskInputPluginDelegate.PluginTask task = (ZendeskInputPluginDelegate.PluginTask) taskToHint;
-
+        final ZendeskInputPluginDelegate.PluginTask task = (ZendeskInputPluginDelegate.PluginTask) taskToHint;
         if (task.getIncremental()) {
             return 1;
         }
-
-        if (task.getPage() > 0) {
-            return task.getPage();
-        }
-        else {
-            int numberOfPage = calculateNumberOfPages(task);
-            if (numberOfPage > 0) {
-                task.setPage(numberOfPage);
-                return numberOfPage;
-            }
-        }
-
-        return 1;
+        return Math.max(calculateNumberOfPages(), 1);
     }
 
     @Override
-    public void hintInEachSplitTask(T taskToHint, Schema schema, int taskIndex)
+    public void hintInEachSplitTask(final T taskToHint, final Schema schema, final int taskIndex)
     {
     }
 
     // only apply for non incremental
-    private int calculateNumberOfPages(final ZendeskInputPluginDelegate.PluginTask task)
+    private int calculateNumberOfPages()
     {
-        final JsonNode result = zendeskSupportAPiService.getData("", 0, false);
+        final JsonNode result = zendeskSupportAPIService.getData("", 0, false);
 
         if (result.get(ZendeskConstants.Field.COUNT) != null
                 && result.get(ZendeskConstants.Field.COUNT).isInt()) {

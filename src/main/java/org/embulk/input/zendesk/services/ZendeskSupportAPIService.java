@@ -5,7 +5,7 @@ import com.google.common.base.Throwables;
 import org.eclipse.jetty.client.HttpResponseException;
 import org.embulk.base.restclient.jackson.StringJsonParser;
 import org.embulk.config.ConfigException;
-import org.embulk.input.zendesk.ZendeskInputPluginDelegate.PluginTask;
+import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
@@ -22,9 +22,14 @@ public class ZendeskSupportAPIService
 {
     private ZendeskRestClient zendeskRestClient;
 
-    private final PluginTask task;
+    private PluginTask task;
 
     public ZendeskSupportAPIService(final PluginTask task)
+    {
+        this.task = task;
+    }
+
+    public void setTask(PluginTask task)
     {
         this.task = task;
     }
@@ -85,7 +90,7 @@ public class ZendeskSupportAPIService
     private String buildURLForPreview()
     {
         // For ticket_events we only have incremental end point
-        final boolean isIncrementalNeeded = Target.TICKET_EVENTS.equals(task.getTarget());
+        final boolean isIncrementalNeeded = task.getIncremental();
 
         return new StringBuilder(task.getLoginUrl())
                 .append(isIncrementalNeeded
@@ -111,8 +116,10 @@ public class ZendeskSupportAPIService
 
     private StringBuilder buildURLForRunBasedOnTarget(final Target target, final int page)
     {
-        final String startTime = task.getStartTime().map(s -> String.valueOf(ZendeskDateUtils.isoToEpochSecond(s))).orElse("0");
-
+        String startTime = "";
+        if (task.getIncremental()) {
+            startTime = task.getStartTime().map(s -> String.valueOf(ZendeskDateUtils.isoToEpochSecond(s))).orElse("0");
+        }
         return new StringBuilder(task.getLoginUrl())
                 .append(task.getIncremental()
                         ? ZendeskConstants.Url.API_INCREMENTAL

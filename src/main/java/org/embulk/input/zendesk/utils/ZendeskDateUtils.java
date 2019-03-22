@@ -41,4 +41,10 @@ public class ZendeskDateUtils
             throw new DataException("Fail to parse value '" + time + "' follow format " + DateTimeFormatter.ISO_INSTANT.toString());
         }
     }
+
+    public static boolean isTimeStamp(final String time)
+    {
+        return isSupportedTimeFormat(time, Arrays.asList(ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT,
+                ZendeskConstants.Misc.ISO_INSTANT));
+    }
 }

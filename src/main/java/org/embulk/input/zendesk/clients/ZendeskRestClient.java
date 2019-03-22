@@ -1,5 +1,7 @@
 package org.embulk.input.zendesk.clients;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -10,7 +12,8 @@ import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.client.api.Response;
 import org.eclipse.jetty.http.HttpMethod;
 import org.embulk.config.ConfigException;
-import org.embulk.input.zendesk.ZendeskInputPluginDelegate;
+import org.embulk.input.zendesk.ZendeskInputPlugin;
+import org.embulk.input.zendesk.models.ZendeskErrorResponse;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.Exec;
@@ -30,9 +33,14 @@ public class ZendeskRestClient implements AutoCloseable
     private static RateLimiter rateLimiter;
 
     private final Jetty92RetryHelper retryHelper;
-    private final ZendeskInputPluginDelegate.PluginTask task;
+    private final ZendeskInputPlugin.PluginTask task;
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
-    public ZendeskRestClient(final Jetty92RetryHelper retryHelper, final ZendeskInputPluginDelegate.PluginTask task)
+    static {
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
+
+    public ZendeskRestClient(final Jetty92RetryHelper retryHelper, final ZendeskInputPlugin.PluginTask task)
     {
         this.retryHelper = retryHelper;
         this.task = task;
@@ -40,8 +48,89 @@ public class ZendeskRestClient implements AutoCloseable
 
     public <T> T doGet(final String url, final Jetty92ResponseReader<T> responseReader)
     {
-        T result = retryHelper.requestWithRetry(responseReader, new ZendeskV2Jetty92SingleRequester(url, buildAuthHeader()));
-        getRateLimiter(responseReader).acquire();
+        if (rateLimiter != null) {
+            getRateLimiter().acquire();
+        }
+
+        T result = retryHelper.requestWithRetry(responseReader, new Jetty92SingleRequester()
+        {
+            @Override
+            public void requestOnce(HttpClient client, Response.Listener responseListener)
+            {
+                final Request request = client.newRequest(url).method(HttpMethod.GET);
+                ImmutableMap<String, String> headers = buildAuthHeader();
+                if (headers != null) {
+                    for (final Map.Entry<String, String> entry : headers.entrySet()) {
+                        request.header(entry.getKey(), entry.getValue());
+                    }
+                }
+
+                logger.info(">>> {} {}{}", request.getMethod(), request.getURI().getPath(),
+                        request.getURI().getQuery() != null ? "?" + request.getURI().getQuery() : "");
+                request.send(responseListener);
+            }
+
+            @Override
+            protected boolean isResponseStatusToRetry(Response response)
+            {
+                final int status = response.getStatus();
+                if (status == 409) {
+                    throw new RuntimeException(String.format("'%s' temporally failure.", status));
+                }
+
+                if (status == 422) {
+                    ZendeskErrorResponse zendeskErrorResponse;
+                    try {
+                        zendeskErrorResponse = objectMapper.readValue(responseReader.readResponseContentInString(), ZendeskErrorResponse.class);
+                    }
+                    catch (final Exception e) {
+                            throw new RuntimeException("Fail to parse body of response, error status '" + status + "'");
+                    }
+                    if (zendeskErrorResponse.description != null
+                                && zendeskErrorResponse.description.startsWith(ZendeskConstants.Misc.TOO_RECENT_START_TIME)) {
+                        return true;
+                    }
+                    else {
+                        throw new ConfigException("Status: '" + status + "', error message +'" + zendeskErrorResponse.toString());
+                    }
+                }
+
+                if (status == 429 || status == 500 || status == 503) {
+                    final String retryAfter = response.getHeaders().get("Retry-After");
+                    if (!retryAfter.isEmpty()) {
+                        logger.warn("Reached API limitation, sleep for '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
+                        Uninterruptibles.sleepUninterruptibly(Long.parseLong(retryAfter), TimeUnit.SECONDS);
+                        return true;
+                    }
+                    else if (status != 429) {
+                        throw new RuntimeException(String.format("'%s' temporally failure.", status));
+                    }
+                }
+
+                // for 500s error we should retry
+                if ((status / 100) == 5) {
+                    return true;
+                }
+                else {
+                    throw new RuntimeException("Server returns unknown status code '" + status + "'");
+                }
+            }
+
+            //Analyze exception whether retryable or not
+            @Override
+            protected boolean isExceptionToRetry(final Exception exception)
+            {
+                if (exception instanceof ConfigException || exception instanceof ExecutionException) {
+                    return toRetry((Exception) exception.getCause());
+                }
+                return exception instanceof IOException;
+            }
+        });
+
+        if (rateLimiter == null) {
+            initRateLimiter(responseReader);
+        }
+
         return result;
     }
 
@@ -49,86 +138,6 @@ public class ZendeskRestClient implements AutoCloseable
     public void close()
     {
         retryHelper.close();
-    }
-
-    private static class ZendeskV2Jetty92SingleRequester extends Jetty92SingleRequester
-    {
-        private final String url;
-        private final ImmutableMap<String, String> headers;
-
-        ZendeskV2Jetty92SingleRequester(final String url, final ImmutableMap<String, String> headers)
-        {
-            this.url = url;
-            this.headers = headers;
-        }
-
-        @Override
-        public void requestOnce(final HttpClient client, final Response.Listener responseListener)
-        {
-            final Request request = client.newRequest(url).method(HttpMethod.GET);
-
-            if (headers != null) {
-                for (final Map.Entry<String, String> entry : headers.entrySet()) {
-                    request.header(entry.getKey(), entry.getValue());
-                }
-            }
-
-            logger.info(">>> {} {}{}", request.getMethod(), request.getURI().getPath(),
-                    request.getURI().getQuery() != null ? "?" + request.getURI().getQuery() : "");
-            request.send(responseListener);
-        }
-
-        /**
-         * Analyze response whether the failure response is retryable or not
-         *
-         * Only retry if reaches the API limitation
-         */
-        @Override
-        protected boolean isResponseStatusToRetry(final Response response)
-        {
-            final int status = response.getStatus();
-
-            if (status == 409 || status == 422) {
-                return true;
-            }
-
-            if (status == 429) {
-                final String retryAfter = response.getHeaders().get("Retry-After");
-
-                if (!retryAfter.isEmpty()) {
-                    logger.warn("Reached API limitation, sleep for '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
-                    Uninterruptibles.sleepUninterruptibly(Long.parseLong(retryAfter), TimeUnit.SECONDS);
-                    return true;
-                }
-            }
-
-            if (status == 503) {
-                final String retryAfter = response.getHeaders().get("Retry-After");
-
-                if (!retryAfter.isEmpty()) {
-                    logger.warn("Reached API limitation, sleep for '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
-                    Uninterruptibles.sleepUninterruptibly(Long.parseLong(retryAfter), TimeUnit.SECONDS);
-                    return true;
-                }
-                else {
-                    throw new RuntimeException(String.format("'%s' temporally failure.", status));
-                }
-            }
-            // for 500s error we should retry
-            return (status / 100) == 5;
-        }
-
-        /**
-         * Analyze exception whether retryable or not
-         */
-        @Override
-        protected boolean isExceptionToRetry(final Exception exception)
-        {
-            if (exception instanceof ConfigException || exception instanceof ExecutionException) {
-                return toRetry((Exception) exception.getCause());
-            }
-            return exception instanceof IOException;
-        }
     }
 
     private ImmutableMap<String, String> buildAuthHeader()
@@ -161,15 +170,12 @@ public class ZendeskRestClient implements AutoCloseable
         builder.put(ZendeskConstants.Header.CONTENT_TYPE, ZendeskConstants.Header.APPLICATION_JSON);
     }
 
-    private RateLimiter getRateLimiter(final Jetty92ResponseReader responseReader)
+    private RateLimiter getRateLimiter()
     {
-        if (rateLimiter == null) {
-            rateLimiter = initRateLimiter(responseReader);
-        }
         return rateLimiter;
     }
 
-    private static synchronized RateLimiter initRateLimiter(final Jetty92ResponseReader responseReader)
+    private static synchronized void initRateLimiter(final Jetty92ResponseReader responseReader)
     {
         String rateLimit = "";
         double permits = 0.0;
@@ -183,6 +189,6 @@ public class ZendeskRestClient implements AutoCloseable
         permits = permits / 60;
         logger.info("Permits per second " + permits);
 
-        return RateLimiter.create(permits);
+        rateLimiter = RateLimiter.create(permits);
     }
 }

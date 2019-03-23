@@ -1,6 +1,5 @@
 package org.embulk.input.zendesk.utils;
 
-import com.google.common.collect.ImmutableList;
 import org.eclipse.jetty.client.HttpResponseException;
 import org.embulk.config.ConfigException;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
@@ -10,7 +9,6 @@ import org.embulk.spi.Exec;
 import org.slf4j.Logger;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -104,32 +102,14 @@ public class ZendeskValidatorUtils
 
     private static void validateIncremental(final ZendeskInputPlugin.PluginTask task)
     {
-        // auto run with non incremental if target doesn't support incremental
-        if (!ZendeskUtils.isSupportIncremental(task.getTarget())) {
-            task.setIncremental(false);
-        }
-
         if (task.getIncremental()) {
             if (!task.getDedup()) {
                 logger.warn("You've selected to skip de-duplicating records, result may contain duplicated data");
             }
-        }
-        else {
-            if (task.getStartTime().isPresent()) {
-                task.setStartTime(Optional.of(ZendeskConstants.Misc.DEFAULT_START_TIME));
-            }
 
-            if (ZendeskUtils.isSupportIncremental(task.getTarget())) {
-                task.setIncremental(true);
-            }
-        }
-
-        if (task.getIncremental()) {
-            if (!ZendeskDateUtils.isSupportedTimeFormat(task.getStartTime().get(),
-                    ImmutableList.of(ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT,
-                            ZendeskConstants.Misc.SHORT_DATE_FORMAT))) {
-                // it followed the logic in the old version
-                task.setStartTime(Optional.of(ZendeskConstants.Misc.DEFAULT_START_TIME));
+            if (!ZendeskUtils.isSupportIncremental(task.getTarget()) && task.getStartTime().isPresent()) {
+                logger.warn(String.format("target: '%s' don't support incremental export API. Will be ignored start_time option",
+                        task.getTarget()));
             }
         }
     }

@@ -9,7 +9,7 @@ Embulk input plugin for loading [Zendesk](https://www.zendesk.com/) records.
 
 ## Overview
 
-Required Embulk version >= 0.8.1.
+Required Embulk version >= 0.9.6.
 
 **NOTE** This plugin don't support JSON type columns e.g. custom fields, tags, etc for now. But they will be supported soon.
 

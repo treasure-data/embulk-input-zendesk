@@ -1,9 +1,11 @@
 package org.embulk.input.zendesk.services;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Throwables;
 import org.eclipse.jetty.client.HttpResponseException;
-import org.embulk.base.restclient.jackson.StringJsonParser;
 import org.embulk.config.ConfigException;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
@@ -11,11 +13,13 @@ import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
+import org.embulk.spi.DataException;
 import org.embulk.spi.Exec;
 import org.embulk.util.retryhelper.jetty92.DefaultJetty92ClientCreator;
 import org.embulk.util.retryhelper.jetty92.Jetty92RetryHelper;
 import org.embulk.util.retryhelper.jetty92.StringJetty92ResponseEntityReader;
 
+import java.io.IOException;
 import java.util.stream.Collectors;
 
 public class ZendeskSupportAPIService
@@ -23,6 +27,13 @@ public class ZendeskSupportAPIService
     private ZendeskRestClient zendeskRestClient;
 
     private PluginTask task;
+
+    private static ObjectMapper mapper = new ObjectMapper();
+
+    static {
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, false);
+    }
 
     public ZendeskSupportAPIService(final PluginTask task)
     {
@@ -43,8 +54,8 @@ public class ZendeskSupportAPIService
         try {
             final String response = getZendeskRestClient().doGet(path,
                     new StringJetty92ResponseEntityReader(ZendeskConstants.Misc.READ_TIMEOUT_IN_MILLIS_FOR_PREVIEW));
-            final StringJsonParser jsonParser = new StringJsonParser();
-            return jsonParser.parseJsonObject(response);
+
+            return parseJsonObject(response);
         }
         catch (final HttpResponseException ex) {
             if (ex.getResponse().getStatus() == 401) {
@@ -58,6 +69,27 @@ public class ZendeskSupportAPIService
             }
         }
         catch (final Exception e) {
+            throw Throwables.propagate(e);
+        }
+    }
+
+    private ObjectNode parseJsonObject(String jsonText)
+    {
+        JsonNode node = parseJsonNode(jsonText);
+        if (node.isObject()) {
+            return (ObjectNode) node;
+        }
+        else {
+            throw new DataException("Expected object node: " + jsonText);
+        }
+    }
+
+    private JsonNode parseJsonNode(String jsonText)
+    {
+        try {
+            return mapper.readTree(jsonText);
+        }
+        catch (IOException e) {
             throw Throwables.propagate(e);
         }
     }
@@ -89,19 +121,29 @@ public class ZendeskSupportAPIService
 
     private String buildURLForPreview()
     {
-        // For ticket_events we only have incremental end point
-        final boolean isIncrementalNeeded = task.getIncremental();
+        final boolean isSupportIncremental = ZendeskUtils.isSupportIncremental(task.getTarget());
+        StringBuilder previewURL = new StringBuilder(task.getLoginUrl());
 
-        return new StringBuilder(task.getLoginUrl())
-                .append(isIncrementalNeeded
+        previewURL.append(isSupportIncremental
                         ? ZendeskConstants.Url.API_INCREMENTAL
                         : ZendeskConstants.Url.API)
-                .append("/")
-                .append(task.getTarget().toString())
-                .append(".json?")
-                .append(isIncrementalNeeded
-                        ? "start_time=0"
-                        : "per_page=1").toString();
+                .append("/");
+
+        if (Target.TICKET_METRICS.equals(task.getTarget())) {
+            previewURL.append(Target.TICKETS.toString())
+                    .append(".json?")
+                    .append("include=metric_sets");
+        }
+        else {
+            previewURL.append(task.getTarget().toString())
+                    .append(".json?");
+        }
+
+        previewURL.append(isSupportIncremental
+            ? "&start_time=0"
+            : "&per_page=1");
+
+        return previewURL.toString();
     }
 
     private String buildURLForRun(final int page)
@@ -117,16 +159,17 @@ public class ZendeskSupportAPIService
     private StringBuilder buildURLForRunBasedOnTarget(final Target target, final int page)
     {
         String startTime = "";
-        if (task.getIncremental()) {
+        boolean isSupportIncremental = ZendeskUtils.isSupportIncremental(target);
+        if (isSupportIncremental) {
             startTime = task.getStartTime().map(s -> String.valueOf(ZendeskDateUtils.isoToEpochSecond(s))).orElse("0");
         }
         return new StringBuilder(task.getLoginUrl())
-                .append(task.getIncremental()
+                .append(isSupportIncremental
                         ? ZendeskConstants.Url.API_INCREMENTAL
                         : ZendeskConstants.Url.API)
                 .append("/")
                 .append(target.toString())
-                .append(task.getIncremental()
+                .append(isSupportIncremental
                         ? ".json?start_time=" + startTime
                         : ".json?sort_by=id&per_page=100&page=" + page);
     }

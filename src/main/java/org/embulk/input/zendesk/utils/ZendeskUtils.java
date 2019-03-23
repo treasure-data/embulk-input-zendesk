@@ -47,7 +47,7 @@ public class ZendeskUtils
     public static int numberToSplitWithHintingInTask(final ZendeskInputPlugin.PluginTask task,
                                                      final ZendeskSupportAPIService zendeskSupportAPIService)
     {
-        if (task.getIncremental()) {
+        if (isSupportIncremental(task.getTarget())) {
             return 1;
         }
         return Math.max(calculateNumberOfPages(zendeskSupportAPIService), 1);

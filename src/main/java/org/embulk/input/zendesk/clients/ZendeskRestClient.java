@@ -48,10 +48,6 @@ public class ZendeskRestClient implements AutoCloseable
 
     public <T> T doGet(final String url, final Jetty92ResponseReader<T> responseReader)
     {
-        if (rateLimiter != null) {
-            getRateLimiter().acquire();
-        }
-
         T result = retryHelper.requestWithRetry(responseReader, new Jetty92SingleRequester()
         {
             @Override
@@ -120,16 +116,14 @@ public class ZendeskRestClient implements AutoCloseable
             @Override
             protected boolean isExceptionToRetry(final Exception exception)
             {
-                if (exception instanceof ConfigException || exception instanceof ExecutionException) {
+                if (exception instanceof ExecutionException) {
                     return toRetry((Exception) exception.getCause());
                 }
                 return exception instanceof IOException;
             }
         });
 
-        if (rateLimiter == null) {
-            initRateLimiter(responseReader);
-        }
+        getRateLimiter(responseReader).acquire();
 
         return result;
     }
@@ -170,12 +164,15 @@ public class ZendeskRestClient implements AutoCloseable
         builder.put(ZendeskConstants.Header.CONTENT_TYPE, ZendeskConstants.Header.APPLICATION_JSON);
     }
 
-    private RateLimiter getRateLimiter()
+    private RateLimiter getRateLimiter(final Jetty92ResponseReader responseReader)
     {
+        if (rateLimiter == null) {
+            rateLimiter = initRateLimiter(responseReader);
+        }
         return rateLimiter;
     }
 
-    private static synchronized void initRateLimiter(final Jetty92ResponseReader responseReader)
+    private static synchronized RateLimiter initRateLimiter(final Jetty92ResponseReader responseReader)
     {
         String rateLimit = "";
         double permits = 0.0;
@@ -189,6 +186,6 @@ public class ZendeskRestClient implements AutoCloseable
         permits = permits / 60;
         logger.info("Permits per second " + permits);
 
-        rateLimiter = RateLimiter.create(permits);
+        return RateLimiter.create(permits);
     }
 }

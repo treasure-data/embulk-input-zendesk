@@ -138,10 +138,6 @@ public class ZendeskInputPlugin implements InputPlugin
 
         @Config("columns")
         SchemaConfig getColumns();
-
-        void setStartTime(Optional<String> startTime);
-
-        void setIncremental(boolean incremental);
     }
 
     private ZendeskSupportAPIService zendeskSupportAPIService;
@@ -203,7 +199,7 @@ public class ZendeskInputPlugin implements InputPlugin
         if (!taskReports.isEmpty()) {
             final TaskReport taskReport = taskReports.get(0);
 
-            if (task.getIncremental()) {
+            if (ZendeskUtils.isSupportIncremental(task.getTarget())) {
                 if (taskReport.has(ZendeskConstants.Field.START_TIME)) {
                     final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
                             taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong()),
@@ -235,7 +231,7 @@ public class ZendeskInputPlugin implements InputPlugin
         }
 
         final Iterator<JsonNode> iterator = result.get(targetJsonName).elements();
-        if (task.getIncremental() && !Exec.isPreview()) {
+        if (ZendeskUtils.isSupportIncremental(task.getTarget()) && !Exec.isPreview()) {
             final long endTimeStamp = result.get(ZendeskConstants.Field.END_TIME).asLong();
             final int numberOfRecords = result.get(ZendeskConstants.Field.COUNT).asInt();
             final boolean isNextIncrementalAvailable =
@@ -264,7 +260,7 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         final List<String> previousRecordsList = task.getPreviousRecords();
         // create multiple threads for fetching the url with included objects of each records
-        if (task.getIncludes().size() > 0) {
+        if (task.getIncludes().size() > 0 && ZendeskUtils.isSupportInclude(task.getTarget())) {
             try {
                 ExecutorService pool = null;
                 try {
@@ -360,8 +356,10 @@ public class ZendeskInputPlugin implements InputPlugin
 
     private JsonNode buildColumns(final PluginTask task)
     {
-        final JsonNode jsonNode = getZendeskSupportAPIService(task).getData("", 0, true);
-        final String targetName = task.getTarget().toString();
+        JsonNode jsonNode = getZendeskSupportAPIService(task).getData("", 0, true);
+
+        String targetName = task.getTarget().getJsonName();
+
         if (!jsonNode.get(targetName).isArray()) {
             throw new ConfigException("Could not guess schema due to empty data set");
         }
@@ -370,7 +368,6 @@ public class ZendeskInputPlugin implements InputPlugin
         }
     }
 
-    private final Pattern timePattern = Pattern.compile(ZendeskConstants.Regex.TIME_FIELD);
     private final Pattern idPattern = Pattern.compile(ZendeskConstants.Regex.ID);
     private JsonNode addAllColumnsToSchema(final JsonNode jsonNode, final Target target, final List<String> includes)
     {
@@ -379,8 +376,6 @@ public class ZendeskInputPlugin implements InputPlugin
         final JsonNode columns = Exec.getInjector().getInstance(GuessExecutor.class)
                 .guessParserConfig(bufferSample, Exec.newConfigSource(), createGuessConfig())
                 .getObjectNode().get("columns");
-
-        final JsonNode targetJsonNode = sample.get(0);
 
         final Iterator<JsonNode> ite = columns.elements();
         while (ite.hasNext()) {
@@ -397,14 +392,8 @@ public class ZendeskInputPlugin implements InputPlugin
                 entry.putPOJO("type", Types.STRING.getName());
             }
 
-            boolean isTimeStampFormat = type.equals(Types.STRING.getName())
-                    && (ZendeskDateUtils.isTimeStamp(targetJsonNode.get(name).asText()) || timePattern.matcher(name).matches());
             if (type.equals(Types.TIMESTAMP.getName())) {
                 entry.putPOJO("format", ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
-            }
-            else if (isTimeStampFormat) {
-                    entry.putPOJO("type", Types.TIMESTAMP);
-                    entry.putPOJO("format", ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
             }
         }
         addIncludedObjectsToSchema((ArrayNode) columns, target, includes);
@@ -496,11 +485,21 @@ public class ZendeskInputPlugin implements InputPlugin
 
     private JsonNode createSamples(final JsonNode jsonNode, final Target target)
     {
-        final JsonNode targetJsonNode = jsonNode.get(target.toString());
+        JsonNode targetJsonNode = getJsonToGuess(jsonNode, target);
+
         if (targetJsonNode.isArray()) {
             return targetJsonNode;
         }
-        return null;
+        throw new ConfigException("Could not guess schema due to empty data set");
+    }
+
+    private JsonNode getJsonToGuess(JsonNode jsonNode, final Target target)
+    {
+        jsonNode = Target.TICKET_METRICS.equals(target)
+                ? jsonNode.get("metric_sets")
+                : jsonNode.get(target.toString());
+
+        return jsonNode;
     }
 
     private PageBuilder getPageBuilder(final Schema schema, final PageOutput output)

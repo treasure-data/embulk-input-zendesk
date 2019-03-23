@@ -39,20 +39,18 @@ public class ZendeskConstants
         public static final String RUBY_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%N%z";
         public static final String ISO_INSTANT = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 
-        public static final String SHORT_DATE_FORMAT = "yyyy-MM-dd";
-        public static final String DEFAULT_START_TIME = "1970-01-01T00:00:00Z";
         public static final String TOO_RECENT_START_TIME = "Too recent start_time.";
 
         public static final long READ_TIMEOUT_IN_MILLIS_FOR_PREVIEW = 10000;
         public static final int RECORDS_SIZE_PER_PAGE = 100;
         public static final int MAXIMUM_RECORDS_INCREMENTAL = 1000;
 
-        public static final int GUESS_BUFFER_SIZE = 5 * 1024 * 1024;
+        // 10 MB
+        public static final int GUESS_BUFFER_SIZE = 10000000;
     }
 
     public static class Regex
     {
-        public static final String TIME_FIELD = "^.*(_at|timestamp|_time)$";
         public static final String ID = "_id$";
         public static final String HOST = "^(https:\\/\\/)?(www.)?([a-zA-Z0-9]+).zendesk.com/$";
     }

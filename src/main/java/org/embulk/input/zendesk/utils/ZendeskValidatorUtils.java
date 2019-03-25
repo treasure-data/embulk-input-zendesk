@@ -1,6 +1,5 @@
 package org.embulk.input.zendesk.utils;
 
-import org.eclipse.jetty.client.HttpResponseException;
 import org.embulk.config.ConfigException;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.models.Target;
@@ -42,7 +41,7 @@ public class ZendeskValidatorUtils
     {
         if (includes != null && !includes.isEmpty()) {
             if (!ZendeskUtils.isSupportInclude(target)) {
-                logger.warn("Target: '{}' doesn't support include size loading. Option include will be ignored", target.toString());
+                logger.warn("Target: '{}' doesn't support include size loading. Will be ignored include option", target.toString());
             }
         }
     }
@@ -73,15 +72,9 @@ public class ZendeskValidatorUtils
         }
 
         // Validate credentials by sending one request to users.json. It Should always have at least one user
-        try {
-            zendeskSupportAPIService.getData(String.format("%s%s/users.json?per_page=1", task.getLoginUrl(),
-                    ZendeskConstants.Url.API), 0, false);
-        }
-        catch (final HttpResponseException ex) {
-            if (ex.getResponse().getStatus() == 401) {
-                throw new ConfigException("Invalid credential. Error 401: can't authenticate");
-            }
-        }
+
+        zendeskSupportAPIService.validateCredential(String.format("%s%s/users.json?per_page=1", task.getLoginUrl(),
+                ZendeskConstants.Url.API));
     }
 
     private static void validateAppMarketPlace(final boolean isAppMarketIntegrationNamePresent,

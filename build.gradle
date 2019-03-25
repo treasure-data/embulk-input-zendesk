@@ -32,10 +32,8 @@ targetCompatibility = 1.8
 
 dependencies {
     compile  "org.embulk:embulk-core:0.9.7"
-    provided("org.embulk:embulk-core:0.9.7") {
-        exclude group: 'commons-lang', module: 'commons-lang'
-    }
-    compile  "org.embulk.base.restclient:embulk-util-retryhelper-jetty92:0.5.3"
+    provided("org.embulk:embulk-core:0.9.7")
+    compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.6'
     testCompile "junit:junit:4.+"
     testCompile "org.embulk:embulk-core:0.9.7:tests"
     testCompile "org.embulk:embulk-test:0.9.7"

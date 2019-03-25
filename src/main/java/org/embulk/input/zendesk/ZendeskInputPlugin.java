@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
@@ -102,12 +103,6 @@ public class ZendeskInputPlugin implements InputPlugin
         @ConfigDefault("60")
         int getMaxRetryWaitSec();
 
-        @Min(3)
-        @Max(100)
-        @Config("connection_timeout")
-        @ConfigDefault("30")
-        int getConnectionTimeout();
-
         @Config("incremental")
         @ConfigDefault("true")
         boolean getIncremental();
@@ -163,6 +158,7 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         final PluginTask task = taskSource.loadTask(PluginTask.class);
         final List<TaskReport> taskReports = control.run(taskSource, schema, taskCount);
+
         return this.buildConfigDiff(task, taskReports);
     }
 
@@ -302,7 +298,8 @@ public class ZendeskInputPlugin implements InputPlugin
     }
 
     private final AtomicBoolean isStopDedup = new AtomicBoolean(false);
-    private void dedupAndFetchData(final PluginTask task, final JsonNode recordJsonNode, final boolean isNextIncrementalAvailable,
+    @VisibleForTesting
+    protected void dedupAndFetchData(final PluginTask task, final JsonNode recordJsonNode, final boolean isNextIncrementalAvailable,
                                    final long incrementalEndTimeToEpochSecond, final ImmutableList.Builder<String> dedupRecordsBuilder,
                                    final List<String> previousRecordsList, final Schema schema, final PageBuilder pageBuilder)
     {
@@ -460,7 +457,8 @@ public class ZendeskInputPlugin implements InputPlugin
                 : jsonNode;
     }
 
-    private ZendeskSupportAPIService getZendeskSupportAPIService(final PluginTask task)
+    @VisibleForTesting
+    protected ZendeskSupportAPIService getZendeskSupportAPIService(final PluginTask task)
     {
         if (this.zendeskSupportAPIService == null) {
             this.zendeskSupportAPIService = new ZendeskSupportAPIService(task);

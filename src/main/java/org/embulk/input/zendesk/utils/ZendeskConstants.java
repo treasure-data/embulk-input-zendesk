@@ -8,8 +8,6 @@ public class ZendeskConstants
 
     public static class Header
     {
-        public static final String AUTHORIZATION = "Authorization";
-        public static final String CONTENT_TYPE = "Content-Type";
         public static final String APPLICATION_JSON = "application/json";
 
         public static final String ZENDESK_MARKETPLACE_NAME = "X-Zendesk-Marketplace-Name";
@@ -41,7 +39,6 @@ public class ZendeskConstants
 
         public static final String TOO_RECENT_START_TIME = "Too recent start_time.";
 
-        public static final long READ_TIMEOUT_IN_MILLIS_FOR_PREVIEW = 10000;
         public static final int RECORDS_SIZE_PER_PAGE = 100;
         public static final int MAXIMUM_RECORDS_INCREMENTAL = 1000;
 

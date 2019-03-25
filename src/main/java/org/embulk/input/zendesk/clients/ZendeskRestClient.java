@@ -1,148 +1,269 @@
 package org.embulk.input.zendesk.clients;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.util.concurrent.RateLimiter;
 import com.google.common.util.concurrent.Uninterruptibles;
-import org.eclipse.jetty.client.HttpClient;
-import org.eclipse.jetty.client.api.Request;
-import org.eclipse.jetty.client.api.Response;
-import org.eclipse.jetty.http.HttpMethod;
+
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.util.EntityUtils;
 import org.embulk.config.ConfigException;
-import org.embulk.input.zendesk.ZendeskInputPlugin;
-import org.embulk.input.zendesk.models.ZendeskErrorResponse;
+import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
+import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.Exec;
-import org.embulk.util.retryhelper.jetty92.Jetty92ResponseReader;
-import org.embulk.util.retryhelper.jetty92.Jetty92RetryHelper;
-import org.embulk.util.retryhelper.jetty92.Jetty92SingleRequester;
+import org.embulk.spi.util.RetryExecutor;
 import org.slf4j.Logger;
+import static org.apache.http.HttpHeaders.AUTHORIZATION;
+import static org.apache.http.protocol.HTTP.CONTENT_TYPE;
+import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
 import java.io.IOException;
+
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-public class ZendeskRestClient implements AutoCloseable
+public class ZendeskRestClient
 {
+    private static final int CONNECTION_TIME_OUT = 300000;
+
     private static final Logger logger = Exec.getLogger(ZendeskRestClient.class);
     private static RateLimiter rateLimiter;
 
-    private final Jetty92RetryHelper retryHelper;
-    private final ZendeskInputPlugin.PluginTask task;
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     static {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-    public ZendeskRestClient(final Jetty92RetryHelper retryHelper, final ZendeskInputPlugin.PluginTask task)
+    public ZendeskRestClient()
     {
-        this.retryHelper = retryHelper;
-        this.task = task;
     }
 
-    public <T> T doGet(final String url, final Jetty92ResponseReader<T> responseReader)
+    public void checkUserCredentials(String url, PluginTask task)
     {
-        T result = retryHelper.requestWithRetry(responseReader, new Jetty92SingleRequester()
-        {
-            @Override
-            public void requestOnce(HttpClient client, Response.Listener responseListener)
-            {
-                final Request request = client.newRequest(url).method(HttpMethod.GET);
-                ImmutableMap<String, String> headers = buildAuthHeader();
-                if (headers != null) {
-                    for (final Map.Entry<String, String> entry : headers.entrySet()) {
-                        request.header(entry.getKey(), entry.getValue());
-                    }
-                }
-
-                logger.info(">>> {} {}{}", request.getMethod(), request.getURI().getPath(),
-                        request.getURI().getQuery() != null ? "?" + request.getURI().getQuery() : "");
-                request.send(responseListener);
+        try {
+            sendRequest(url, task);
+        }
+        catch (ZendeskException e) {
+            if (e.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
+                throw new ConfigException("Could not authorize with your credential.");
             }
-
-            @Override
-            protected boolean isResponseStatusToRetry(Response response)
-            {
-                final int status = response.getStatus();
-                if (status == 409) {
-                    throw new RuntimeException(String.format("'%s' temporally failure.", status));
-                }
-
-                if (status == 422) {
-                    ZendeskErrorResponse zendeskErrorResponse;
-                    try {
-                        zendeskErrorResponse = objectMapper.readValue(responseReader.readResponseContentInString(), ZendeskErrorResponse.class);
-                    }
-                    catch (final Exception e) {
-                            throw new RuntimeException("Fail to parse body of response, error status '" + status + "'");
-                    }
-                    if (zendeskErrorResponse.description != null
-                                && zendeskErrorResponse.description.startsWith(ZendeskConstants.Misc.TOO_RECENT_START_TIME)) {
-                        return true;
-                    }
-                    else {
-                        throw new ConfigException("Status: '" + status + "', error message +'" + zendeskErrorResponse.toString());
-                    }
-                }
-
-                if (status == 429 || status == 500 || status == 503) {
-                    final String retryAfter = response.getHeaders().get("Retry-After");
-                    if (!retryAfter.isEmpty()) {
-                        logger.warn("Reached API limitation, sleep for '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
-                        Uninterruptibles.sleepUninterruptibly(Long.parseLong(retryAfter), TimeUnit.SECONDS);
-                        return true;
-                    }
-                    else if (status != 429) {
-                        throw new RuntimeException(String.format("'%s' temporally failure.", status));
-                    }
-                }
-
-                // for 500s error we should retry
-                if ((status / 100) == 5) {
-                    return true;
-                }
-                else {
-                    throw new RuntimeException("Server returns unknown status code '" + status + "'");
-                }
+            else if (e.getStatusCode() == HttpStatus.SC_FORBIDDEN) {
+                throw new ConfigException("Your account doesn't have enough permission.");
             }
-
-            //Analyze exception whether retryable or not
-            @Override
-            protected boolean isExceptionToRetry(final Exception exception)
-            {
-                if (exception instanceof ExecutionException) {
-                    return toRetry((Exception) exception.getCause());
-                }
-                return exception instanceof IOException;
+            else {
+                throw new ConfigException("Could not authorize with your credential due to problems " + e.getMessage());
             }
-        });
-
-        getRateLimiter(responseReader).acquire();
-
-        return result;
+        }
     }
 
-    @Override
-    public void close()
+    private String sendRequest(final String url, final PluginTask task) throws ZendeskException
     {
-        retryHelper.close();
+        try {
+            HttpClient client = createHttpClient();
+            HttpRequestBase request = createGetRequest(url, task);
+            logger.info(">>> {} {}{}", request.getMethod(), request.getURI().getPath(),
+                    request.getURI().getQuery() != null ? "?" + request.getURI().getQuery() : "");
+            HttpResponse response = client.execute(request);
+            getRateLimiter(response).acquire();
+            int statusCode = response.getStatusLine().getStatusCode();
+            if (statusCode != HttpStatus.SC_OK) {
+                if (statusCode == 429 || statusCode == 500 || statusCode == 503) {
+                    Header retryHeader = response.getFirstHeader("Retry-After");
+                    if (retryHeader != null) {
+                        throw new ZendeskException(statusCode, extractErrorMessages(EntityUtils.toString(response.getEntity())), Integer.parseInt(retryHeader.getValue()));
+                    }
+                }
+                throw new ZendeskException(statusCode, extractErrorMessages(EntityUtils.toString(response.getEntity())), 0);
+            }
+            return EntityUtils.toString(response.getEntity());
+        }
+        catch (IOException ex) {
+            throw new ZendeskException(-1, ex.getMessage(), 0);
+        }
     }
 
-    private ImmutableMap<String, String> buildAuthHeader()
+    private HttpClient createHttpClient()
+    {
+        RequestConfig config = RequestConfig.custom()
+                .setConnectTimeout(CONNECTION_TIME_OUT)
+                .setConnectionRequestTimeout(CONNECTION_TIME_OUT)
+                .build();
+        return HttpClientBuilder.create().setDefaultRequestConfig(config).build();
+    }
+
+    private String extractErrorMessages(String errorResponse)
+    {
+        try {
+            JsonNode errorObject = objectMapper.readTree(errorResponse);
+            ObjectNode objectNode = objectMapper.createObjectNode();
+            if (errorObject.get("error") != null) {
+                objectNode.putPOJO("error", errorObject.get("error").asText());
+            }
+
+            if (errorObject.get("description") != null) {
+                objectNode.putPOJO("description", errorObject.get("description").asText());
+            }
+            return objectNode.toString();
+        }
+        catch (Exception e) {
+            throw Throwables.propagate(e);
+        }
+    }
+
+    public String doGet(String url, PluginTask task)
+    {
+        try {
+            return retryExecutor().withRetryLimit(task.getRetryLimit())
+                    .withInitialRetryWait(task.getRetryInitialWaitSec())
+                    .withMaxRetryWait(task.getMaxRetryWaitSec())
+                    .runInterruptible(new RetryExecutor.Retryable<String>() {
+                        @Override
+                        public String call() throws Exception
+                        {
+                            return sendRequest(url, task);
+                        }
+
+                        @Override
+                        public boolean isRetryableException(Exception exception)
+                        {
+                            if (exception instanceof ZendeskException) {
+                                int statusCode = ((ZendeskException) exception).getStatusCode();
+                                return isResponseStatusToRetry(statusCode, exception.getMessage(), ((ZendeskException) exception).getStatusCode());
+                            }
+                            return exception instanceof IOException;
+                        }
+
+                        @Override
+                        public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait) throws RetryExecutor.RetryGiveupException
+                        {
+                            if (exception instanceof ZendeskException) {
+                                int retryAfter = ((ZendeskException) exception).getRetryAfter();
+                                String message;
+                                if (retryAfter > 0 && retryAfter > (retryWait / 1000)) {
+                                    message = String
+                                            .format("Retrying '%d'/'%d' after '%d' seconds. HTTP status code: '%s'",
+                                                    retryCount, retryLimit,
+                                                    retryAfter,
+                                                    ((ZendeskException) exception).getStatusCode());
+                                    logger.warn(message);
+                                    Uninterruptibles.sleepUninterruptibly(retryAfter - (retryWait / 1000), TimeUnit.SECONDS);
+                                }
+                                else {
+                                    message = String
+                                            .format("Retrying '%d'/'%d' after '%d' seconds. HTTP status code: '%s'",
+                                                    retryCount, retryLimit,
+                                                    retryWait / 1000,
+                                                    ((ZendeskException) exception).getStatusCode());
+                                    logger.warn(message);
+                                }
+                            }
+                            else {
+                                String message = String
+                                        .format("Retrying '%d'/'%d' after '%d' seconds. Message: '%s'",
+                                                retryCount, retryLimit,
+                                                retryWait / 1000,
+                                                exception.getMessage());
+                                logger.warn(message, exception);
+                            }
+                        }
+
+                        @Override
+                        public void onGiveup(Exception firstException, Exception lastException) throws RetryExecutor.RetryGiveupException
+                        {
+                            logger.warn("Retry Limit Exceeded");
+                        }
+                    });
+        }
+        catch (RetryExecutor.RetryGiveupException | InterruptedException e) {
+            if (e instanceof RetryExecutor.RetryGiveupException && e.getCause() != null && e.getCause() instanceof ZendeskException) {
+                throw new ConfigException(e.getCause().getMessage());
+            }
+            throw new ConfigException(e);
+        }
+    }
+
+    private boolean isResponseStatusToRetry(int status, String message, int retryAfter)
+    {
+        if (status == -1) {
+            return false;
+        }
+
+        if (status == 409) {
+            throw new RuntimeException(String.format("'%s' temporally failure.", status));
+        }
+
+        if (status == 422) {
+            JsonNode jsonNode;
+            try {
+                jsonNode = objectMapper.readTree(message);
+            }
+            catch (final Exception e) {
+                throw new RuntimeException("Fail to parse body error response, error status '" + status + "'");
+            }
+            if (jsonNode != null && jsonNode.get("description") != null
+                    && jsonNode.get("description").asText().startsWith(ZendeskConstants.Misc.TOO_RECENT_START_TIME)) {
+                return true;
+            }
+            else {
+                throw new ConfigException("Status: '" + status + "', error message +'" + jsonNode + "'");
+            }
+        }
+
+        if (status == 429 || status == 500 || status == 503) {
+            if (retryAfter > 0) {
+                logger.warn("Reached API limitation, sleep for '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
+                return true;
+            }
+            else if (status != 429) {
+                throw new RuntimeException(String.format("'%s' temporally failure.", status));
+            }
+        }
+
+        // for 500s error we should retry
+        if ((status / 100) == 5) {
+            return true;
+        }
+        else {
+            throw new RuntimeException("Server returns unknown status code '" + status + "'");
+        }
+    }
+
+    private HttpRequestBase createGetRequest(String url, PluginTask task)
+    {
+        HttpGet request = new HttpGet(url);
+        ImmutableMap<String, String> headers = buildAuthHeader(task);
+        if (headers != null) {
+            for (final Map.Entry<String, String> entry : headers.entrySet()) {
+                request.setHeader(entry.getKey(), entry.getValue());
+            }
+        }
+        return request;
+    }
+
+    private ImmutableMap<String, String> buildAuthHeader(PluginTask task)
     {
         Builder<String, String> builder = new Builder<>();
-        builder.put(ZendeskConstants.Header.AUTHORIZATION, buildCredential());
-        addCommonHeader(builder);
+        builder.put(AUTHORIZATION, buildCredential(task));
+        addCommonHeader(builder, task);
         return builder.build();
     }
 
-    private String buildCredential()
+    private String buildCredential(PluginTask task)
     {
         switch (task.getAuthenticationMethod()) {
             case BASIC:
@@ -155,29 +276,31 @@ public class ZendeskRestClient implements AutoCloseable
         return "";
     }
 
-    private void addCommonHeader(final Builder<String, String> builder)
+    private void addCommonHeader(final Builder<String, String> builder, PluginTask task)
     {
         task.getAppMarketPlaceIntegrationName().ifPresent(s -> builder.put(ZendeskConstants.Header.ZENDESK_MARKETPLACE_NAME, s));
         task.getAppMarketPlaceAppId().ifPresent(s -> builder.put(ZendeskConstants.Header.ZENDESK_MARKETPLACE_APP_ID, s));
         task.getAppMarketPlaceOrgId().ifPresent(s -> builder.put(ZendeskConstants.Header.ZENDESK_MARKETPLACE_ORGANIZATION_ID, s));
 
-        builder.put(ZendeskConstants.Header.CONTENT_TYPE, ZendeskConstants.Header.APPLICATION_JSON);
+        builder.put(CONTENT_TYPE, ZendeskConstants.Header.APPLICATION_JSON);
     }
 
-    private RateLimiter getRateLimiter(final Jetty92ResponseReader responseReader)
+    private RateLimiter getRateLimiter(final HttpResponse response)
     {
         if (rateLimiter == null) {
-            rateLimiter = initRateLimiter(responseReader);
+            rateLimiter = initRateLimiter(response);
         }
         return rateLimiter;
     }
 
-    private static synchronized RateLimiter initRateLimiter(final Jetty92ResponseReader responseReader)
+    private static synchronized RateLimiter initRateLimiter(final HttpResponse response)
     {
         String rateLimit = "";
         double permits = 0.0;
         try {
-            rateLimit = responseReader.getResponse().getHeaders().get("x-rate-limit");
+            if (response.getFirstHeader("x-rate-limit") != null) {
+                rateLimit = response.getFirstHeader("x-rate-limit").getValue();
+            }
             permits = Double.parseDouble(rateLimit);
         }
         catch (Exception e) {

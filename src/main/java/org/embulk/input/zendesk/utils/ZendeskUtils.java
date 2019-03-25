@@ -151,7 +151,7 @@ public class ZendeskUtils
 
     private static boolean isNull(JsonNode jsonNode)
     {
-        return jsonNode == null || (jsonNode.isNull());
+        return jsonNode == null || jsonNode.isNull();
     }
 
     /*

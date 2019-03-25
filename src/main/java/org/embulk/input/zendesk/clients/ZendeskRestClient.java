@@ -199,12 +199,14 @@ public class ZendeskRestClient
 
     private boolean isResponseStatusToRetry(int status, String message, int retryAfter)
     {
-        if (status == -1) {
-            return false;
+        if (status == 404) {
+            //404 would be returned e.g. ticket comments are empty (on fetch_subresource method)
+            return true;
         }
 
         if (status == 409) {
-            throw new RuntimeException(String.format("'%s' temporally failure.", status));
+            logger.warn(String.format("'%s' temporally failure.", status));
+            return true;
         }
 
         if (status == 422) {
@@ -217,7 +219,8 @@ public class ZendeskRestClient
             }
             if (jsonNode != null && jsonNode.get("description") != null
                     && jsonNode.get("description").asText().startsWith(ZendeskConstants.Misc.TOO_RECENT_START_TIME)) {
-                return true;
+                //That means "No records from start_time". We can recognize it same as 200.
+                return false;
             }
             else {
                 throw new ConfigException("Status: '" + status + "', error message +'" + jsonNode + "'");
@@ -230,17 +233,17 @@ public class ZendeskRestClient
                 return true;
             }
             else if (status != 429) {
-                throw new RuntimeException(String.format("'%s' temporally failure.", status));
+                logger.warn(String.format("'%s' temporally failure.", status));
+                return true;
             }
         }
 
-        // for 500s error we should retry
-        if ((status / 100) == 5) {
-            return true;
+        if (status / 100 == 4) {
+            throw new ConfigException("Status '" + status + "', message '" + message + "'");
         }
-        else {
-            throw new RuntimeException("Server returns unknown status code '" + status + "'");
-        }
+
+        logger.warn("Server returns unknown status code '" + status + "' message '" + message + "'");
+        return true;
     }
 
     private HttpRequestBase createGetRequest(String url, PluginTask task)

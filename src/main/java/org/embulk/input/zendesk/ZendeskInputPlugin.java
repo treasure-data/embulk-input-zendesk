@@ -467,7 +467,8 @@ public class ZendeskInputPlugin implements InputPlugin
         return this.zendeskSupportAPIService;
     }
 
-    private boolean isRequiredForFurtherChecking(final Optional<String> startTime, final long recordUpdatedAtTime)
+    @VisibleForTesting
+    protected boolean isRequiredForFurtherChecking(final Optional<String> startTime, final long recordUpdatedAtTime)
     {
         // Because records sorted by updated_at.
         // When updated_at of one record is larger than start_time, we don't need to check further
@@ -500,7 +501,8 @@ public class ZendeskInputPlugin implements InputPlugin
         return jsonNode;
     }
 
-    private PageBuilder getPageBuilder(final Schema schema, final PageOutput output)
+    @VisibleForTesting
+    protected PageBuilder getPageBuilder(final Schema schema, final PageOutput output)
     {
         return new PageBuilder(Exec.getBufferAllocator(), schema, output);
     }

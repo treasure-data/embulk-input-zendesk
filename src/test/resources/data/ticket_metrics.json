@@ -1,0 +1,394 @@
+{
+  "tickets": [
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/tickets/2.json",
+      "id": 2,
+      "external_id": null,
+      "via": {
+        "channel": "web",
+        "source": {
+          "from": {},
+          "to": {},
+          "rel": null
+        }
+      },
+      "created_at": "2019-02-20T06:51:50Z",
+      "updated_at": "2019-02-20T06:51:50Z",
+      "type": null,
+      "subject": "ticket1",
+      "raw_subject": "ticket1",
+      "description": "ticket1",
+      "priority": null,
+      "status": "open",
+      "recipient": null,
+      "requester_id": 374673563333,
+      "submitter_id": 374673563333,
+      "assignee_id": 374673563333,
+      "organization_id": 360857467053,
+      "group_id": 360003235353,
+      "collaborator_ids": [],
+      "follower_ids": [],
+      "email_cc_ids": [],
+      "forum_topic_id": null,
+      "problem_id": null,
+      "has_incidents": false,
+      "is_public": true,
+      "due_at": null,
+      "tags": [],
+      "custom_fields": [],
+      "satisfaction_rating": null,
+      "sharing_agreement_ids": [],
+      "fields": [],
+      "followup_ids": [],
+      "brand_id": 360001998013,
+      "metric_set": {
+        "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414816973.json",
+        "id": 367414816973,
+        "ticket_id": 2,
+        "created_at": "2019-02-20T06:51:50Z",
+        "updated_at": "2019-02-20T06:51:50Z",
+        "group_stations": 1,
+        "assignee_stations": 1,
+        "reopens": 0,
+        "replies": 0,
+        "assignee_updated_at": "2019-02-20T06:51:50Z",
+        "requester_updated_at": "2019-02-20T06:51:50Z",
+        "status_updated_at": "2019-02-20T06:51:50Z",
+        "initially_assigned_at": "2019-02-20T06:51:50Z",
+        "assigned_at": "2019-02-20T06:51:50Z",
+        "solved_at": null,
+        "latest_comment_added_at": "2019-02-20T06:51:50Z",
+        "reply_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "first_resolution_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "full_resolution_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "agent_wait_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "requester_wait_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "on_hold_time_in_minutes": {
+          "calendar": 0,
+          "business": 0
+        }
+      },
+      "allow_channelback": false,
+      "allow_attachments": true,
+      "generated_timestamp": 1550645510
+    },
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/tickets/3.json",
+      "id": 3,
+      "external_id": null,
+      "via": {
+        "channel": "web",
+        "source": {
+          "from": {},
+          "to": {},
+          "rel": null
+        }
+      },
+      "created_at": "2019-02-20T06:52:02Z",
+      "updated_at": "2019-02-20T06:52:02Z",
+      "type": null,
+      "subject": "ticket2",
+      "raw_subject": "ticket2",
+      "description": "ticket2",
+      "priority": null,
+      "status": "open",
+      "recipient": null,
+      "requester_id": 374673563333,
+      "submitter_id": 374673563333,
+      "assignee_id": 374673563333,
+      "organization_id": 360857467053,
+      "group_id": 360003235353,
+      "collaborator_ids": [],
+      "follower_ids": [],
+      "email_cc_ids": [],
+      "forum_topic_id": null,
+      "problem_id": null,
+      "has_incidents": false,
+      "is_public": true,
+      "due_at": null,
+      "tags": [],
+      "custom_fields": [],
+      "satisfaction_rating": null,
+      "sharing_agreement_ids": [],
+      "fields": [],
+      "followup_ids": [],
+      "brand_id": 360001998013,
+      "metric_set": {
+        "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414819433.json",
+        "id": 367414819433,
+        "ticket_id": 3,
+        "created_at": "2019-02-20T06:52:02Z",
+        "updated_at": "2019-02-20T06:52:02Z",
+        "group_stations": 1,
+        "assignee_stations": 1,
+        "reopens": 0,
+        "replies": 0,
+        "assignee_updated_at": "2019-02-20T06:52:02Z",
+        "requester_updated_at": "2019-02-20T06:52:02Z",
+        "status_updated_at": "2019-02-20T06:52:02Z",
+        "initially_assigned_at": "2019-02-20T06:52:02Z",
+        "assigned_at": "2019-02-20T06:52:02Z",
+        "solved_at": null,
+        "latest_comment_added_at": "2019-02-20T06:52:02Z",
+        "reply_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "first_resolution_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "full_resolution_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "agent_wait_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "requester_wait_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "on_hold_time_in_minutes": {
+          "calendar": 0,
+          "business": 0
+        }
+      },
+      "allow_channelback": false,
+      "allow_attachments": true,
+      "generated_timestamp": 1550645522
+    },
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/tickets/4.json",
+      "id": 4,
+      "external_id": null,
+      "via": {
+        "channel": "web",
+        "source": {
+          "from": {},
+          "to": {},
+          "rel": null
+        }
+      },
+      "created_at": "2019-02-20T06:52:12Z",
+      "updated_at": "2019-02-20T06:52:12Z",
+      "type": null,
+      "subject": "ticket3",
+      "raw_subject": "ticket3",
+      "description": "ticket3",
+      "priority": null,
+      "status": "open",
+      "recipient": null,
+      "requester_id": 374673563333,
+      "submitter_id": 374673563333,
+      "assignee_id": 374673563333,
+      "organization_id": 360857467053,
+      "group_id": 360003235353,
+      "collaborator_ids": [],
+      "follower_ids": [],
+      "email_cc_ids": [],
+      "forum_topic_id": null,
+      "problem_id": null,
+      "has_incidents": false,
+      "is_public": true,
+      "due_at": null,
+      "tags": [],
+      "custom_fields": [],
+      "satisfaction_rating": null,
+      "sharing_agreement_ids": [],
+      "fields": [],
+      "followup_ids": [],
+      "brand_id": 360001998013,
+      "metric_set": {
+        "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414821253.json",
+        "id": 367414821253,
+        "ticket_id": 4,
+        "created_at": "2019-02-20T06:52:13Z",
+        "updated_at": "2019-02-20T06:52:13Z",
+        "group_stations": 1,
+        "assignee_stations": 1,
+        "reopens": 0,
+        "replies": 0,
+        "assignee_updated_at": "2019-02-20T06:52:12Z",
+        "requester_updated_at": "2019-02-20T06:52:12Z",
+        "status_updated_at": "2019-02-20T06:52:12Z",
+        "initially_assigned_at": "2019-02-20T06:52:12Z",
+        "assigned_at": "2019-02-20T06:52:12Z",
+        "solved_at": null,
+        "latest_comment_added_at": "2019-02-20T06:52:12Z",
+        "reply_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "first_resolution_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "full_resolution_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "agent_wait_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "requester_wait_time_in_minutes": {
+          "calendar": null,
+          "business": null
+        },
+        "on_hold_time_in_minutes": {
+          "calendar": 0,
+          "business": 0
+        }
+      },
+      "allow_channelback": false,
+      "allow_attachments": true,
+      "generated_timestamp": 1550645532
+    }
+  ],
+  "count": 1000,
+  "metric_sets": [
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414816973.json",
+      "id": 367414816973,
+      "ticket_id": 2,
+      "created_at": "2019-02-20T06:51:50Z",
+      "updated_at": "2019-02-20T06:51:50Z",
+      "group_stations": 1,
+      "assignee_stations": 1,
+      "reopens": 0,
+      "replies": 0,
+      "assignee_updated_at": "2019-02-20T06:51:50Z",
+      "requester_updated_at": "2019-02-20T06:51:50Z",
+      "status_updated_at": "2019-02-20T06:51:50Z",
+      "initially_assigned_at": "2019-02-20T06:51:50Z",
+      "assigned_at": "2019-02-20T06:51:50Z",
+      "solved_at": null,
+      "latest_comment_added_at": "2019-02-20T06:51:50Z",
+      "reply_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "first_resolution_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "full_resolution_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "agent_wait_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "requester_wait_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "on_hold_time_in_minutes": {
+        "calendar": 0,
+        "business": 0
+      }
+    },
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414819433.json",
+      "id": 367414819433,
+      "ticket_id": 3,
+      "created_at": "2019-02-20T06:52:02Z",
+      "updated_at": "2019-02-20T06:52:02Z",
+      "group_stations": 1,
+      "assignee_stations": 1,
+      "reopens": 0,
+      "replies": 0,
+      "assignee_updated_at": "2019-02-20T06:52:02Z",
+      "requester_updated_at": "2019-02-20T06:52:02Z",
+      "status_updated_at": "2019-02-20T06:52:02Z",
+      "initially_assigned_at": "2019-02-20T06:52:02Z",
+      "assigned_at": "2019-02-20T06:52:02Z",
+      "solved_at": null,
+      "latest_comment_added_at": "2019-02-20T06:52:02Z",
+      "reply_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "first_resolution_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "full_resolution_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "agent_wait_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "requester_wait_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "on_hold_time_in_minutes": {
+        "calendar": 0,
+        "business": 0
+      }
+    },
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414821253.json",
+      "id": 367414821253,
+      "ticket_id": 4,
+      "created_at": "2019-02-20T06:52:13Z",
+      "updated_at": "2019-02-20T06:52:13Z",
+      "group_stations": 1,
+      "assignee_stations": 1,
+      "reopens": 0,
+      "replies": 0,
+      "assignee_updated_at": "2019-02-20T06:52:12Z",
+      "requester_updated_at": "2019-02-20T06:52:12Z",
+      "status_updated_at": "2019-02-20T06:52:12Z",
+      "initially_assigned_at": "2019-02-20T06:52:12Z",
+      "assigned_at": "2019-02-20T06:52:12Z",
+      "solved_at": null,
+      "latest_comment_added_at": "2019-02-20T06:52:12Z",
+      "reply_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "first_resolution_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "full_resolution_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "agent_wait_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "requester_wait_time_in_minutes": {
+        "calendar": null,
+        "business": null
+      },
+      "on_hold_time_in_minutes": {
+        "calendar": 0,
+        "business": 0
+      }
+    }
+  ]
+}

@@ -2,7 +2,9 @@ package org.embulk.input.zendesk.utils;
 
 import org.embulk.spi.DataException;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
@@ -11,19 +13,19 @@ import java.util.List;
 
 public class ZendeskDateUtils
 {
-    public static boolean isSupportedTimeFormat(final String value, final List<String> supportedFormats)
+    private static String supportedTimeFormat(final String value, final List<String> supportedFormats)
     {
         for (final String fmt : supportedFormats) {
             final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(fmt);
             try {
                 formatter.parse(value);
-                return true;
+                return fmt;
             }
             catch (final DateTimeParseException e) {
                 // Do nothing
             }
         }
-        return false;
+        return "";
     }
 
     private ZendeskDateUtils()
@@ -32,19 +34,15 @@ public class ZendeskDateUtils
 
     public static long isoToEpochSecond(final String time)
     {
-        if (isSupportedTimeFormat(time, Arrays.asList(ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.ISO_INSTANT))) {
-            final OffsetDateTime offsetDateTime = OffsetDateTime.parse(time);
-            offsetDateTime.format(DateTimeFormatter.ISO_INSTANT);
+        String pattern = supportedTimeFormat(time, Arrays.asList(ZendeskConstants.Misc.ISO_INSTANT,
+                ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT));
+        if (!pattern.isEmpty()) {
+            final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
+            final OffsetDateTime offsetDateTime = LocalDateTime.parse(time, formatter).atOffset(ZoneOffset.UTC);
             return offsetDateTime.toInstant().getEpochSecond();
         }
         else {
             throw new DataException("Fail to parse value '" + time + "' follow format " + DateTimeFormatter.ISO_INSTANT.toString());
         }
-    }
-
-    public static boolean isTimeStamp(final String time)
-    {
-        return isSupportedTimeFormat(time, Arrays.asList(ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT,
-                ZendeskConstants.Misc.ISO_INSTANT));
     }
 }

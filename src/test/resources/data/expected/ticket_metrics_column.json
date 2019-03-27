@@ -1,0 +1,98 @@
+[
+  {
+    "name": "url",
+    "type": "string"
+  },
+  {
+    "name": "id",
+    "type": "long"
+  },
+  {
+    "name": "ticket_id",
+    "type": "long"
+  },
+  {
+    "name": "created_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+  },
+  {
+    "name": "updated_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+  },
+  {
+    "name": "group_stations",
+    "type": "long"
+  },
+  {
+    "name": "assignee_stations",
+    "type": "long"
+  },
+  {
+    "name": "reopens",
+    "type": "long"
+  },
+  {
+    "name": "replies",
+    "type": "long"
+  },
+  {
+    "name": "assignee_updated_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+  },
+  {
+    "name": "requester_updated_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+  },
+  {
+    "name": "status_updated_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+  },
+  {
+    "name": "initially_assigned_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+  },
+  {
+    "name": "assigned_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+  },
+  {
+    "name": "solved_at",
+    "type": "string"
+  },
+  {
+    "name": "latest_comment_added_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+  },
+  {
+    "name": "reply_time_in_minutes",
+    "type": "json"
+  },
+  {
+    "name": "first_resolution_time_in_minutes",
+    "type": "json"
+  },
+  {
+    "name": "full_resolution_time_in_minutes",
+    "type": "json"
+  },
+  {
+    "name": "agent_wait_time_in_minutes",
+    "type": "json"
+  },
+  {
+    "name": "requester_wait_time_in_minutes",
+    "type": "json"
+  },
+  {
+    "name": "on_hold_time_in_minutes",
+    "type": "json"
+  }
+]

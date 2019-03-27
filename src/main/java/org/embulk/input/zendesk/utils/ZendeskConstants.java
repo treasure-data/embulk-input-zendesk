@@ -33,8 +33,8 @@ public class ZendeskConstants
 
     public static class Misc
     {
-        public static final String JAVA_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'";
         public static final String RUBY_TIMESTAMP_FORMAT = "%Y-%m-%dT%H:%M:%S.%N%z";
+        public static final String RUBY_TIMESTAMP_FORMAT_INPUT = "yyyy-MM-dd HH:mm:ss Z";
         public static final String ISO_INSTANT = "yyyy-MM-dd'T'HH:mm:ss'Z'";
 
         public static final String TOO_RECENT_START_TIME = "Too recent start_time.";

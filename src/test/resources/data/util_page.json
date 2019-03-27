@@ -1,0 +1,227 @@
+{
+  "ticket_fields": [
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417093.json",
+      "id": 360015417093,
+      "type": "subject",
+      "title": "Subject",
+      "raw_title": "Subject",
+      "description": "",
+      "raw_description": "",
+      "position": 1,
+      "active": true,
+      "required": false,
+      "collapsed_for_agents": false,
+      "regexp_for_validation": null,
+      "title_in_portal": "Subject",
+      "raw_title_in_portal": "Subject",
+      "visible_in_portal": true,
+      "editable_in_portal": true,
+      "required_in_portal": true,
+      "tag": null,
+      "created_at": "2019-02-20T06:50:45Z",
+      "updated_at": "2019-02-20T06:50:46Z",
+      "removable": false,
+      "agent_description": null
+    },
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417113.json",
+      "id": 360015417113,
+      "type": "description",
+      "title": "Description",
+      "raw_title": "Description",
+      "description": "Please enter the details of your request. A member of our support staff will respond as soon as possible.",
+      "raw_description": "Please enter the details of your request. A member of our support staff will respond as soon as possible.",
+      "position": 2,
+      "active": true,
+      "required": false,
+      "collapsed_for_agents": false,
+      "regexp_for_validation": null,
+      "title_in_portal": "Description",
+      "raw_title_in_portal": "Description",
+      "visible_in_portal": true,
+      "editable_in_portal": true,
+      "required_in_portal": true,
+      "tag": null,
+      "created_at": "2019-02-20T06:50:45Z",
+      "updated_at": "2019-02-20T06:50:46Z",
+      "removable": false,
+      "agent_description": null
+    },
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417133.json",
+      "id": 360015417133,
+      "type": "status",
+      "title": "Status",
+      "raw_title": "Status",
+      "description": "Request status",
+      "raw_description": "Request status",
+      "position": 3,
+      "active": true,
+      "required": false,
+      "collapsed_for_agents": false,
+      "regexp_for_validation": null,
+      "title_in_portal": "Status",
+      "raw_title_in_portal": "Status",
+      "visible_in_portal": false,
+      "editable_in_portal": false,
+      "required_in_portal": false,
+      "tag": null,
+      "created_at": "2019-02-20T06:50:45Z",
+      "updated_at": "2019-02-20T06:50:46Z",
+      "removable": false,
+      "agent_description": null,
+      "system_field_options": [
+        {
+          "name": "Open",
+          "value": "open"
+        },
+        {
+          "name": "Pending",
+          "value": "pending"
+        },
+        {
+          "name": "Solved",
+          "value": "solved"
+        }
+      ],
+      "sub_type_id": 0
+    },
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417153.json",
+      "id": 360015417153,
+      "type": "tickettype",
+      "title": "Type",
+      "raw_title": "Type",
+      "description": "Request type",
+      "raw_description": "Request type",
+      "position": 4,
+      "active": true,
+      "required": false,
+      "collapsed_for_agents": false,
+      "regexp_for_validation": null,
+      "title_in_portal": "Type",
+      "raw_title_in_portal": "Type",
+      "visible_in_portal": false,
+      "editable_in_portal": false,
+      "required_in_portal": false,
+      "tag": null,
+      "created_at": "2019-02-20T06:50:45Z",
+      "updated_at": "2019-02-20T06:50:46Z",
+      "removable": true,
+      "agent_description": null,
+      "system_field_options": [
+        {
+          "name": "Question",
+          "value": "question"
+        },
+        {
+          "name": "Incident",
+          "value": "incident"
+        },
+        {
+          "name": "Problem",
+          "value": "problem"
+        },
+        {
+          "name": "Task",
+          "value": "task"
+        }
+      ]
+    },
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417173.json",
+      "id": 360015417173,
+      "type": "priority",
+      "title": "Priority",
+      "raw_title": "Priority",
+      "description": "Request priority",
+      "raw_description": "Request priority",
+      "position": 5,
+      "active": true,
+      "required": false,
+      "collapsed_for_agents": false,
+      "regexp_for_validation": null,
+      "title_in_portal": "Priority",
+      "raw_title_in_portal": "Priority",
+      "visible_in_portal": true,
+      "editable_in_portal": false,
+      "required_in_portal": false,
+      "tag": null,
+      "created_at": "2019-02-20T06:50:45Z",
+      "updated_at": "2019-02-20T06:50:46Z",
+      "removable": true,
+      "agent_description": null,
+      "system_field_options": [
+        {
+          "name": "Low",
+          "value": "low"
+        },
+        {
+          "name": "Normal",
+          "value": "normal"
+        },
+        {
+          "name": "High",
+          "value": "high"
+        },
+        {
+          "name": "Urgent",
+          "value": "urgent"
+        }
+      ],
+      "sub_type_id": 0
+    },
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417193.json",
+      "id": 360015417193,
+      "type": "group",
+      "title": "Group",
+      "raw_title": "Group",
+      "description": "Request group",
+      "raw_description": "Request group",
+      "position": 6,
+      "active": true,
+      "required": false,
+      "collapsed_for_agents": false,
+      "regexp_for_validation": null,
+      "title_in_portal": "Group",
+      "raw_title_in_portal": "Group",
+      "visible_in_portal": false,
+      "editable_in_portal": false,
+      "required_in_portal": false,
+      "tag": null,
+      "created_at": "2019-02-20T06:50:45Z",
+      "updated_at": "2019-02-20T06:50:46Z",
+      "removable": false,
+      "agent_description": null
+    },
+    {
+      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417213.json",
+      "id": 360015417213,
+      "type": "assignee",
+      "title": "Assignee",
+      "raw_title": "Assignee",
+      "description": "Agent assigned to your request",
+      "raw_description": "Agent assigned to your request",
+      "position": 7,
+      "active": true,
+      "required": true,
+      "collapsed_for_agents": false,
+      "regexp_for_validation": null,
+      "title_in_portal": "Assignee",
+      "raw_title_in_portal": "Assignee",
+      "visible_in_portal": true,
+      "editable_in_portal": false,
+      "required_in_portal": false,
+      "tag": null,
+      "created_at": "2019-02-20T06:50:45Z",
+      "updated_at": "2019-02-20T06:50:46Z",
+      "removable": false,
+      "agent_description": null
+    }
+  ],
+  "next_page": "https://hieudion123.zendesk.com/api/v2/ticket_fields.json?page=2",
+  "previous_page": null,
+  "count": 2198
+}

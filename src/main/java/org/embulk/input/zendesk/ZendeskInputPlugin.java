@@ -88,7 +88,7 @@ public class ZendeskInputPlugin implements InputPlugin
         @Min(1)
         @Max(30)
         @Config("retry_limit")
-        @ConfigDefault("5")
+        @ConfigDefault("3")
         int getRetryLimit();
 
         @Min(1)
@@ -202,7 +202,7 @@ public class ZendeskInputPlugin implements InputPlugin
                             ZoneOffset.UTC);
 
                     configDiff.set(ZendeskConstants.Field.START_TIME,
-                            offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT)));
+                            offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
                 }
                 if (taskReport.has(ZendeskConstants.Field.PREVIOUS_RECORDS)) {
                     configDiff.set(ZendeskConstants.Field.PREVIOUS_RECORDS,
@@ -357,11 +357,11 @@ public class ZendeskInputPlugin implements InputPlugin
 
         String targetName = task.getTarget().getJsonName();
 
-        if (!jsonNode.get(targetName).isArray()) {
-            throw new ConfigException("Could not guess schema due to empty data set");
+        if (jsonNode.get(targetName) != null && jsonNode.get(targetName).isArray()) {
+            return addAllColumnsToSchema(jsonNode, task.getTarget(), task.getIncludes());
         }
         else {
-            return addAllColumnsToSchema(jsonNode, task.getTarget(), task.getIncludes());
+            throw new ConfigException("Could not guess schema due to empty data set");
         }
     }
 
@@ -382,15 +382,15 @@ public class ZendeskInputPlugin implements InputPlugin
 
             if (name.equals("id")) {
                 if (!type.equals(Types.LONG.getName())) {
-                    entry.putPOJO("type", Types.LONG.getName());
+                    entry.put("type", Types.LONG.getName());
                 }
             }
             else if (idPattern.matcher(name).matches()) {
-                entry.putPOJO("type", Types.STRING.getName());
+                entry.put("type", Types.STRING.getName());
             }
 
             if (type.equals(Types.TIMESTAMP.getName())) {
-                entry.putPOJO("format", ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
+                entry.put("format", ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
             }
         }
         addIncludedObjectsToSchema((ArrayNode) columns, target, includes);
@@ -405,8 +405,8 @@ public class ZendeskInputPlugin implements InputPlugin
         if (ZendeskUtils.isSupportInclude(target, includes)) {
             for (final String include : includes) {
                 final ObjectNode object = mapper.createObjectNode();
-                object.putPOJO("name", include);
-                object.putPOJO("type", Types.JSON);
+                object.put("name", include);
+                object.put("type", Types.JSON.getName());
                 objectNode.add(object);
             }
         }
@@ -444,7 +444,7 @@ public class ZendeskInputPlugin implements InputPlugin
         for (final String include : task.getIncludes()) {
             final JsonNode includeJsonNode = result.get(include);
             if (includeJsonNode != null) {
-                ((ObjectNode) targetJsonNode).putPOJO(include, includeJsonNode);
+                ((ObjectNode) targetJsonNode).put(include, includeJsonNode);
             }
         }
         ZendeskUtils.addRecord(targetJsonNode, schema, pageBuilder);

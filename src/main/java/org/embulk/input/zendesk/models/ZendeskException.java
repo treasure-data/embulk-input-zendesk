@@ -8,7 +8,7 @@ public class ZendeskException extends Exception
 
     public ZendeskException(int statusCode, String message, int retryAfter)
     {
-        super(message + ":" + statusCode);
+        super(message);
         this.statusCode = statusCode;
         this.retryAfter = retryAfter;
     }

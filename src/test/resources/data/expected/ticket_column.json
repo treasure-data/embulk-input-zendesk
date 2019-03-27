@@ -1,0 +1,148 @@
+[
+  {
+    "name": "url",
+    "type": "string"
+  },
+  {
+    "name": "id",
+    "type": "long"
+  },
+  {
+    "name": "external_id",
+    "type": "string"
+  },
+  {
+    "name": "via",
+    "type": "json"
+  },
+  {
+    "name": "created_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+  },
+  {
+    "name": "updated_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+  },
+  {
+    "name": "type",
+    "type": "string"
+  },
+  {
+    "name": "subject",
+    "type": "string"
+  },
+  {
+    "name": "raw_subject",
+    "type": "string"
+  },
+  {
+    "name": "description",
+    "type": "string"
+  },
+  {
+    "name": "priority",
+    "type": "string"
+  },
+  {
+    "name": "status",
+    "type": "string"
+  },
+  {
+    "name": "recipient",
+    "type": "string"
+  },
+  {
+    "name": "requester_id",
+    "type": "long"
+  },
+  {
+    "name": "submitter_id",
+    "type": "long"
+  },
+  {
+    "name": "assignee_id",
+    "type": "long"
+  },
+  {
+    "name": "organization_id",
+    "type": "long"
+  },
+  {
+    "name": "group_id",
+    "type": "long"
+  },
+  {
+    "name": "collaborator_ids",
+    "type": "json"
+  },
+  {
+    "name": "follower_ids",
+    "type": "json"
+  },
+  {
+    "name": "email_cc_ids",
+    "type": "json"
+  },
+  {
+    "name": "forum_topic_id",
+    "type": "string"
+  },
+  {
+    "name": "problem_id",
+    "type": "string"
+  },
+  {
+    "name": "has_incidents",
+    "type": "boolean"
+  },
+  {
+    "name": "is_public",
+    "type": "boolean"
+  },
+  {
+    "name": "due_at",
+    "type": "string"
+  },
+  {
+    "name": "tags",
+    "type": "json"
+  },
+  {
+    "name": "custom_fields",
+    "type": "json"
+  },
+  {
+    "name": "satisfaction_rating",
+    "type": "string"
+  },
+  {
+    "name": "sharing_agreement_ids",
+    "type": "json"
+  },
+  {
+    "name": "fields",
+    "type": "json"
+  },
+  {
+    "name": "followup_ids",
+    "type": "json"
+  },
+  {
+    "name": "brand_id",
+    "type": "long"
+  },
+  {
+    "name": "allow_channelback",
+    "type": "boolean"
+  },
+  {
+    "name": "allow_attachments",
+    "type": "boolean"
+  },
+  {
+    "name": "generated_timestamp",
+    "type": "long"
+  }
+]

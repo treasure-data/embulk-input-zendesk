@@ -92,7 +92,7 @@ public class ZendeskUtils
                     pageBuilder.setNull(column);
                 }
                 else {
-                    pageBuilder.setString(column, data.toString());
+                    pageBuilder.setString(column, data.asText());
                 }
             }
 
@@ -166,7 +166,6 @@ public class ZendeskUtils
             result = Timestamp.ofEpochSecond(timeStamp);
         }
         catch (Exception e) {
-            e.printStackTrace();
         }
         return result;
     }

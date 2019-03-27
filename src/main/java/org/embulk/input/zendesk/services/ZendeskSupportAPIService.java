@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
@@ -93,13 +94,7 @@ public class ZendeskSupportAPIService
         // Include some related objects
         final boolean isIncludeRelatedObjects = !task.getIncludes().isEmpty() && ZendeskUtils.isSupportInclude(task.getTarget());
         if (isIncludeRelatedObjects) {
-            final boolean isRunWithTicketMetric = !isPreview && Target.TICKET_METRICS.equals(task.getTarget());
-            if (isRunWithTicketMetric) {
-                path.append(",");
-            }
-            else {
-                path.append("&include=");
-            }
+            path.append("&include=");
             path.append(task.getIncludes()
                     .stream()
                     .map(String::trim)
@@ -122,7 +117,7 @@ public class ZendeskSupportAPIService
         if (Target.TICKET_METRICS.equals(task.getTarget())) {
             previewURL.append(Target.TICKETS.toString())
                     .append(".json?")
-                    .append("include=metric_sets");
+                    .append("include=metric_sets&");
         }
         else {
             previewURL.append(task.getTarget().toString())
@@ -130,8 +125,8 @@ public class ZendeskSupportAPIService
         }
 
         previewURL.append(isSupportIncremental
-            ? "&start_time=0"
-            : "&per_page=1");
+            ? "start_time=0"
+            : "per_page=1");
 
         return previewURL.toString();
     }
@@ -164,7 +159,8 @@ public class ZendeskSupportAPIService
                         : ".json?sort_by=id&per_page=100&page=" + page);
     }
 
-    private ZendeskRestClient getZendeskRestClient()
+    @VisibleForTesting
+    protected ZendeskRestClient getZendeskRestClient()
     {
         if (zendeskRestClient == null) {
             zendeskRestClient = new ZendeskRestClient();

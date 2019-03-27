@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
@@ -41,6 +42,7 @@ public class ZendeskRestClient
     private static final int CONNECTION_TIME_OUT = 300000;
 
     private static final Logger logger = Exec.getLogger(ZendeskRestClient.class);
+
     private static RateLimiter rateLimiter;
 
     private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -97,7 +99,8 @@ public class ZendeskRestClient
         }
     }
 
-    private HttpClient createHttpClient()
+    @VisibleForTesting
+    protected HttpClient createHttpClient()
     {
         RequestConfig config = RequestConfig.custom()
                 .setConnectTimeout(CONNECTION_TIME_OUT)
@@ -112,11 +115,11 @@ public class ZendeskRestClient
             JsonNode errorObject = objectMapper.readTree(errorResponse);
             ObjectNode objectNode = objectMapper.createObjectNode();
             if (errorObject.get("error") != null) {
-                objectNode.putPOJO("error", errorObject.get("error").asText());
+                objectNode.put("error", errorObject.get("error").asText());
             }
 
             if (errorObject.get("description") != null) {
-                objectNode.putPOJO("description", errorObject.get("description").asText());
+                objectNode.put("description", errorObject.get("description").asText());
             }
             return objectNode.toString();
         }
@@ -129,8 +132,8 @@ public class ZendeskRestClient
     {
         try {
             return retryExecutor().withRetryLimit(task.getRetryLimit())
-                    .withInitialRetryWait(task.getRetryInitialWaitSec())
-                    .withMaxRetryWait(task.getMaxRetryWaitSec())
+                    .withInitialRetryWait(task.getRetryInitialWaitSec() * 1000)
+                    .withMaxRetryWait(task.getMaxRetryWaitSec() * 1000)
                     .runInterruptible(new RetryExecutor.Retryable<String>() {
                         @Override
                         public String call() throws Exception
@@ -143,13 +146,13 @@ public class ZendeskRestClient
                         {
                             if (exception instanceof ZendeskException) {
                                 int statusCode = ((ZendeskException) exception).getStatusCode();
-                                return isResponseStatusToRetry(statusCode, exception.getMessage(), ((ZendeskException) exception).getStatusCode());
+                                return isResponseStatusToRetry(statusCode, exception.getMessage(), ((ZendeskException) exception).getRetryAfter());
                             }
-                            return exception instanceof IOException;
+                            return false;
                         }
 
                         @Override
-                        public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait) throws RetryExecutor.RetryGiveupException
+                        public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait)
                         {
                             if (exception instanceof ZendeskException) {
                                 int retryAfter = ((ZendeskException) exception).getRetryAfter();
@@ -174,7 +177,7 @@ public class ZendeskRestClient
                             }
                             else {
                                 String message = String
-                                        .format("Retrying '%d'/'%d' after '%d' seconds. Message: '%s'",
+                                        .format("Retrying %d/%d after %d seconds. Message: %s",
                                                 retryCount, retryLimit,
                                                 retryWait / 1000,
                                                 exception.getMessage());
@@ -183,9 +186,9 @@ public class ZendeskRestClient
                         }
 
                         @Override
-                        public void onGiveup(Exception firstException, Exception lastException) throws RetryExecutor.RetryGiveupException
+                        public void onGiveup(Exception firstException, Exception lastException)
                         {
-                            logger.warn("Retry Limit Exceeded");
+                            logger.warn("Unable to complete the request", lastException);
                         }
                     });
         }
@@ -197,8 +200,12 @@ public class ZendeskRestClient
         }
     }
 
-    private boolean isResponseStatusToRetry(int status, String message, int retryAfter)
+    private boolean isResponseStatusToRetry(int status, String message, int retryAfter) throws ConfigException
     {
+        if (status == -1) {
+            return true;
+        }
+
         if (status == 404) {
             //404 would be returned e.g. ticket comments are empty (on fetch_subresource method)
             return true;
@@ -215,7 +222,7 @@ public class ZendeskRestClient
                 jsonNode = objectMapper.readTree(message);
             }
             catch (final Exception e) {
-                throw new RuntimeException("Fail to parse body error response, error status '" + status + "'");
+                throw new ConfigException("Status: '" + status + "', error message +'" + message + "'");
             }
             if (jsonNode != null && jsonNode.get("description") != null
                     && jsonNode.get("description").asText().startsWith(ZendeskConstants.Misc.TOO_RECENT_START_TIME)) {
@@ -223,21 +230,21 @@ public class ZendeskRestClient
                 return false;
             }
             else {
-                throw new ConfigException("Status: '" + status + "', error message +'" + jsonNode + "'");
+                throw new ConfigException("Status: '" + status + "', error message '" + jsonNode + "'");
             }
         }
 
         if (status == 429 || status == 500 || status == 503) {
             if (retryAfter > 0) {
-                logger.warn("Reached API limitation, sleep for '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
-                return true;
+                logger.warn("Reached API limitation, wait for '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
             }
             else if (status != 429) {
                 logger.warn(String.format("'%s' temporally failure.", status));
-                return true;
             }
+            return true;
         }
 
+        //Won't retry for 4xx range errors except above. Almost they should be ConfigError e.g. 403 Forbidden
         if (status / 100 == 4) {
             throw new ConfigException("Status '" + status + "', message '" + message + "'");
         }

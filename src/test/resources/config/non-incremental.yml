@@ -1,0 +1,36 @@
+type: zendesk
+login_url: https://hieudion123.zendesk.com/
+auth_method: oauth
+username: duongminhhieu89@gmail.com
+password: hieudion123
+token: v1GV66ZxNSKhprUyQUXH3GghGQvELhClUtGIuscC
+access_token: 2c1517c6ab89cbf34bfbe9960f6483628a415eff1188e461d098b112726115e5
+target: ticket_fields
+app_marketplace_integration_name: abc
+app_marketplace_app_id: abc
+app_marketplace_org_id: abc
+includes: [organizations]
+incremental: false
+columns:
+  - {name: url, type: string}
+  - {name: id, type: long}
+  - {name: type, type: string}
+  - {name: title, type: string}
+  - {name: raw_title, type: string}
+  - {name: description, type: string}
+  - {name: raw_description, type: string}
+  - {name: position, type: long}
+  - {name: active, type: boolean}
+  - {name: required, type: boolean}
+  - {name: collapsed_for_agents, type: boolean}
+  - {name: regexp_for_validation, type: string}
+  - {name: title_in_portal, type: string}
+  - {name: raw_title_in_portal, type: string}
+  - {name: visible_in_portal, type: boolean}
+  - {name: editable_in_portal, type: boolean}
+  - {name: required_in_portal, type: boolean}
+  - {name: tag, type: string}
+  - {name: created_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S.%N%z'}
+  - {name: updated_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S.%N%z'}
+  - {name: removable, type: boolean}
+  - {name: agent_description, type: string}

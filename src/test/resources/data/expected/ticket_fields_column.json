@@ -74,12 +74,12 @@
   {
     "name": "created_at",
     "type": "timestamp",
-    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+    "format": "%Y-%m-%dT%H:%M:%S%z"
   },
   {
     "name": "updated_at",
     "type": "timestamp",
-    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+    "format": "%Y-%m-%dT%H:%M:%S%z"
   },
   {
     "name": "removable",

@@ -11,6 +11,9 @@ app_marketplace_app_id: abc
 app_marketplace_org_id: abc
 includes: [organizations]
 incremental: false
+retry_initial_wait_sec: 1
+max_retry_wait_sec: 30
+retry_limit: 2
 columns:
   - {name: url, type: string}
   - {name: id, type: long}
@@ -30,7 +33,7 @@ columns:
   - {name: editable_in_portal, type: boolean}
   - {name: required_in_portal, type: boolean}
   - {name: tag, type: string}
-  - {name: created_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S.%N%z'}
-  - {name: updated_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S.%N%z'}
+  - {name: created_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S%z'}
+  - {name: updated_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S%z'}
   - {name: removable, type: boolean}
   - {name: agent_description, type: string}

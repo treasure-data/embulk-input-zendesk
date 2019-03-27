@@ -14,12 +14,12 @@
   {
     "name": "created_at",
     "type": "timestamp",
-    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+    "format": "%Y-%m-%dT%H:%M:%S%z"
   },
   {
     "name": "updated_at",
     "type": "timestamp",
-    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+    "format": "%Y-%m-%dT%H:%M:%S%z"
   },
   {
     "name": "group_stations",
@@ -40,27 +40,27 @@
   {
     "name": "assignee_updated_at",
     "type": "timestamp",
-    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+    "format": "%Y-%m-%dT%H:%M:%S%z"
   },
   {
     "name": "requester_updated_at",
     "type": "timestamp",
-    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+    "format": "%Y-%m-%dT%H:%M:%S%z"
   },
   {
     "name": "status_updated_at",
     "type": "timestamp",
-    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+    "format": "%Y-%m-%dT%H:%M:%S%z"
   },
   {
     "name": "initially_assigned_at",
     "type": "timestamp",
-    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+    "format": "%Y-%m-%dT%H:%M:%S%z"
   },
   {
     "name": "assigned_at",
     "type": "timestamp",
-    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+    "format": "%Y-%m-%dT%H:%M:%S%z"
   },
   {
     "name": "solved_at",
@@ -69,7 +69,7 @@
   {
     "name": "latest_comment_added_at",
     "type": "timestamp",
-    "format": "%Y-%m-%dT%H:%M:%S.%N%z"
+    "format": "%Y-%m-%dT%H:%M:%S%z"
   },
   {
     "name": "reply_time_in_minutes",

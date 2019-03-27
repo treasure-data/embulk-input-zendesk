@@ -166,7 +166,7 @@ public class TestZendeskRestClient
     {
         String expectedMessage = "{\"error\":\"APIRateLimitExceeded\",\"description\":\"Number of allowed incremental " +
                 "export API requests per minute exceeded\"}";
-        int expectedRetryTime = 4;
+        int expectedRetryTime = 3;
         testExceptionMessageForDoGet("doGet429", expectedMessage, expectedRetryTime);
     }
 
@@ -175,7 +175,7 @@ public class TestZendeskRestClient
     {
         String expectedMessage = "{\"error\":\"APIRateLimitExceeded\",\"description\":\"Number of allowed incremental " +
                 "export API requests per minute exceeded\"}";
-        int expectedRetryTime = 4;
+        int expectedRetryTime = 3;
 
         when(response.getFirstHeader("x-rate-limit")).thenReturn(header);
         when(response.getFirstHeader("Retry-After")).thenReturn(header);
@@ -279,7 +279,7 @@ public class TestZendeskRestClient
     {
         setup("doGet503");
 
-        int expectedRetryTime = 4;
+        int expectedRetryTime = 3;
         when(response.getFirstHeader("Retry-After")).thenReturn(header);
         when(header.getValue())
                 .thenReturn("5")
@@ -301,7 +301,7 @@ public class TestZendeskRestClient
         when(client.execute(any()))
                 .thenThrow(new IOException());
 
-        int expectedRetryTime = 4;
+        int expectedRetryTime = 3;
         assertThrows(ConfigException.class, () -> zendeskRestClient.doGet("any", task));
         verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
     }

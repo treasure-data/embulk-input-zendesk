@@ -88,13 +88,13 @@ public class ZendeskInputPlugin implements InputPlugin
         @Min(1)
         @Max(30)
         @Config("retry_limit")
-        @ConfigDefault("3")
+        @ConfigDefault("5")
         int getRetryLimit();
 
         @Min(1)
         @Max(3600)
         @Config("retry_initial_wait_sec")
-        @ConfigDefault("5")
+        @ConfigDefault("4")
         int getRetryInitialWaitSec();
 
         @Min(30)

@@ -18,7 +18,6 @@ import org.mockito.Mockito;
 import org.msgpack.value.Value;
 import static org.junit.Assert.assertEquals;
 
-import java.io.IOException;
 import java.util.Collections;
 
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -140,7 +139,7 @@ public class TestZendeskUtil
         long longValue = 1;
         long doubleValue = 1;
         String stringValue = "string";
-        Timestamp dateValue = TimestampParser.of("%Y-%m-%dT%H:%M:%S.%L%z", "UTC").parse("2019-01-01T00:00:00.000Z");
+        Timestamp dateValue = TimestampParser.of("%Y-%m-%dT%H:%M:%S%z", "UTC").parse("2019-01-01T00:00:00Z");
         Value jsonValue = new JsonParser().parse("{}");
 
         ZendeskUtils.addRecord(dataJson, schema, mock);

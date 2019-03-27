@@ -14,8 +14,8 @@ columns:
   - {name: id, type: long}
   - {name: external_id, type: string}
   - {name: via, type: json}
-  - {name: created_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S.%N%z'}
-  - {name: updated_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S.%N%z'}
+  - {name: created_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S%z'}
+  - {name: updated_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S%z'}
   - {name: type, type: string}
   - {name: subject, type: string}
   - {name: raw_subject, type: string}

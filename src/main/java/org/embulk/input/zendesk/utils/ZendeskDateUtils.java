@@ -35,7 +35,7 @@ public class ZendeskDateUtils
     public static long isoToEpochSecond(final String time)
     {
         String pattern = supportedTimeFormat(time, Arrays.asList(ZendeskConstants.Misc.ISO_INSTANT,
-                ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT));
+                ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT, ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT));
         if (!pattern.isEmpty()) {
             final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern);
             final OffsetDateTime offsetDateTime = LocalDateTime.parse(time, formatter).atOffset(ZoneOffset.UTC);

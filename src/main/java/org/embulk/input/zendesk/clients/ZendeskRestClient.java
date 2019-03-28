@@ -114,14 +114,23 @@ public class ZendeskRestClient
         try {
             JsonNode errorObject = objectMapper.readTree(errorResponse);
             ObjectNode objectNode = objectMapper.createObjectNode();
+            boolean isExtractSuccess = false;
             if (errorObject.get("error") != null) {
                 objectNode.put("error", errorObject.get("error").asText());
+                isExtractSuccess = true;
             }
 
             if (errorObject.get("description") != null) {
                 objectNode.put("description", errorObject.get("description").asText());
+                isExtractSuccess = true;
             }
-            return objectNode.toString();
+
+            if (isExtractSuccess) {
+                return objectNode.toString();
+            }
+            else {
+                return errorResponse;
+            }
         }
         catch (Exception e) {
             throw Throwables.propagate(e);
@@ -202,10 +211,6 @@ public class ZendeskRestClient
 
     private boolean isResponseStatusToRetry(int status, String message, int retryAfter) throws ConfigException
     {
-        if (status == -1) {
-            return true;
-        }
-
         if (status == 404) {
             //404 would be returned e.g. ticket comments are empty (on fetch_subresource method)
             return true;

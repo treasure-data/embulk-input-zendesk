@@ -258,14 +258,14 @@
   },
   "doGet500": {
     "statusCode": 500,
-    "body": "Internal server error"
+    "body": {}
   },
   "doGet502": {
     "statusCode": 502,
-    "body": {}
+    "body": "dummy body"
   },
   "doGet503": {
     "statusCode": 503,
-    "body": "Internal server error"
+    "body": {}
   }
 }

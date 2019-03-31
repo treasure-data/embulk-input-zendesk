@@ -10,7 +10,6 @@ import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
-import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.DataException;
 
@@ -40,26 +39,16 @@ public class ZendeskSupportAPIService
         this.task = task;
     }
 
-    public JsonNode getData(String path, final int page, final boolean isPreview)
+    public JsonNode getData(String path, final int page, final boolean isPreview, long startTime)
     {
         if (path.isEmpty()) {
-            path = buildPath(page, isPreview);
+            path = buildPath(page, isPreview, startTime);
         }
         try {
             final String response = getZendeskRestClient().doGet(path, task);
             return parseJsonObject(response);
         }
         catch (final Exception e) {
-            throw Throwables.propagate(e);
-        }
-    }
-
-    public void validateCredential(String path)
-    {
-        try {
-            getZendeskRestClient().checkUserCredentials(path, task);
-        }
-        catch (Exception e) {
             throw Throwables.propagate(e);
         }
     }
@@ -85,20 +74,29 @@ public class ZendeskSupportAPIService
         }
     }
 
-    private String buildPath(final int page, final boolean isPreview)
+    private String buildPath(final int page, final boolean isPreview, long startTime)
     {
         final StringBuilder path = isPreview
                 ? new StringBuilder(buildURLForPreview())
-                : new StringBuilder(buildURLForRun(page));
+                : new StringBuilder(buildURLForRun(page, startTime));
 
         // Include some related objects
         final boolean isIncludeRelatedObjects = !task.getIncludes().isEmpty() && ZendeskUtils.isSupportInclude(task.getTarget());
+
         if (isIncludeRelatedObjects) {
-            path.append("&include=");
+            path.append(
+                    Target.TICKET_METRICS.equals(task.getTarget())
+                            ? "&include=metric_sets,"
+                            : "&include=");
             path.append(task.getIncludes()
                     .stream()
                     .map(String::trim)
                     .collect(Collectors.joining(",")));
+        }
+        else {
+            if (Target.TICKET_METRICS.equals(task.getTarget())) {
+                path.append("&include=metric_sets");
+            }
         }
 
         return path.toString();
@@ -110,14 +108,13 @@ public class ZendeskSupportAPIService
         StringBuilder previewURL = new StringBuilder(task.getLoginUrl());
 
         previewURL.append(isSupportIncremental
-                        ? ZendeskConstants.Url.API_INCREMENTAL
-                        : ZendeskConstants.Url.API)
+                ? ZendeskConstants.Url.API_INCREMENTAL
+                : ZendeskConstants.Url.API)
                 .append("/");
 
         if (Target.TICKET_METRICS.equals(task.getTarget())) {
             previewURL.append(Target.TICKETS.toString())
-                    .append(".json?")
-                    .append("include=metric_sets&");
+                    .append(".json?");
         }
         else {
             previewURL.append(task.getTarget().toString())
@@ -125,29 +122,23 @@ public class ZendeskSupportAPIService
         }
 
         previewURL.append(isSupportIncremental
-            ? "start_time=0"
-            : "per_page=1");
+                ? "start_time=0"
+                : "per_page=1");
 
         return previewURL.toString();
     }
 
-    private String buildURLForRun(final int page)
+    private String buildURLForRun(final int page, final long startTime)
     {
         if (Target.TICKET_METRICS.equals(task.getTarget())) {
-            return buildURLForRunBasedOnTarget(Target.TICKETS, page)
-                    .append("&include=metric_sets")
-                    .toString();
+            return buildURLForRunBasedOnTarget(Target.TICKETS, page, startTime).toString();
         }
-        return buildURLForRunBasedOnTarget(task.getTarget(), page).toString();
+        return buildURLForRunBasedOnTarget(task.getTarget(), page, startTime).toString();
     }
 
-    private StringBuilder buildURLForRunBasedOnTarget(final Target target, final int page)
+    private StringBuilder buildURLForRunBasedOnTarget(final Target target, final int page, final long startTime)
     {
-        String startTime = "";
         boolean isSupportIncremental = ZendeskUtils.isSupportIncremental(target);
-        if (isSupportIncremental) {
-            startTime = task.getStartTime().map(s -> String.valueOf(ZendeskDateUtils.isoToEpochSecond(s))).orElse("0");
-        }
         return new StringBuilder(task.getLoginUrl())
                 .append(isSupportIncremental
                         ? ZendeskConstants.Url.API_INCREMENTAL

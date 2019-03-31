@@ -1,7 +1,7 @@
 {
   "tickets": [
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/tickets/2.json",
+      "url": "https://abc.zendesk.com/api/v2/tickets/2.json",
       "id": 2,
       "external_id": null,
       "via": {
@@ -42,7 +42,7 @@
       "followup_ids": [],
       "brand_id": 360001998013,
       "metric_set": {
-        "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414816973.json",
+        "url": "https://abc.zendesk.com/api/v2/ticket_metrics/367414816973.json",
         "id": 367414816973,
         "ticket_id": 2,
         "created_at": "2019-02-20T06:51:50Z",
@@ -88,7 +88,7 @@
       "generated_timestamp": 1550645510
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/tickets/3.json",
+      "url": "https://abc.zendesk.com/api/v2/tickets/3.json",
       "id": 3,
       "external_id": null,
       "via": {
@@ -129,7 +129,7 @@
       "followup_ids": [],
       "brand_id": 360001998013,
       "metric_set": {
-        "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414819433.json",
+        "url": "https://abc.zendesk.com/api/v2/ticket_metrics/367414819433.json",
         "id": 367414819433,
         "ticket_id": 3,
         "created_at": "2019-02-20T06:52:02Z",
@@ -175,7 +175,7 @@
       "generated_timestamp": 1550645522
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/tickets/4.json",
+      "url": "https://abc.zendesk.com/api/v2/tickets/4.json",
       "id": 4,
       "external_id": null,
       "via": {
@@ -216,7 +216,7 @@
       "followup_ids": [],
       "brand_id": 360001998013,
       "metric_set": {
-        "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414821253.json",
+        "url": "https://abc.zendesk.com/api/v2/ticket_metrics/367414821253.json",
         "id": 367414821253,
         "ticket_id": 4,
         "created_at": "2019-02-20T06:52:13Z",
@@ -265,7 +265,7 @@
   "count": 1000,
   "metric_sets": [
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414816973.json",
+      "url": "https://abc.zendesk.com/api/v2/ticket_metrics/367414816973.json",
       "id": 367414816973,
       "ticket_id": 2,
       "created_at": "2019-02-20T06:51:50Z",
@@ -307,7 +307,7 @@
       }
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414819433.json",
+      "url": "https://abc.zendesk.com/api/v2/ticket_metrics/367414819433.json",
       "id": 367414819433,
       "ticket_id": 3,
       "created_at": "2019-02-20T06:52:02Z",
@@ -349,7 +349,7 @@
       }
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/ticket_metrics/367414821253.json",
+      "url": "https://abc.zendesk.com/api/v2/ticket_metrics/367414821253.json",
       "id": 367414821253,
       "ticket_id": 4,
       "created_at": "2019-02-20T06:52:13Z",
@@ -390,5 +390,8 @@
         "business": 0
       }
     }
-  ]
+  ],
+  "count": 999,
+  "next_page": "https://abc.zendesk.com/api/v2/incremental/tickets.json?start_time=1550647053&include=metric_sets",
+  "end_time": 1550647053
 }

@@ -2,12 +2,10 @@ package org.embulk.input.zendesk.utils;
 
 import org.embulk.config.ConfigException;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
-import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
 import org.embulk.spi.Exec;
 import org.slf4j.Logger;
 
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -24,7 +22,6 @@ public class ZendeskValidatorUtils
                 task.getAppMarketPlaceAppId().isPresent(),
                 task.getAppMarketPlaceOrgId().isPresent());
         validateCredentials(task, zendeskSupportAPIService);
-        validateInclude(task.getIncludes(), task.getTarget());
         validateIncremental(task);
     }
 
@@ -34,15 +31,6 @@ public class ZendeskValidatorUtils
         if (!matcher.matches()) {
             throw new ConfigException(String.format("Login URL, '%s', is unmatched expectation. " +
                     "It should be followed this format: https://abc.zendesk.com/", loginUrl));
-        }
-    }
-
-    private static void validateInclude(final List<String> includes, final Target target)
-    {
-        if (includes != null && !includes.isEmpty()) {
-            if (!ZendeskUtils.isSupportInclude(target)) {
-                logger.warn("Target: '{}' doesn't support include size loading. Will be ignored include option", target.toString());
-            }
         }
     }
 
@@ -70,11 +58,6 @@ public class ZendeskValidatorUtils
             default:
                 throw new ConfigException("Unknown authentication method");
         }
-
-        // Validate credentials by sending one request to users.json. It Should always have at least one user
-
-        zendeskSupportAPIService.validateCredential(String.format("%s%s/users.json?per_page=1", task.getLoginUrl(),
-                ZendeskConstants.Url.API));
     }
 
     private static void validateAppMarketPlace(final boolean isAppMarketIntegrationNamePresent,
@@ -101,7 +84,7 @@ public class ZendeskValidatorUtils
             }
 
             if (!ZendeskUtils.isSupportIncremental(task.getTarget()) && task.getStartTime().isPresent()) {
-                logger.warn(String.format("target: '%s' don't support incremental export API. Will be ignored start_time option",
+                logger.warn(String.format("Target: '%s' doesn't support incremental export API. Will be ignored start_time option",
                         task.getTarget()));
             }
         }

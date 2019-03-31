@@ -1,7 +1,7 @@
 {
   "ticket_fields": [
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417093.json",
+      "url": "https://abc.zendesk.com/api/v2/ticket_fields/360015417093.json",
       "id": 360015417093,
       "type": "subject",
       "title": "Subject",
@@ -25,7 +25,7 @@
       "agent_description": null
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417113.json",
+      "url": "https://abc.zendesk.com/api/v2/ticket_fields/360015417113.json",
       "id": 360015417113,
       "type": "description",
       "title": "Description",
@@ -49,7 +49,7 @@
       "agent_description": null
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417133.json",
+      "url": "https://abc.zendesk.com/api/v2/ticket_fields/360015417133.json",
       "id": 360015417133,
       "type": "status",
       "title": "Status",
@@ -88,7 +88,7 @@
       "sub_type_id": 0
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417153.json",
+      "url": "https://abc.zendesk.com/api/v2/ticket_fields/360015417153.json",
       "id": 360015417153,
       "type": "tickettype",
       "title": "Type",
@@ -130,7 +130,7 @@
       ]
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417173.json",
+      "url": "https://abc.zendesk.com/api/v2/ticket_fields/360015417173.json",
       "id": 360015417173,
       "type": "priority",
       "title": "Priority",
@@ -173,7 +173,7 @@
       "sub_type_id": 0
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417193.json",
+      "url": "https://abc.zendesk.com/api/v2/ticket_fields/360015417193.json",
       "id": 360015417193,
       "type": "group",
       "title": "Group",
@@ -197,7 +197,7 @@
       "agent_description": null
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/ticket_fields/360015417213.json",
+      "url": "https://abc.zendesk.com/api/v2/ticket_fields/360015417213.json",
       "id": 360015417213,
       "type": "assignee",
       "title": "Assignee",
@@ -221,7 +221,7 @@
       "agent_description": null
     }
   ],
-  "next_page": "https://hieudion123.zendesk.com/api/v2/ticket_fields.json?page=2",
+  "next_page": "https://abc.zendesk.com/api/v2/ticket_fields.json?page=2",
   "previous_page": null,
   "count": 2198
 }

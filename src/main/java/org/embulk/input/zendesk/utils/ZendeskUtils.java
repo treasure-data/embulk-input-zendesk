@@ -2,28 +2,32 @@ package org.embulk.input.zendesk.utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.base.Charsets;
-import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.models.Target;
-import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
+
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnVisitor;
 
+import org.embulk.spi.Exec;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.Schema;
 import org.embulk.spi.json.JsonParser;
 import org.embulk.spi.time.Timestamp;
+import org.slf4j.Logger;
 
 import java.util.Base64;
 import java.util.List;
 
 public class ZendeskUtils
 {
+    private static final Logger logger = Exec.getLogger(ZendeskUtils.class);
+
     private ZendeskUtils()
     {}
 
     public static boolean isSupportIncremental(final Target target)
     {
-        return !Target.TICKET_FORMS.equals(target) && !Target.TICKET_FIELDS.equals(target);
+        return !Target.TICKET_FORMS.equals(target)
+                && !Target.TICKET_FIELDS.equals(target);
     }
 
     // For more information: https://developer.zendesk.com/rest_api/docs/support/side_loading#supported-endpoints
@@ -44,29 +48,11 @@ public class ZendeskUtils
         return includes != null && !includes.isEmpty() && ZendeskUtils.isSupportInclude(target);
     }
 
-    public static int numberToSplitWithHintingInTask(final ZendeskInputPlugin.PluginTask task,
-                                                     final ZendeskSupportAPIService zendeskSupportAPIService)
+    public static int numberToSplitWithHintingInTask(int count)
     {
-        if (isSupportIncremental(task.getTarget())) {
-            return 1;
-        }
-        return Math.max(calculateNumberOfPages(zendeskSupportAPIService), 1);
-    }
-
-    // only apply for non incremental
-    private static int calculateNumberOfPages(final ZendeskSupportAPIService zendeskSupportAPIService)
-    {
-        final JsonNode result = zendeskSupportAPIService.getData("", 0, false);
-
-        if (result.get(ZendeskConstants.Field.COUNT) != null
-                && result.get(ZendeskConstants.Field.COUNT).isInt()) {
-            int count = result.get(ZendeskConstants.Field.COUNT).asInt();
-
-            return count % ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE == 0
-                    ? count / ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE
-                    : (count / ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE) + 1;
-        }
-        return 1;
+        return count % ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE == 0
+                ? count / ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE
+                : (count / ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE) + 1;
     }
 
     public static void addRecord(JsonNode record, Schema schema, PageBuilder pageBuilder)
@@ -166,37 +152,18 @@ public class ZendeskUtils
             result = Timestamp.ofEpochSecond(timeStamp);
         }
         catch (Exception e) {
+            logger.warn("Error when parse time stamp data " + value);
         }
         return result;
     }
 
-    /*
-     * For getting the Long value of the node
-     * Sometime if error occurs (i.e a JSON value but user modified it as long) then return null
-     * */
     private static Long getLongValue(JsonNode value)
     {
-        Long result = null;
-        try {
-            result = value.asLong();
-        }
-        catch (Exception e) {
-        }
-        return result;
+        return value.asLong();
     }
 
-    /*
-     * For getting the Boolean value of the node
-     * Sometime if error occurs (i.e a JSON value but user modified it as boolean) then return null
-     * */
     private static Boolean getBooleanValue(JsonNode value)
     {
-        Boolean result = null;
-        try {
-            result = value.asBoolean();
-        }
-        catch (Exception e) {
-        }
-        return result;
+        return value.asBoolean();
     }
 }

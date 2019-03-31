@@ -1,34 +1,30 @@
 {
   "credentialSuccess": {
     "statusCode": 200,
-    "body": {}
+    "description": "dummy text"
   },
   "credentialFail400": {
     "statusCode": 400,
-    "body": {}
+    "description": "dummy text"
   },
   "credentialFail401": {
     "statusCode": 401,
-    "body": {}
+    "description": "dummy text"
   },
   "credentialFail403": {
     "statusCode": 403,
-    "body": {}
+    "description": "dummy text"
   },
   "credentialFail405": {
     "statusCode": 405,
-    "body": {
-      "error":"SC_METHOD_NOT_ALLOWED",
-      "description":"description",
-      "current_job_ids":["14b1939441cb2e96d0c0835ede22ce03"]
-    }
+    "description": "dummy text"
   },
   "doGet200": {
     "statusCode": 200,
     "body": {
       "tickets": [
         {
-          "url": "https://hieudion123.zendesk.com/api/v2/tickets/2.json",
+          "url": "https://abc.zendesk.com/api/v2/tickets/2.json",
           "id": 2,
           "external_id": null,
           "via": {
@@ -73,7 +69,7 @@
           "generated_timestamp": 1550645510
         },
         {
-          "url": "https://hieudion123.zendesk.com/api/v2/tickets/3.json",
+          "url": "https://abc.zendesk.com/api/v2/tickets/3.json",
           "id": 3,
           "external_id": null,
           "via": {
@@ -118,7 +114,7 @@
           "generated_timestamp": 1550645522
         },
         {
-          "url": "https://hieudion123.zendesk.com/api/v2/tickets/4.json",
+          "url": "https://abc.zendesk.com/api/v2/tickets/4.json",
           "id": 4,
           "external_id": null,
           "via": {
@@ -163,7 +159,7 @@
           "generated_timestamp": 1550645532
         },
         {
-          "url": "https://hieudion123.zendesk.com/api/v2/tickets/1002.json",
+          "url": "https://abc.zendesk.com/api/v2/tickets/1002.json",
           "id": 1002,
           "external_id": null,
           "via": {
@@ -208,64 +204,45 @@
           "generated_timestamp": 1550647053
         }
       ],
-      "count": 1000,
-      "next_page": "https://hieudion123.zendesk.com/api/v2/incremental/tickets.json?sort_by=+updated_at&start_time=1550647053",
+      "count": 999,
+      "next_page": "https://abc.zendesk.com/api/v2/incremental/tickets.json?sort_by=updated_at&start_time=1550647053",
       "end_time": 1550647053
     }
   },
   "doGet404": {
     "statusCode": 404,
-    "body": {
-      "error":"NOT FOUND",
-      "description":"description",
-      "current_job_ids":["14b1939441cb2e96d0c0835ede22ce03"]
-    }
+    "description": "dummy text"
   },
   "doGet405": {
     "statusCode": 405,
-    "body": {
-      "error":"SC_METHOD_NOT_ALLOWED",
-      "description":"description",
-      "current_job_ids":["14b1939441cb2e96d0c0835ede22ce03"]
-    }
+    "description": "dummy text"
   },
   "doGet409": {
     "statusCode": 409,
-    "body": {}
+    "description": "dummy text"
   },
   "doGet422NotContainTooRecentStartTime": {
     "statusCode": 422,
-    "body": {
-      "error":"SC_UNPROCESSABLE_ENTITY",
-      "description":"description",
-      "current_job_ids":["14b1939441cb2e96d0c0835ede22ce03"]
-    }
+    "description": "dummy text"
   },
   "doGet422ContainTooRecentStartTime": {
     "statusCode": 422,
-    "body": {
-      "error":"SC_UNPROCESSABLE_ENTITY",
-      "description":"Too recent start_time.",
-      "current_job_ids":["14b1939441cb2e96d0c0835ede22ce03"]
-    }
+    "description": "dummy text"
   },
   "doGet429": {
     "statusCode": 429,
-    "body": {
-      "error": "APIRateLimitExceeded",
-      "description": "Number of allowed incremental export API requests per minute exceeded"
-    }
+    "description": "Number of allowed incremental export API requests per minute exceeded"
   },
   "doGet500": {
     "statusCode": 500,
-    "body": {}
+    "description": "dummy text"
   },
   "doGet502": {
     "statusCode": 502,
-    "body": "dummy body"
+    "description": "dummy text"
   },
   "doGet503": {
     "statusCode": 503,
-    "body": {}
+    "description": "dummy text"
   }
 }

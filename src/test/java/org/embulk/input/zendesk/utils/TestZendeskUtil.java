@@ -1,6 +1,8 @@
 package org.embulk.input.zendesk.utils;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import org.embulk.EmbulkTestRuntime;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
@@ -13,15 +15,16 @@ import org.embulk.spi.time.TimestampParser;
 
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
 import org.msgpack.value.Value;
-import static org.junit.Assert.assertEquals;
 
 import java.util.Collections;
-
+import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 
 import static org.mockito.Mockito.mock;
@@ -31,6 +34,10 @@ import static org.mockito.Mockito.when;
 
 public class TestZendeskUtil
 {
+    @Rule
+    @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
+    public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
+
     private static Schema schema;
     private static Column booleanColumn;
     private static Column longColumn;
@@ -39,11 +46,12 @@ public class TestZendeskUtil
     private static Column dateColumn;
     private static Column jsonColumn;
 
-    private ZendeskSupportAPIService zendeskSupportAPIService = mock(ZendeskSupportAPIService.class);
+    private static ZendeskSupportAPIService zendeskSupportAPIService;
 
     @BeforeClass
     public static void setUp()
     {
+        zendeskSupportAPIService = mock(ZendeskSupportAPIService.class);
         PluginTask pluginTask = ZendeskTestHelper.getConfigSource("util.yml").loadConfig(PluginTask.class);
         schema = pluginTask.getColumns().toSchema();
         booleanColumn = schema.getColumn(0);
@@ -111,21 +119,18 @@ public class TestZendeskUtil
     }
 
     @Test
-    public void testNumberToSplitWithHintingInTaskWithIncrementalTarget()
-    {
-        PluginTask task = ZendeskTestHelper.getConfigSource("incremental.yml").loadConfig(PluginTask.class);
-        int number = ZendeskUtils.numberToSplitWithHintingInTask(task, zendeskSupportAPIService);
-        assertEquals(1, number);
-    }
-
-    @Test
     public void testNumberToSplitWithHintingInTaskWithNonIncrementalTarget()
     {
-        PluginTask task = ZendeskTestHelper.getConfigSource("non-incremental.yml").loadConfig(PluginTask.class);
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/util_page.json");
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean())).thenReturn(dataJson);
-        int number = ZendeskUtils.numberToSplitWithHintingInTask(task, zendeskSupportAPIService);
+        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
+        int number = ZendeskUtils.numberToSplitWithHintingInTask(2101);
         assertEquals(22, number);
+
+        number = ZendeskUtils.numberToSplitWithHintingInTask(2100);
+        assertEquals(21, number);
+
+        number = ZendeskUtils.numberToSplitWithHintingInTask(2099);
+        assertEquals(21, number);
     }
 
     @Test

@@ -1,7 +1,7 @@
 {
   "error_target": [
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/tickets/2.json",
+      "url": "https://abc.zendesk.com/api/v2/tickets/2.json",
       "id": 2,
       "external_id": null,
       "via": {
@@ -46,7 +46,7 @@
       "generated_timestamp": 1550645510
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/tickets/3.json",
+      "url": "https://abc.zendesk.com/api/v2/tickets/3.json",
       "id": 3,
       "external_id": null,
       "via": {
@@ -91,7 +91,7 @@
       "generated_timestamp": 1550645522
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/tickets/4.json",
+      "url": "https://abc.zendesk.com/api/v2/tickets/4.json",
       "id": 4,
       "external_id": null,
       "via": {
@@ -136,7 +136,7 @@
       "generated_timestamp": 1550645532
     },
     {
-      "url": "https://hieudion123.zendesk.com/api/v2/tickets/1002.json",
+      "url": "https://abc.zendesk.com/api/v2/tickets/1002.json",
       "id": 1002,
       "external_id": null,
       "via": {
@@ -182,6 +182,6 @@
     }
   ],
   "count": 1000,
-  "next_page": "https://hieudion123.zendesk.com/api/v2/incremental/tickets.json?sort_by=+updated_at&start_time=1550647053",
+  "next_page": "https://abc.zendesk.com/api/v2/incremental/tickets.json?sort_by=+updated_at&start_time=1550647053",
   "end_time": 1550647053
 }

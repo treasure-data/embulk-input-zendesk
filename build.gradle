@@ -10,16 +10,6 @@ import com.github.jrubygradle.JRubyExec
 repositories {
     mavenCentral()
     jcenter()
-
-    // for base rest client
-    maven {
-        url "https://dl.bintray.com/embulk-base-restclient/maven"
-    }
-
-    // for SOQL Parser
-    maven {
-        url "http://repository.mulesoft.org/releases/"
-    }
 }
 configurations {
     provided

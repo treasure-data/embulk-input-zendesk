@@ -37,6 +37,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -44,6 +45,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Optional;
 
 public class TestZendeskRestClient
 {
@@ -93,45 +95,16 @@ public class TestZendeskRestClient
         JsonNode messageResponse = data.get(name);
         when(statusLine.getStatusCode()).thenReturn(messageResponse.get("statusCode").asInt());
         try {
-            when(response.getEntity()).thenReturn(new StringEntity(messageResponse.get("body").toString()));
+            if (name.equals("doGet200")) {
+                doReturn(new StringEntity(messageResponse.get("body").toString())).when(response).getEntity();
+            }
+            else {
+                doReturn(new StringEntity(messageResponse.get("description").asText())).when(response).getEntity();
+            }
         }
         catch (Exception e) {
             fail("fail to setup client for UT");
         }
-    }
-
-    private void testExceptionMessageForCheckUserCredentials(String name, String expectedMessage)
-    {
-        setup(name);
-        try {
-            zendeskRestClient.checkUserCredentials("any", task);
-            fail("Should not reach here");
-        }
-        catch (final Exception e) {
-            assertEquals(expectedMessage, e.getMessage());
-        }
-    }
-
-    @Test
-    public void testCheckUserCredentialsFail401()
-    {
-        String expectedMessage = "Could not authorize with your credential.";
-        testExceptionMessageForCheckUserCredentials("credentialFail401", expectedMessage);
-    }
-
-    @Test
-    public void testCheckUserCredentialsFail403()
-    {
-        String expectedMessage = "Your account doesn't have enough permission.";
-        testExceptionMessageForCheckUserCredentials("credentialFail403", expectedMessage);
-    }
-
-    @Test
-    public void testCheckUserCredentialsFail()
-    {
-        String expectedMessage = "Could not authorize with your credential due to problems " +
-                "{\"error\":\"SC_METHOD_NOT_ALLOWED\",\"description\":\"description\"}";
-        testExceptionMessageForCheckUserCredentials("credentialFail405", expectedMessage);
     }
 
     @Test
@@ -164,8 +137,7 @@ public class TestZendeskRestClient
     @Test
     public void doGetRetryFail429WithoutRetryAfter()
     {
-        String expectedMessage = "{\"error\":\"APIRateLimitExceeded\",\"description\":\"Number of allowed incremental " +
-                "export API requests per minute exceeded\"}";
+        String expectedMessage = "Number of allowed incremental export API requests per minute exceeded";
         int expectedRetryTime = 3;
         testExceptionMessageForDoGet("doGet429", expectedMessage, expectedRetryTime);
     }
@@ -173,8 +145,7 @@ public class TestZendeskRestClient
     @Test
     public void doGetRetryFail429WithRetryAfter()
     {
-        String expectedMessage = "{\"error\":\"APIRateLimitExceeded\",\"description\":\"Number of allowed incremental " +
-                "export API requests per minute exceeded\"}";
+        String expectedMessage = "Number of allowed incremental export API requests per minute exceeded";
         int expectedRetryTime = 3;
 
         when(response.getFirstHeader("x-rate-limit")).thenReturn(header);
@@ -189,8 +160,7 @@ public class TestZendeskRestClient
     @Test
     public void doGetRetry405()
     {
-        String expectedMessage = "Status '405', message '{\"error\":\"SC_METHOD_NOT_ALLOWED\"," +
-                "\"description\":\"description\"}'";
+        String expectedMessage = "Status '405', message 'dummy text'";
         int expectedRetryTime = 1;
 
         testExceptionMessageForDoGet("doGet405", expectedMessage, expectedRetryTime);
@@ -199,8 +169,7 @@ public class TestZendeskRestClient
     @Test
     public void doGetRetry422FailBecauseNotContainTooRecentStartTime()
     {
-        String expectedMessage = "Status: '422', error message '{\"error\":\"SC_UNPROCESSABLE_ENTITY\"," +
-                "\"description\":\"description\"}'";
+        String expectedMessage = "Status: '422', error message 'dummy text'";
         int expectedRetryTime = 1;
         testExceptionMessageForDoGet("doGet422NotContainTooRecentStartTime", expectedMessage, expectedRetryTime);
     }
@@ -208,7 +177,7 @@ public class TestZendeskRestClient
     @Test
     public void doGetNotRetry422BecauseContainTooRecentStartTime()
     {
-        String expectedMessage = "{\"error\":\"SC_UNPROCESSABLE_ENTITY\",\"description\":\"Too recent start_time.\"}";
+        String expectedMessage = "Status: '422', error message 'dummy text'";
         int expectedRetryTime = 1;
         testExceptionMessageForDoGet("doGet422ContainTooRecentStartTime", expectedMessage, expectedRetryTime);
     }
@@ -226,7 +195,7 @@ public class TestZendeskRestClient
 
         try {
             when(response.getEntity())
-                    .thenReturn(new StringEntity(messageResponse.get("body").toString()))
+                    .thenReturn(new StringEntity(messageResponse.get("description").asText()))
                     .thenReturn(new StringEntity(messageResponseSuccess.get("body").toString()));
         }
         catch (Exception e) {
@@ -308,7 +277,7 @@ public class TestZendeskRestClient
 
     private void setupAndVerifyAuthenticationString(String expectedString, PluginTask pluginTask) throws IOException
     {
-        zendeskRestClient.checkUserCredentials("any", pluginTask);
+        zendeskRestClient.doGet("any", pluginTask);
         final ArgumentCaptor<HttpRequestBase> request = ArgumentCaptor.forClass(HttpRequestBase.class);
         verify(client).execute(request.capture());
 
@@ -319,7 +288,7 @@ public class TestZendeskRestClient
     @Test
     public void authenticationOauthSuccess() throws IOException
     {
-        setup("credentialSuccess");
+        setup("doGet200");
 
         String accessToken = "testzendesk";
 
@@ -335,14 +304,14 @@ public class TestZendeskRestClient
     @Test
     public void authenticationBasicSuccess() throws IOException
     {
-        setup("credentialSuccess");
+        setup("doGet200");
 
         String username = "zendesk_username";
         String password = "zendesk_password";
 
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
         configSource.set("auth_method", "basic");
-        configSource.set("username", username);
+        configSource.set("username", Optional.of(username));
         configSource.set("password", password);
         PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
 
@@ -353,7 +322,7 @@ public class TestZendeskRestClient
     @Test
     public void authenticationTokenSuccess() throws IOException
     {
-        setup("credentialSuccess");
+        setup("doGet200");
 
         String username = "zendesk_username";
         String token = "zendesk_token";

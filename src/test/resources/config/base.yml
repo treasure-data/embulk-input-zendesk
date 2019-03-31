@@ -1,10 +1,10 @@
 type: zendesk
-login_url: https://hieudion123.zendesk.com/
+login_url: https://abc.zendesk.com/
 auth_method: oauth
-username: duongminhhieu89@gmail.com
-password: hieudion123
-token: v1GV66ZxNSKhprUyQUXH3GghGQvELhClUtGIuscC
-access_token: 2c1517c6ab89cbf34bfbe9960f6483628a415eff1188e461d098b112726115e5
+username: dummy
+password: dummy
+token: dummy
+access_token: dummy
 app_marketplace_integration_name: abc
 app_marketplace_app_id: abc
 app_marketplace_org_id: abc

@@ -20,9 +20,9 @@ public class ZendeskConstants
         public static final String START_TIME = "start_time";
         public static final String END_TIME = "end_time";
         public static final String COUNT = "count";
+        public static final String GENERATED_TIMESTAMP = "generated_timestamp";
         public static final String UPDATED_AT = "updated_at";
         public static final String ID = "id";
-        public static final String PREVIOUS_RECORDS = "previous_records";
     }
 
     public static class Url
@@ -42,8 +42,8 @@ public class ZendeskConstants
         public static final int RECORDS_SIZE_PER_PAGE = 100;
         public static final int MAXIMUM_RECORDS_INCREMENTAL = 1000;
 
-        // 10 MB
-        public static final int GUESS_BUFFER_SIZE = 10000000;
+        // 1 MB
+        public static final int GUESS_BUFFER_SIZE = 1024 * 1024;
     }
 
     public static class Regex

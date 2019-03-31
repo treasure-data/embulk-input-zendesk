@@ -1,7 +1,6 @@
 package org.embulk.input.zendesk;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.google.common.collect.ImmutableList;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
@@ -24,12 +23,14 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.mockito.Mockito;
+
 import static org.junit.Assert.assertEquals;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 
 import static org.mockito.Mockito.doReturn;
@@ -42,7 +43,9 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
+
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TestZendeskInputPlugin
 {
@@ -52,7 +55,7 @@ public class TestZendeskInputPlugin
 
     private ZendeskSupportAPIService zendeskSupportAPIService = mock(ZendeskSupportAPIService.class);
 
-    private ZendeskInputPlugin zendeskInputPlugin = spy(new ZendeskInputPlugin());
+    private ZendeskInputPlugin zendeskInputPlugin;
 
     private TestPageBuilderReader.MockPageOutput output = new TestPageBuilderReader.MockPageOutput();
 
@@ -61,6 +64,7 @@ public class TestZendeskInputPlugin
     @Before
     public void prepare()
     {
+        zendeskInputPlugin = spy(new ZendeskInputPlugin());
         when(zendeskInputPlugin.getZendeskSupportAPIService(any(ZendeskInputPlugin.PluginTask.class))).thenReturn(zendeskSupportAPIService);
         doReturn(pageBuilder).when(zendeskInputPlugin).getPageBuilder(any(Schema.class), any(PageOutput.class));
     }
@@ -68,7 +72,7 @@ public class TestZendeskInputPlugin
     private void loadData(String fileName)
     {
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile(fileName);
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean())).thenReturn(dataJson);
+        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
     }
 
     private void setupTestGuessGenerateColumn(ConfigSource src, String fileName, String expectedSource)
@@ -128,11 +132,27 @@ public class TestZendeskInputPlugin
         final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
 
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean())).thenReturn(dataJson);
+        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
         String nextStartTime = configDiff.get(String.class, "start_time");
         verify(pageBuilder, times(4)).addRecord();
+        verify(pageBuilder, times(1)).finish();
+        assertEquals("2019-02-20 07:17:33 +0000", nextStartTime);
+    }
+
+    @Test
+    public void testRunIncrementalForTicketMetrics()
+    {
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        src.set("target", "ticket_metrics");
+        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/ticket_metrics.json");
+
+        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
+
+        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
+        String nextStartTime = configDiff.get(String.class, "start_time");
+        verify(pageBuilder, times(3)).addRecord();
         verify(pageBuilder, times(1)).finish();
         assertEquals("2019-02-20 07:17:33 +0000", nextStartTime);
     }
@@ -143,12 +163,12 @@ public class TestZendeskInputPlugin
         final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
         src.set("includes", Collections.singletonList("organizations"));
 
-        loadData("data/tickets.json");
+        loadData("data/ticket_with_related_objects.json");
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        verify(zendeskInputPlugin, times(4))
-                .dedupAndFetchData(any(ZendeskInputPlugin.PluginTask.class), any(JsonNode.class), anyBoolean(), anyLong(),
-                        any(ImmutableList.Builder.class), anyList(), any(Schema.class), any(PageBuilder.class));
+        verify(zendeskInputPlugin, times(1))
+                .dedupAndFetchData(any(ZendeskInputPlugin.PluginTask.class), any(JsonNode.class), anySet(), any(Schema.class), any(PageBuilder.class), anyLong());
+
         verify(pageBuilder, times(1)).finish();
         String nextStartTime = configDiff.get(String.class, "start_time");
         assertEquals("2019-02-20 07:17:33 +0000", nextStartTime);
@@ -161,41 +181,59 @@ public class TestZendeskInputPlugin
         loadData("data/ticket_fields.json");
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        verify(pageBuilder, times(7)).addRecord();
-        verify(pageBuilder, times(1)).finish();
+        // running in 2 pages
+        verify(pageBuilder, times(7 * 2)).addRecord();
+        verify(pageBuilder, times(2)).finish();
         Assert.assertTrue(configDiff.isEmpty());
     }
 
     @Test
-    public void testDedupAndFetchDataShouldUpdateRequiredToCheckRecord()
+    public void testDedupAndFetchDataShouldAddRecords()
     {
         final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
         final ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
         Schema schema = task.getColumns().toSchema();
 
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean())).thenReturn(dataJson);
+        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
 
-        ImmutableList.Builder requiredToCheckedRecords = new ImmutableList.Builder();
-        List<String> previousRecordList = new ArrayList<>();
+        Set<String> knownIDs = ConcurrentHashMap.newKeySet();
 
-        zendeskInputPlugin.dedupAndFetchData(task, dataJson.get("tickets").get(0), true, 1550647053, requiredToCheckedRecords,
-                previousRecordList, schema, pageBuilder);
-        Assert.assertTrue(requiredToCheckedRecords.build().isEmpty());
+        zendeskInputPlugin
+                .dedupAndFetchData(task, dataJson.get("tickets").get(0), knownIDs, schema, pageBuilder, 0);
 
-        zendeskInputPlugin.dedupAndFetchData(task, dataJson.get("tickets").get(3), true, 1550647053, requiredToCheckedRecords,
-                previousRecordList, schema, pageBuilder);
-        Assert.assertTrue(requiredToCheckedRecords.build().contains("1002"));
+        zendeskInputPlugin
+                .dedupAndFetchData(task, dataJson.get("tickets").get(3), knownIDs, schema, pageBuilder, 0);
 
         verify(pageBuilder, times(2)).addRecord();
     }
 
     @Test
-    public void testDedupAndFetchDataShouldStop()
+    public void testDedupAndFetchDataShouldNotAddDuplicatedRecord()
+    {
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        final ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        Schema schema = task.getColumns().toSchema();
+
+        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
+        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
+
+        Set<String> knownIDs = ConcurrentHashMap.newKeySet();
+
+        zendeskInputPlugin
+                .dedupAndFetchData(task, dataJson.get("tickets").get(0), knownIDs, schema, pageBuilder, 0);
+
+        zendeskInputPlugin
+                .dedupAndFetchData(task, dataJson.get("tickets").get(0), knownIDs, schema, pageBuilder, 0);
+
+        verify(pageBuilder, times(1)).addRecord();
+    }
+
+    @Test
+    public void testDedupAndFetchDataShouldNotAddUpdatedBySystemRecord()
     {
         // updated_at of first record
-        String startTime = "2019-02-20 06:51:50 +0000";
-        long time = ZendeskDateUtils.isoToEpochSecond(startTime);
+        String startTime = "2019-05-20 06:51:50 +0000";
 
         final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
         src.set("start_time", startTime);
@@ -204,68 +242,16 @@ public class TestZendeskInputPlugin
         Schema schema = task.getColumns().toSchema();
 
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean())).thenReturn(dataJson);
-
-        ImmutableList.Builder<String> builder = new ImmutableList.Builder<>();
-        List<String> previousRecordList = new ArrayList<>();
+        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
 
         JsonNode record = dataJson.get("tickets").get(0);
 
-        // equal time do nothing
-        zendeskInputPlugin.dedupAndFetchData(task, record, true, time, builder,
-                previousRecordList, schema, pageBuilder);
-        verify(zendeskInputPlugin, times(1))
-                .isRequiredForFurtherChecking(Optional.of(startTime),
-                        ZendeskDateUtils.isoToEpochSecond(record.get("updated_at").asText()));
+        Set<String> knownIDs = ConcurrentHashMap.newKeySet();
 
-        // larger than time stop
-        record = dataJson.get("tickets").get(1);
-        zendeskInputPlugin.dedupAndFetchData(task, record, true, time, builder,
-                previousRecordList, schema, pageBuilder);
-        verify(zendeskInputPlugin, times(1)).isRequiredForFurtherChecking(Optional.of(startTime),
-                        ZendeskDateUtils.isoToEpochSecond(record.get("updated_at").asText()));
+        zendeskInputPlugin
+                .dedupAndFetchData(task, record, knownIDs, schema, pageBuilder, ZendeskDateUtils.isoToEpochSecond(startTime));
 
-        // Do not need for further checking
-        record = dataJson.get("tickets").get(3);
-        zendeskInputPlugin.dedupAndFetchData(task, record, true, time, builder,
-                previousRecordList, schema, pageBuilder);
-        verify(zendeskInputPlugin, times(0)).isRequiredForFurtherChecking(Optional.of(startTime),
-                        ZendeskDateUtils.isoToEpochSecond(record.get("updated_at").asText()));
-
-        verify(pageBuilder, times(3)).addRecord();
-    }
-
-    @Test
-    public void testDedupAndFetchDataDoNotAddDuplicatedRecord()
-    {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        src.set("includes", Collections.singletonList("organizations"));
-        final ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
-        Schema schema = task.getColumns().toSchema();
-
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-        JsonNode singleObjectJson = ZendeskTestHelper.getJsonFromFile("data/ticket_with_related_objects.json");
-
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean()))
-                .thenReturn(singleObjectJson);
-
-        ImmutableList.Builder<String> builder = new ImmutableList.Builder<>();
-        List<String> previousRecordList = new ArrayList<>();
-
-        // time of the last record
-        long time = ZendeskDateUtils.isoToEpochSecond(dataJson.get("tickets").get(3).get("updated_at").asText());
-        String expectedId = dataJson.get("tickets").get(3).get("id").toString();
-
-        zendeskInputPlugin.dedupAndFetchData(task, dataJson.get("tickets").get(0), true, time, builder,
-                previousRecordList, schema, pageBuilder);
-        verify(pageBuilder, times(1)).addRecord();
-
-        // duplicated and don't add
-        previousRecordList.add(expectedId);
-        zendeskInputPlugin.dedupAndFetchData(task, dataJson.get("tickets").get(3), true, time, builder,
-                previousRecordList, schema, pageBuilder);
-        verify(pageBuilder, times(1)).addRecord();
-        Assert.assertTrue(builder.build().contains("1002"));
+        verify(pageBuilder, times(0)).addRecord();
     }
 
     private class Control implements InputPlugin.Control

@@ -3,7 +3,6 @@ package org.embulk.input.zendesk.clients;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -39,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ZendeskRestClient
 {
-    private static final int CONNECTION_TIME_OUT = 300000;
+    private static final int CONNECTION_TIME_OUT = 240000;
 
     private static final Logger logger = Exec.getLogger(ZendeskRestClient.class);
 
@@ -53,24 +52,6 @@ public class ZendeskRestClient
 
     public ZendeskRestClient()
     {
-    }
-
-    public void checkUserCredentials(String url, PluginTask task)
-    {
-        try {
-            sendRequest(url, task);
-        }
-        catch (ZendeskException e) {
-            if (e.getStatusCode() == HttpStatus.SC_UNAUTHORIZED) {
-                throw new ConfigException("Could not authorize with your credential.");
-            }
-            else if (e.getStatusCode() == HttpStatus.SC_FORBIDDEN) {
-                throw new ConfigException("Your account doesn't have enough permission.");
-            }
-            else {
-                throw new ConfigException("Could not authorize with your credential due to problems " + e.getMessage());
-            }
-        }
     }
 
     private String sendRequest(final String url, final PluginTask task) throws ZendeskException
@@ -87,10 +68,10 @@ public class ZendeskRestClient
                 if (statusCode == 429 || statusCode == 500 || statusCode == 503) {
                     Header retryHeader = response.getFirstHeader("Retry-After");
                     if (retryHeader != null) {
-                        throw new ZendeskException(statusCode, extractErrorMessages(EntityUtils.toString(response.getEntity())), Integer.parseInt(retryHeader.getValue()));
+                        throw new ZendeskException(statusCode, EntityUtils.toString(response.getEntity()), Integer.parseInt(retryHeader.getValue()));
                     }
                 }
-                throw new ZendeskException(statusCode, extractErrorMessages(EntityUtils.toString(response.getEntity())), 0);
+                throw new ZendeskException(statusCode, EntityUtils.toString(response.getEntity()), 0);
             }
             return EntityUtils.toString(response.getEntity());
         }
@@ -107,34 +88,6 @@ public class ZendeskRestClient
                 .setConnectionRequestTimeout(CONNECTION_TIME_OUT)
                 .build();
         return HttpClientBuilder.create().setDefaultRequestConfig(config).build();
-    }
-
-    private String extractErrorMessages(String errorResponse)
-    {
-        try {
-            JsonNode errorObject = objectMapper.readTree(errorResponse);
-            ObjectNode objectNode = objectMapper.createObjectNode();
-            boolean isExtractSuccess = false;
-            if (errorObject.get("error") != null) {
-                objectNode.put("error", errorObject.get("error").asText());
-                isExtractSuccess = true;
-            }
-
-            if (errorObject.get("description") != null) {
-                objectNode.put("description", errorObject.get("description").asText());
-                isExtractSuccess = true;
-            }
-
-            if (isExtractSuccess) {
-                return objectNode.toString();
-            }
-            else {
-                return errorResponse;
-            }
-        }
-        catch (Exception e) {
-            throw Throwables.propagate(e);
-        }
     }
 
     public String doGet(String url, PluginTask task)
@@ -227,7 +180,7 @@ public class ZendeskRestClient
                 jsonNode = objectMapper.readTree(message);
             }
             catch (final Exception e) {
-                throw new ConfigException("Status: '" + status + "', error message +'" + message + "'");
+                throw new ConfigException("Status: '" + status + "', error message '" + message + "'");
             }
             if (jsonNode != null && jsonNode.get("description") != null
                     && jsonNode.get("description").asText().startsWith(ZendeskConstants.Misc.TOO_RECENT_START_TIME)) {
@@ -241,7 +194,7 @@ public class ZendeskRestClient
 
         if (status == 429 || status == 500 || status == 503) {
             if (retryAfter > 0) {
-                logger.warn("Reached API limitation, wait for '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
+                logger.warn("Reached API limitation, wait for at least '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
             }
             else if (status != 429) {
                 logger.warn(String.format("'%s' temporally failure.", status));

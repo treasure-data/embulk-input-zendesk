@@ -122,7 +122,7 @@ public class TestZendeskSupportAPIService
     @Test
     public void buildPathWithIncrementalForRunIncludeRelatedObject()
     {
-        String expectURL = "https://abc.zendesk.com/api/v2/incremental/tickets.json?start_time=0&include=organizations";
+        String expectURL = "https://abc.zendesk.com/api/v2/incremental/tickets.json?start_time=0";
         loadData("data/tickets.json");
 
         ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");

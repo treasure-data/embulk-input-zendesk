@@ -47,11 +47,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -210,12 +212,14 @@ public class ZendeskInputPlugin implements InputPlugin
         return configDiff;
     }
 
+    private AtomicInteger count = new AtomicInteger(0);
     private TaskReport ingestServiceData(final PluginTask task, final int taskIndex,
                                          final Schema schema, final PageBuilder pageBuilder)
     {
         final TaskReport taskReport = Exec.newTaskReport();
 
         long startTime = 0;
+
         if (ZendeskUtils.isSupportIncremental(task.getTarget())) {
             if (task.getStartTime().isPresent()) {
                 startTime = ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get());
@@ -223,6 +227,7 @@ public class ZendeskInputPlugin implements InputPlugin
         }
         Set<String> knownIDs = ConcurrentHashMap.newKeySet();
         while (true) {
+            count.set(0);
             // Page start from 1 => page = taskIndex + 1
             final JsonNode result = getZendeskSupportAPIService(task).getData("", taskIndex + 1, false, startTime);
             String targetJsonName = task.getTarget().getJsonName();
@@ -250,6 +255,10 @@ public class ZendeskInputPlugin implements InputPlugin
                 }
             }
 
+            if (ZendeskUtils.isSupportIncremental(task.getTarget())) {
+                printCount();
+            }
+
             // we need to break and do not store start_time when target is not incremental, next page is not available
             // or running in preview
             if (!isNextIncrementalAvailable || Exec.isPreview()) {
@@ -260,6 +269,13 @@ public class ZendeskInputPlugin implements InputPlugin
             }
         }
         return taskReport;
+    }
+
+    private void printCount()
+    {
+        if (!Exec.isPreview()) {
+            logger.info("Actual added '" + count + "' records");
+        }
     }
 
     private void importDataForIncremental(final Iterator<JsonNode> iterator, final PluginTask task, Set<String> knownIDs,
@@ -317,10 +333,12 @@ public class ZendeskInputPlugin implements InputPlugin
             if (!knownIDs.contains(recordID) && !isUpdatedBySystem(recordJsonNode, startTime)) {
                 fetchData(recordJsonNode, task, schema, pageBuilder);
                 knownIDs.add(recordID);
+                count.incrementAndGet();
             }
         }
         else {
             fetchData(recordJsonNode, task, schema, pageBuilder);
+            count.incrementAndGet();
         }
     }
 
@@ -366,12 +384,11 @@ public class ZendeskInputPlugin implements InputPlugin
                 entry.put("format", ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
             }
         }
-        addIncludedObjectsToSchema((ArrayNode) columns, target, includes);
+        addIncludedObjectsToSchema((ArrayNode) columns, includes);
         return columns;
     }
 
-    private void addIncludedObjectsToSchema(final ArrayNode objectNode, final Target target,
-                                            final List<String> includes)
+    private void addIncludedObjectsToSchema(final ArrayNode objectNode, final List<String> includes)
     {
         final ObjectMapper mapper = new ObjectMapper();
         for (final String include : includes) {
@@ -411,12 +428,14 @@ public class ZendeskInputPlugin implements InputPlugin
 
         final JsonNode result = getZendeskSupportAPIService(task).getData(builder.toString(), 0, false, 0);
         final JsonNode targetJsonNode = result.get(target.getSingleFieldName());
+
         for (final String include : task.getIncludes()) {
             final JsonNode includeJsonNode = result.get(include);
             if (includeJsonNode != null) {
                 ((ObjectNode) targetJsonNode).put(include, includeJsonNode);
             }
         }
+
         ZendeskUtils.addRecord(targetJsonNode, schema, pageBuilder);
     }
 
@@ -472,22 +491,20 @@ public class ZendeskInputPlugin implements InputPlugin
 
     private boolean isUpdatedBySystem(JsonNode recordJsonNode, long startTime)
     {
-        /**
-         # https://developer.zendesk.com/rest_api/docs/core/incremental_export#excluding-system-updates
-         # "generated_timestamp" will be updated when Zendesk internal changing
-         # "updated_at" will be updated when ticket data was changed
-         # start_time for query parameter will be processed on Zendesk with generated_timestamp,
-         # but it was calculated by record' updated_at time.
-         # So the doesn't changed record from previous import would be appear by Zendesk internal changes.
-         # We ignore record that has updated_at <= start_time
+        /*
+         * https://developer.zendesk.com/rest_api/docs/core/incremental_export#excluding-system-updates
+         * "generated_timestamp" will be updated when Zendesk internal changing
+         * "updated_at" will be updated when ticket data was changed
+         * start_time for query parameter will be processed on Zendesk with generated_timestamp,
+         * but it was calculated by record' updated_at time.
+         * So the doesn't changed record from previous import would be appear by Zendesk internal changes.
+         * We ignore record that has updated_at <= start_time
          */
         if (recordJsonNode.get(ZendeskConstants.Field.GENERATED_TIMESTAMP) != null
                 && recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT) != null) {
             String recordUpdatedAtTime = recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).asText();
             long recordUpdatedAtToEpochSecond = ZendeskDateUtils.isoToEpochSecond(recordUpdatedAtTime);
-            if (recordUpdatedAtToEpochSecond <= startTime) {
-                return true;
-            }
+            return recordUpdatedAtToEpochSecond <= startTime;
         }
 
         return false;

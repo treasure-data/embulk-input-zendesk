@@ -14,7 +14,6 @@ import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.DataException;
 
 import java.io.IOException;
-import java.util.stream.Collectors;
 
 public class ZendeskSupportAPIService
 {
@@ -80,23 +79,8 @@ public class ZendeskSupportAPIService
                 ? new StringBuilder(buildURLForPreview())
                 : new StringBuilder(buildURLForRun(page, startTime));
 
-        // Include some related objects
-        final boolean isIncludeRelatedObjects = !task.getIncludes().isEmpty() && ZendeskUtils.isSupportInclude(task.getTarget());
-
-        if (isIncludeRelatedObjects) {
-            path.append(
-                    Target.TICKET_METRICS.equals(task.getTarget())
-                            ? "&include=metric_sets,"
-                            : "&include=");
-            path.append(task.getIncludes()
-                    .stream()
-                    .map(String::trim)
-                    .collect(Collectors.joining(",")));
-        }
-        else {
-            if (Target.TICKET_METRICS.equals(task.getTarget())) {
-                path.append("&include=metric_sets");
-            }
+        if (Target.TICKET_METRICS.equals(task.getTarget())) {
+            path.append("&include=metric_sets");
         }
 
         return path.toString();

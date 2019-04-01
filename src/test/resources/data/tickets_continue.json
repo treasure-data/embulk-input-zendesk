@@ -1,8 +1,8 @@
 {
-  "ticket":
+  "tickets": [
     {
-      "url": "https://abc.zendesk.com/api/v2/tickets/2.json",
-      "id": 2,
+      "url": "https://abc.zendesk.com/api/v2/tickets/1.json",
+      "id": 1,
       "external_id": null,
       "via": {
         "channel": "web",
@@ -42,26 +42,11 @@
       "followup_ids": [],
       "brand_id": 360001998013,
       "allow_channelback": false,
-      "allow_attachments": true
-    },
-  "organizations": [
-    {
-      "url": "https://abc.zendesk.com/api/v2/organizations/360857467053.json",
-      "id": 360857467053,
-      "name": "利用端末�",
-      "shared_tickets": false,
-      "shared_comments": false,
-      "external_id": null,
-      "created_at": "2019-02-20T06:50:45Z",
-      "updated_at": "2019-02-28T10:33:21Z",
-      "domain_names": [],
-      "details": "",
-      "notes": "",
-      "group_id": null,
-      "tags": [],
-      "organization_fields": {}
+      "allow_attachments": true,
+      "generated_timestamp": 1550645510
     }
   ],
-  "count": 999,
+  "count": 1000,
+  "next_page": "https://abc.zendesk.com/api/v2/incremental/tickets.json?sort_by=updated_at&start_time=1550647053",
   "end_time": 1550647053
 }

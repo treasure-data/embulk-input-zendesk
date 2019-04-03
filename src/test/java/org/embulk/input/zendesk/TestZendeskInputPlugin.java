@@ -8,7 +8,6 @@ import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
-import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskPluginTestRuntime;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 
@@ -30,7 +29,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.anyString;
 
 import static org.mockito.Mockito.doReturn;
@@ -40,12 +38,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class TestZendeskInputPlugin
 {
@@ -138,7 +134,7 @@ public class TestZendeskInputPlugin
         String nextStartTime = configDiff.get(String.class, "start_time");
         verify(pageBuilder, times(4)).addRecord();
         verify(pageBuilder, times(1)).finish();
-        assertEquals("2019-02-20 07:17:33 +0000", nextStartTime);
+        assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
     }
 
     @Test
@@ -155,7 +151,7 @@ public class TestZendeskInputPlugin
         String nextStartTime = configDiff.get(String.class, "start_time");
         verify(pageBuilder, times(1)).addRecord();
         verify(pageBuilder, times(1)).finish();
-        assertEquals("2019-02-20 07:17:33 +0000", nextStartTime);
+        assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
     }
 
     @Test
@@ -171,7 +167,7 @@ public class TestZendeskInputPlugin
         String nextStartTime = configDiff.get(String.class, "start_time");
         verify(pageBuilder, times(5)).addRecord();
         verify(pageBuilder, times(1)).finish();
-        assertEquals("2019-02-20 07:17:33 +0000", nextStartTime);
+        assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
     }
 
     @Test
@@ -187,7 +183,7 @@ public class TestZendeskInputPlugin
         String nextStartTime = configDiff.get(String.class, "start_time");
         verify(pageBuilder, times(3)).addRecord();
         verify(pageBuilder, times(1)).finish();
-        assertEquals("2019-02-20 07:17:33 +0000", nextStartTime);
+        assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
     }
 
     @Test
@@ -203,12 +199,10 @@ public class TestZendeskInputPlugin
                 .thenReturn(dataJsonObject);
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        verify(zendeskInputPlugin, times(5))
-                .dedupAndFetchData(any(ZendeskInputPlugin.PluginTask.class), any(JsonNode.class), anySet(), any(Schema.class), any(PageBuilder.class), anyLong());
 
         verify(pageBuilder, times(1)).finish();
         String nextStartTime = configDiff.get(String.class, "start_time");
-        assertEquals("2019-02-20 07:17:33 +0000", nextStartTime);
+        assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
     }
 
     @Test
@@ -224,82 +218,14 @@ public class TestZendeskInputPlugin
         Assert.assertTrue(configDiff.isEmpty());
     }
 
-    @Test
-    public void testDedupAndFetchDataShouldAddRecords()
-    {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        final ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
-        Schema schema = task.getColumns().toSchema();
-
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
-
-        Set<String> knownIDs = ConcurrentHashMap.newKeySet();
-
-        zendeskInputPlugin
-                .dedupAndFetchData(task, dataJson.get("tickets").get(0), knownIDs, schema, pageBuilder, 0);
-
-        zendeskInputPlugin
-                .dedupAndFetchData(task, dataJson.get("tickets").get(3), knownIDs, schema, pageBuilder, 0);
-
-        verify(pageBuilder, times(2)).addRecord();
-    }
-
-    @Test
-    public void testDedupAndFetchDataShouldNotAddDuplicatedRecord()
-    {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        final ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
-        Schema schema = task.getColumns().toSchema();
-
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
-
-        Set<String> knownIDs = ConcurrentHashMap.newKeySet();
-
-        zendeskInputPlugin
-                .dedupAndFetchData(task, dataJson.get("tickets").get(0), knownIDs, schema, pageBuilder, 0);
-
-        zendeskInputPlugin
-                .dedupAndFetchData(task, dataJson.get("tickets").get(0), knownIDs, schema, pageBuilder, 0);
-
-        verify(pageBuilder, times(1)).addRecord();
-    }
-
-    @Test
-    public void testDedupAndFetchDataShouldNotAddUpdatedBySystemRecord()
-    {
-        // updated_at of first record
-        String startTime = "2019-05-20 06:51:50 +0000";
-
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        src.set("start_time", startTime);
-
-        final ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
-        Schema schema = task.getColumns().toSchema();
-
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
-
-        JsonNode record = dataJson.get("tickets").get(0);
-
-        Set<String> knownIDs = ConcurrentHashMap.newKeySet();
-
-        zendeskInputPlugin
-                .dedupAndFetchData(task, record, knownIDs, schema, pageBuilder, ZendeskDateUtils.isoToEpochSecond(startTime));
-
-        verify(pageBuilder, times(0)).addRecord();
-    }
-
     private class Control implements InputPlugin.Control
     {
         @Override
         public List<TaskReport> run(final TaskSource taskSource, final Schema schema, final int taskCount)
         {
-            List<TaskReport> reports = new ArrayList<>();
-            for (int i = 0; i < taskCount; i++) {
-                reports.add(zendeskInputPlugin.run(taskSource, schema, i, output));
-            }
+            List<TaskReport> reports = IntStream.range(0, taskCount)
+                    .mapToObj(i -> zendeskInputPlugin.run(taskSource, schema, i, output))
+                    .collect(Collectors.toList());
             return reports;
         }
     }

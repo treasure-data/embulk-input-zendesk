@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
 import org.embulk.config.Config;
@@ -42,20 +43,15 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
-
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 public class ZendeskInputPlugin implements InputPlugin
 {
@@ -145,12 +141,12 @@ public class ZendeskInputPlugin implements InputPlugin
     public ConfigDiff transaction(final ConfigSource config, final Control control)
     {
         final PluginTask task = config.loadConfig(PluginTask.class);
+        ZendeskValidatorUtils.validateInputTask(task, getZendeskSupportAPIService(task));
         final Schema schema = task.getColumns().toSchema();
         int taskCount = 1;
         if (!ZendeskUtils.isSupportIncremental(task.getTarget())) {
             final JsonNode result = getZendeskSupportAPIService(task).getData("", 0, false, 0);
-            if (result.get(ZendeskConstants.Field.COUNT) != null
-                    && result.get(ZendeskConstants.Field.COUNT).isInt()) {
+            if (result.has(ZendeskConstants.Field.COUNT) && result.get(ZendeskConstants.Field.COUNT).isInt()) {
                 taskCount = ZendeskUtils.numberToSplitWithHintingInTask(result.get(ZendeskConstants.Field.COUNT).asInt());
             }
         }
@@ -162,7 +158,6 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         final PluginTask task = taskSource.loadTask(PluginTask.class);
         final List<TaskReport> taskReports = control.run(taskSource, schema, taskCount);
-
         return this.buildConfigDiff(task, taskReports);
     }
 
@@ -175,7 +170,6 @@ public class ZendeskInputPlugin implements InputPlugin
     public TaskReport run(final TaskSource taskSource, final Schema schema, final int taskIndex, final PageOutput output)
     {
         final PluginTask task = taskSource.loadTask(PluginTask.class);
-        ZendeskValidatorUtils.validateInputTask(task, getZendeskSupportAPIService(task));
         try (final PageBuilder pageBuilder = getPageBuilder(schema, output)) {
             final TaskReport taskReport = ingestServiceData(task, taskIndex, schema, pageBuilder);
             pageBuilder.finish();
@@ -197,8 +191,8 @@ public class ZendeskInputPlugin implements InputPlugin
         final ConfigDiff configDiff = Exec.newConfigDiff();
 
         if (!taskReports.isEmpty()) {
-            final TaskReport taskReport = taskReports.get(0);
             if (ZendeskUtils.isSupportIncremental(task.getTarget())) {
+                final TaskReport taskReport = taskReports.get(0);
                 if (taskReport.has(ZendeskConstants.Field.START_TIME)) {
                     final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
                             taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong()),
@@ -212,134 +206,128 @@ public class ZendeskInputPlugin implements InputPlugin
         return configDiff;
     }
 
-    private AtomicInteger count = new AtomicInteger(0);
     private TaskReport ingestServiceData(final PluginTask task, final int taskIndex,
                                          final Schema schema, final PageBuilder pageBuilder)
     {
         final TaskReport taskReport = Exec.newTaskReport();
 
-        long startTime = 0;
-
         if (ZendeskUtils.isSupportIncremental(task.getTarget())) {
-            if (task.getStartTime().isPresent()) {
-                startTime = ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get());
-            }
+            importDataForIncremental(task, schema, pageBuilder, taskReport);
         }
-        Set<String> knownIDs = ConcurrentHashMap.newKeySet();
-        while (true) {
-            count.set(0);
-            // Page start from 1 => page = taskIndex + 1
-            final JsonNode result = getZendeskSupportAPIService(task).getData("", taskIndex + 1, false, startTime);
-            String targetJsonName = task.getTarget().getJsonName();
-
-            if (!result.has(targetJsonName) || !result.get(targetJsonName).isArray()) {
-                throw new DataException(String.format("Missing '%s' from Zendesk API response", targetJsonName));
-            }
-            boolean isNextIncrementalAvailable = false;
-            final Iterator<JsonNode> iterator = result.get(targetJsonName).elements();
-
-            if (ZendeskUtils.isSupportIncremental(task.getTarget()) && !Exec.isPreview()) {
-                final int numberOfRecords = result.get(ZendeskConstants.Field.COUNT).asInt();
-                isNextIncrementalAvailable = numberOfRecords >= ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL;
-                final long endTimeStamp = result.get(ZendeskConstants.Field.END_TIME).asLong();
-                importDataForIncremental(iterator, task, knownIDs, schema, pageBuilder, startTime);
-                taskReport.set(ZendeskConstants.Field.START_TIME, endTimeStamp);
-            }
-            else {
-                while (iterator.hasNext()) {
-                    fetchData(iterator.next(), task, schema, pageBuilder);
-                    // in preview only need to hit one
-                    if (Exec.isPreview()) {
-                        break;
-                    }
-                }
-            }
-
-            if (ZendeskUtils.isSupportIncremental(task.getTarget())) {
-                printCount();
-            }
-
-            // we need to break and do not store start_time when target is not incremental, next page is not available
-            // or running in preview
-            if (!isNextIncrementalAvailable || Exec.isPreview()) {
-                break;
-            }
-            else {
-                startTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
-            }
+        else {
+            importDataForNonIncremental(task, taskIndex, schema, pageBuilder);
         }
+
         return taskReport;
     }
 
-    private void printCount()
+    private void importDataForIncremental(final PluginTask task, final Schema schema,
+                                          final PageBuilder pageBuilder, final TaskReport taskReport)
     {
-        if (!Exec.isPreview()) {
-            logger.info("Actual added '" + count + "' records");
-        }
-    }
+        long startTime = 0;
 
-    private void importDataForIncremental(final Iterator<JsonNode> iterator, final PluginTask task, Set<String> knownIDs,
-                                          final Schema schema, final PageBuilder pageBuilder, final long startTime)
-    {
-        // create multiple threads for fetching the url with included objects of each records
-        if (task.getIncludes().size() > 0 && ZendeskUtils.isSupportInclude(task.getTarget())) {
-            ThreadPoolExecutor pool = null;
-            try {
-                pool = new ThreadPoolExecutor(
-                        10, 100, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>()
-                        );
+        if (ZendeskUtils.isSupportIncremental(task.getTarget()) && task.getStartTime().isPresent()) {
+                startTime = ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get());
+        }
+
+        ThreadPoolExecutor pool = null;
+        try {
+            Set<String> knownIds = ConcurrentHashMap.newKeySet();
+            pool = new ThreadPoolExecutor(
+                    10, 100, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>()
+            );
+
+            while (true) {
+                int count = 0;
+                final JsonNode result = getZendeskSupportAPIService(task).getData("", 0, false, startTime);
+                final Iterator<JsonNode> iterator = getListRecords(result, task.getTarget().getJsonName());
+
+                int numberOfRecords = 0;
+                if (result.has(ZendeskConstants.Field.COUNT)) {
+                    numberOfRecords = result.get(ZendeskConstants.Field.COUNT).asInt();
+                }
 
                 while (iterator.hasNext()) {
                     final JsonNode recordJsonNode = iterator.next();
-                    pool.submit(() -> dedupAndFetchData(task, recordJsonNode, knownIDs, schema, pageBuilder, startTime));
-                    // in preview only need to hit one
+
+                    if (isUpdatedBySystem(recordJsonNode, startTime)) {
+                       continue;
+                    }
+
+                    if (task.getDedup()) {
+                        String recordID = recordJsonNode.get(ZendeskConstants.Field.ID).asText();
+                        if (knownIds.contains(recordID)) {
+                            continue;
+                        }
+                        else {
+                            knownIds.add(recordID);
+                        }
+                    }
+
+                    pool.submit(() -> fetchData(recordJsonNode, task, schema, pageBuilder));
+                    count = count + 1;
                     if (Exec.isPreview()) {
-                        break;
+                        return;
                     }
                 }
-            }
-            finally {
-                if (pool != null) {
-                    pool.shutdown();
-                    try {
-                        pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-                    }
-                    catch (final InterruptedException e) {
-                        logger.warn("Error when wait pool to finish");
-                        throw new DataException(e);
-                    }
+                logger.info("Fetched '{}' records from start_time '{}'", count, startTime);
+                if (result.has(ZendeskConstants.Field.END_TIME) && !result.get(ZendeskConstants.Field.END_TIME).isNull()
+                        && result.has(task.getTarget().getJsonName())) {
+                    // NOTE: start_time compared as "=>", not ">".
+                    // If we will use end_time for next start_time, we got the same record that is last fetched
+                    // end_time + 1 is workaround for that
+                    taskReport.set("start_time", result.get(ZendeskConstants.Field.END_TIME).asLong() + 1);
+                }
+                else {
+                    // Sometimes no record and no end_time fetched on the job, but we should generate start_time on config_diff.
+                    taskReport.set("start_time", Instant.now().getEpochSecond());
+                }
+
+                if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL) {
+                    break;
+                }
+                else {
+                    startTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
                 }
             }
         }
-        else {
-            while (iterator.hasNext()) {
-                final JsonNode recordJsonNode = iterator.next();
-                dedupAndFetchData(task, recordJsonNode, knownIDs, schema, pageBuilder, startTime);
-
-                // in preview only need to hit one
-                if (Exec.isPreview()) {
-                    break;
+        finally {
+            if (pool != null) {
+                pool.shutdown();
+                try {
+                    pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
+                }
+                catch (final InterruptedException e) {
+                    logger.warn("Error when wait pool to finish");
+                    throw Throwables.propagate(e);
                 }
             }
         }
     }
 
-    @VisibleForTesting
-    protected void dedupAndFetchData(final PluginTask task, final JsonNode recordJsonNode, Set<String> knownIDs,
-                                     final Schema schema, final PageBuilder pageBuilder, long startTime)
+    private void importDataForNonIncremental(final PluginTask task, final int taskIndex, final Schema schema,
+                                             final PageBuilder pageBuilder)
     {
-        if (task.getDedup()) {
-            String recordID = recordJsonNode.get(ZendeskConstants.Field.ID).asText();
-            if (!knownIDs.contains(recordID) && !isUpdatedBySystem(recordJsonNode, startTime)) {
-                fetchData(recordJsonNode, task, schema, pageBuilder);
-                knownIDs.add(recordID);
-                count.incrementAndGet();
+        // Page start from 1 => page = taskIndex + 1
+        final JsonNode result = getZendeskSupportAPIService(task).getData("", taskIndex + 1, false, 0);
+        final Iterator<JsonNode> iterator = getListRecords(result, task.getTarget().getJsonName());
+
+        while (iterator.hasNext()) {
+            fetchData(iterator.next(), task, schema, pageBuilder);
+
+            if (Exec.isPreview()) {
+                break;
             }
         }
-        else {
-            fetchData(recordJsonNode, task, schema, pageBuilder);
-            count.incrementAndGet();
+    }
+
+    private Iterator<JsonNode> getListRecords(JsonNode result, String targetJsonName)
+    {
+        if (!result.has(targetJsonName) || !result.get(targetJsonName).isArray()) {
+            throw new DataException(String.format("Missing '%s' from Zendesk API response", targetJsonName));
         }
+
+        return result.get(targetJsonName).elements();
     }
 
     private JsonNode buildColumns(final PluginTask task)
@@ -348,7 +336,7 @@ public class ZendeskInputPlugin implements InputPlugin
 
         String targetName = task.getTarget().getJsonName();
 
-        if (jsonNode.get(targetName) != null && jsonNode.get(targetName).isArray()) {
+        if (jsonNode.has(targetName) && jsonNode.get(targetName).isArray()) {
             return addAllColumnsToSchema(jsonNode, task.getTarget(), task.getIncludes());
         }
         else {
@@ -374,10 +362,12 @@ public class ZendeskInputPlugin implements InputPlugin
             if (name.equals("id")) {
                 if (!type.equals(Types.LONG.getName())) {
                     entry.put("type", Types.LONG.getName());
+                    entry.remove("format");
                 }
             }
             else if (idPattern.matcher(name).matches()) {
                 entry.put("type", Types.STRING.getName());
+                entry.remove("format");
             }
 
             if (type.equals(Types.TIMESTAMP.getName())) {
@@ -391,17 +381,18 @@ public class ZendeskInputPlugin implements InputPlugin
     private void addIncludedObjectsToSchema(final ArrayNode objectNode, final List<String> includes)
     {
         final ObjectMapper mapper = new ObjectMapper();
-        for (final String include : includes) {
+
+        includes.forEach(include -> {
             final ObjectNode object = mapper.createObjectNode();
             object.put("name", include);
             object.put("type", Types.JSON.getName());
             objectNode.add(object);
-        }
+        });
     }
 
     private void fetchData(final JsonNode jsonNode, final PluginTask task, final Schema schema, final PageBuilder pageBuilder)
     {
-        if (ZendeskUtils.isSupportInclude(task.getTarget(), task.getIncludes())) {
+        if (task.getIncludes() != null && !task.getIncludes().isEmpty()) {
             fetchRelatedObjects(jsonNode, task, schema, pageBuilder);
         }
         else {
@@ -412,31 +403,27 @@ public class ZendeskInputPlugin implements InputPlugin
     private void fetchRelatedObjects(final JsonNode jsonNode, final PluginTask task, final Schema schema,
                                      final PageBuilder pageBuilder)
     {
-        // remove .json in url
-        final String url = jsonNode.get("url").asText().trim().replaceFirst("\\.json", "");
+        task.getIncludes().forEach(include -> {
+            String relatedObjectName = include.trim();
+            final String url = task.getLoginUrl() + ZendeskConstants.Url.API
+                    + "/" + task.getTarget().toString()
+                    + "/" + jsonNode.get(ZendeskConstants.Field.ID).asText()
+                    + "/" + relatedObjectName + ".json";
 
-        final StringBuilder builder = new StringBuilder(url);
-
-        final Target target = task.getTarget();
-        if (ZendeskUtils.isSupportInclude(target)) {
-            builder.append("?include=");
-            builder.append(task.getIncludes()
-                    .stream()
-                    .map(String::trim)
-                    .collect(Collectors.joining(",")));
-        }
-
-        final JsonNode result = getZendeskSupportAPIService(task).getData(builder.toString(), 0, false, 0);
-        final JsonNode targetJsonNode = result.get(target.getSingleFieldName());
-
-        for (final String include : task.getIncludes()) {
-            final JsonNode includeJsonNode = result.get(include);
-            if (includeJsonNode != null) {
-                ((ObjectNode) targetJsonNode).put(include, includeJsonNode);
+            try {
+                final JsonNode result = getZendeskSupportAPIService(task).getData(url, 0, false, 0);
+                if (result != null && result.has(relatedObjectName)) {
+                    ((ObjectNode) jsonNode).put(include, result.get(relatedObjectName));
+                }
             }
-        }
-
-        ZendeskUtils.addRecord(targetJsonNode, schema, pageBuilder);
+            catch (final ConfigException e) {
+                // Sometimes we get 404 when having invalid endpoint, so ignore when we get 404 InvalidEndpoint
+                if (!e.getMessage().contains(ZendeskConstants.Misc.INVALID_END_POINT_RESPONSE)) {
+                    throw new DataException(e);
+                }
+            }
+        });
+        ZendeskUtils.addRecord(jsonNode, schema, pageBuilder);
     }
 
     @VisibleForTesting
@@ -458,7 +445,7 @@ public class ZendeskInputPlugin implements InputPlugin
 
     private JsonNode createSamples(final JsonNode jsonNode, final Target target)
     {
-        JsonNode targetJsonNode = getJsonToGuess(jsonNode, target);
+        JsonNode targetJsonNode = jsonNode.get(target.getJsonName());
 
         if (targetJsonNode.isArray() && targetJsonNode.size() > 0) {
             // prevent over buffer size
@@ -472,15 +459,6 @@ public class ZendeskInputPlugin implements InputPlugin
             return arrayNode;
         }
         throw new ConfigException("Could not guess schema due to empty data set");
-    }
-
-    private JsonNode getJsonToGuess(JsonNode jsonNode, final Target target)
-    {
-        jsonNode = Target.TICKET_METRICS.equals(target)
-                ? jsonNode.get("metric_sets")
-                : jsonNode.get(target.toString());
-
-        return jsonNode;
     }
 
     @VisibleForTesting
@@ -500,8 +478,7 @@ public class ZendeskInputPlugin implements InputPlugin
          * So the doesn't changed record from previous import would be appear by Zendesk internal changes.
          * We ignore record that has updated_at <= start_time
          */
-        if (recordJsonNode.get(ZendeskConstants.Field.GENERATED_TIMESTAMP) != null
-                && recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT) != null) {
+        if (recordJsonNode.has(ZendeskConstants.Field.GENERATED_TIMESTAMP) && recordJsonNode.has(ZendeskConstants.Field.UPDATED_AT)) {
             String recordUpdatedAtTime = recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).asText();
             long recordUpdatedAtToEpochSecond = ZendeskDateUtils.isoToEpochSecond(recordUpdatedAtTime);
             return recordUpdatedAtToEpochSecond <= startTime;

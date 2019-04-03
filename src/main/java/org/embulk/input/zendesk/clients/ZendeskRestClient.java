@@ -1,7 +1,6 @@
 package org.embulk.input.zendesk.clients;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
@@ -33,7 +32,6 @@ import static org.embulk.spi.util.RetryExecutor.retryExecutor;
 
 import java.io.IOException;
 
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class ZendeskRestClient
@@ -54,12 +52,12 @@ public class ZendeskRestClient
     {
     }
 
-    private String sendRequest(final String url, final PluginTask task) throws ZendeskException
+    private String sendGetRequest(final String url, final PluginTask task) throws ZendeskException
     {
         try {
             HttpClient client = createHttpClient();
             HttpRequestBase request = createGetRequest(url, task);
-            logger.info(">>> {} {}{}", request.getMethod(), request.getURI().getPath(),
+            logger.info(">>> {}{}", request.getURI().getPath(),
                     request.getURI().getQuery() != null ? "?" + request.getURI().getQuery() : "");
             HttpResponse response = client.execute(request);
             getRateLimiter(response).acquire();
@@ -100,7 +98,7 @@ public class ZendeskRestClient
                         @Override
                         public String call() throws Exception
                         {
-                            return sendRequest(url, task);
+                            return sendGetRequest(url, task);
                         }
 
                         @Override
@@ -150,7 +148,6 @@ public class ZendeskRestClient
                         @Override
                         public void onGiveup(Exception firstException, Exception lastException)
                         {
-                            logger.warn("Unable to complete the request", lastException);
                         }
                     });
         }
@@ -165,8 +162,8 @@ public class ZendeskRestClient
     private boolean isResponseStatusToRetry(int status, String message, int retryAfter) throws ConfigException
     {
         if (status == 404) {
-            //404 would be returned e.g. ticket comments are empty (on fetch_subresource method)
-            return true;
+            //404 would be returned e.g. ticket comments are empty (on fetchRelatedObjects method)
+            return false;
         }
 
         if (status == 409) {
@@ -175,20 +172,12 @@ public class ZendeskRestClient
         }
 
         if (status == 422) {
-            JsonNode jsonNode;
-            try {
-                jsonNode = objectMapper.readTree(message);
-            }
-            catch (final Exception e) {
-                throw new ConfigException("Status: '" + status + "', error message '" + message + "'");
-            }
-            if (jsonNode != null && jsonNode.get("description") != null
-                    && jsonNode.get("description").asText().startsWith(ZendeskConstants.Misc.TOO_RECENT_START_TIME)) {
+            if (message.startsWith(ZendeskConstants.Misc.TOO_RECENT_START_TIME)) {
                 //That means "No records from start_time". We can recognize it same as 200.
                 return false;
             }
             else {
-                throw new ConfigException("Status: '" + status + "', error message '" + jsonNode + "'");
+                throw new ConfigException("Status: '" + status + "', error message '" + message + "'");
             }
         }
 
@@ -216,9 +205,7 @@ public class ZendeskRestClient
         HttpGet request = new HttpGet(url);
         ImmutableMap<String, String> headers = buildAuthHeader(task);
         if (headers != null) {
-            for (final Map.Entry<String, String> entry : headers.entrySet()) {
-                request.setHeader(entry.getKey(), entry.getValue());
-            }
+            headers.forEach(request::setHeader);
         }
         return request;
     }

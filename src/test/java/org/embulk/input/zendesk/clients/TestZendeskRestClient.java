@@ -228,7 +228,17 @@ public class TestZendeskRestClient
     @Test
     public void doGetRetry404()
     {
-        setupReTrySuccess("doGet404");
+        setup("doGet404");
+        String expectedMessage = "dummy text";
+        int expectedRetryTime = 1;
+        try {
+            zendeskRestClient.doGet("any", task);
+            fail("Should not reach here");
+        }
+        catch (final Exception e) {
+            assertEquals(expectedMessage, e.getMessage());
+        }
+        verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
     }
 
     @Test

@@ -10,17 +10,15 @@ public enum Target
     /** For ticket_metrics - we fetch by using include metric_sets with ticket target
     *    so the jsonName is different comparing to the target name
     */
-    TICKETS("tickets", "ticket"), USERS("users", "user"), ORGANIZATIONS("organizations", "organization"),
-    TICKET_EVENTS("ticket_events", "ticket_event"), TICKET_METRICS("metric_sets", "metric_sets"),
-    TICKET_FIELDS("ticket_fields", "ticket_field"), TICKET_FORMS("ticket_forms", "ticket_form");
+    TICKETS("tickets"), USERS("users"), ORGANIZATIONS("organizations"),
+    TICKET_EVENTS("ticket_events"), TICKET_METRICS("metric_sets"),
+    TICKET_FIELDS("ticket_fields"), TICKET_FORMS("ticket_forms");
 
     String jsonName;
-    String singleFieldName;
 
-    Target(String jsonName, String singleName)
+    Target(String jsonName)
     {
         this.jsonName = jsonName;
-        this.singleFieldName = singleName;
     }
 
     @JsonCreator
@@ -44,10 +42,5 @@ public enum Target
     public String getJsonName()
     {
         return this.jsonName;
-    }
-
-    public String getSingleFieldName()
-    {
-        return this.singleFieldName;
     }
 }

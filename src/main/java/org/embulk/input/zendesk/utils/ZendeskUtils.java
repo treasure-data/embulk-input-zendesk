@@ -15,7 +15,6 @@ import org.embulk.spi.time.Timestamp;
 import org.slf4j.Logger;
 
 import java.util.Base64;
-import java.util.List;
 
 public class ZendeskUtils
 {
@@ -30,22 +29,9 @@ public class ZendeskUtils
                 && !Target.TICKET_FIELDS.equals(target);
     }
 
-    // For more information: https://developer.zendesk.com/rest_api/docs/support/side_loading#supported-endpoints
-    public static boolean isSupportInclude(final Target target)
-    {
-        return Target.TICKETS.equals(target)
-                || Target.USERS.equals(target)
-                || Target.ORGANIZATIONS.equals(target);
-    }
-
     public static String convertBase64(final String text)
     {
         return Base64.getEncoder().encodeToString(text.getBytes(Charsets.UTF_8));
-    }
-
-    public static boolean isSupportInclude(Target target, List<String> includes)
-    {
-        return includes != null && !includes.isEmpty() && ZendeskUtils.isSupportInclude(target);
     }
 
     public static int numberToSplitWithHintingInTask(int count)
@@ -55,7 +41,7 @@ public class ZendeskUtils
                 : (count / ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE) + 1;
     }
 
-    public static void addRecord(JsonNode record, Schema schema, PageBuilder pageBuilder)
+    public static synchronized void addRecord(JsonNode record, Schema schema, PageBuilder pageBuilder)
     {
         schema.visitColumns(new ColumnVisitor() {
             @Override
@@ -129,7 +115,14 @@ public class ZendeskUtils
             @Override
             public void doubleColumn(Column column)
             {
-                longColumn(column);
+                JsonNode data = record.get(column.getName());
+                if (isNull(data)) {
+                    pageBuilder.setNull(column);
+                }
+                else {
+                    Double value = getDoubleValue(data);
+                    pageBuilder.setDouble(column, value);
+                }
             }
         });
         pageBuilder.addRecord();
@@ -165,5 +158,10 @@ public class ZendeskUtils
     private static Boolean getBooleanValue(JsonNode value)
     {
         return value.asBoolean();
+    }
+
+    private static Double getDoubleValue(JsonNode value)
+    {
+        return value.asDouble();
     }
 }

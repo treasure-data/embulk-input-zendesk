@@ -20,7 +20,6 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.msgpack.value.Value;
 
-import java.util.Collections;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -82,43 +81,6 @@ public class TestZendeskUtil
     }
 
     @Test
-    public void testIsSupportIncrementalShouldReturnFalse()
-    {
-        boolean result = ZendeskUtils.isSupportInclude(Target.TICKET_FIELDS);
-        Assert.assertFalse(result);
-
-        result = ZendeskUtils.isSupportInclude(Target.TICKET_FORMS);
-        Assert.assertFalse(result);
-    }
-
-    @Test
-    public void testIsSupportIncludeShouldReturnTrue()
-    {
-        boolean result = ZendeskUtils.isSupportInclude(Target.TICKETS);
-        Assert.assertTrue(result);
-
-        result = ZendeskUtils.isSupportInclude(Target.USERS);
-        Assert.assertTrue(result);
-
-        result = ZendeskUtils.isSupportInclude(Target.ORGANIZATIONS);
-        Assert.assertTrue(result);
-    }
-
-    @Test
-    public void testIsSupportIncludeWithIncludeListShouldReturnTrue()
-    {
-        boolean result = ZendeskUtils.isSupportInclude(Target.TICKETS, Collections.singletonList("abc"));
-        Assert.assertTrue(result);
-    }
-
-    @Test
-    public void testIsSupportIncludeWithIncludeListShouldReturnFalse()
-    {
-        boolean result = ZendeskUtils.isSupportInclude(Target.TICKETS, Collections.EMPTY_LIST);
-        Assert.assertFalse(result);
-    }
-
-    @Test
     public void testNumberToSplitWithHintingInTaskWithNonIncrementalTarget()
     {
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/util_page.json");
@@ -142,7 +104,7 @@ public class TestZendeskUtil
 
         Boolean boolValue = Boolean.TRUE;
         long longValue = 1;
-        long doubleValue = 1;
+        double doubleValue = 1;
         String stringValue = "string";
         Timestamp dateValue = TimestampParser.of("%Y-%m-%dT%H:%M:%S%z", "UTC").parse("2019-01-01T00:00:00Z");
         Value jsonValue = new JsonParser().parse("{}");
@@ -151,7 +113,7 @@ public class TestZendeskUtil
 
         verify(mock, times(1)).setBoolean(booleanColumn, boolValue);
         verify(mock, times(1)).setLong(longColumn, longValue);
-        verify(mock, times(1)).setLong(doubleColumn, doubleValue);
+        verify(mock, times(1)).setDouble(doubleColumn, doubleValue);
         verify(mock, times(1)).setString(stringColumn, stringValue);
         verify(mock, times(1)).setTimestamp(dateColumn, dateValue);
         verify(mock, times(1)).setJson(jsonColumn, jsonValue);

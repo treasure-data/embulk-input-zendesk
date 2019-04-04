@@ -23,6 +23,7 @@ import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
+import org.embulk.spi.DataException;
 import org.embulk.spi.Exec;
 import org.embulk.spi.util.RetryExecutor;
 import org.slf4j.Logger;
@@ -52,43 +53,7 @@ public class ZendeskRestClient
     {
     }
 
-    private String sendGetRequest(final String url, final PluginTask task) throws ZendeskException
-    {
-        try {
-            HttpClient client = createHttpClient();
-            HttpRequestBase request = createGetRequest(url, task);
-            logger.info(">>> {}{}", request.getURI().getPath(),
-                    request.getURI().getQuery() != null ? "?" + request.getURI().getQuery() : "");
-            HttpResponse response = client.execute(request);
-            getRateLimiter(response).acquire();
-            int statusCode = response.getStatusLine().getStatusCode();
-            if (statusCode != HttpStatus.SC_OK) {
-                if (statusCode == 429 || statusCode == 500 || statusCode == 503) {
-                    Header retryHeader = response.getFirstHeader("Retry-After");
-                    if (retryHeader != null) {
-                        throw new ZendeskException(statusCode, EntityUtils.toString(response.getEntity()), Integer.parseInt(retryHeader.getValue()));
-                    }
-                }
-                throw new ZendeskException(statusCode, EntityUtils.toString(response.getEntity()), 0);
-            }
-            return EntityUtils.toString(response.getEntity());
-        }
-        catch (IOException ex) {
-            throw new ZendeskException(-1, ex.getMessage(), 0);
-        }
-    }
-
-    @VisibleForTesting
-    protected HttpClient createHttpClient()
-    {
-        RequestConfig config = RequestConfig.custom()
-                .setConnectTimeout(CONNECTION_TIME_OUT)
-                .setConnectionRequestTimeout(CONNECTION_TIME_OUT)
-                .build();
-        return HttpClientBuilder.create().setDefaultRequestConfig(config).build();
-    }
-
-    public String doGet(String url, PluginTask task)
+    public String doGet(String url, PluginTask task, boolean isPreview)
     {
         try {
             return retryExecutor().withRetryLimit(task.getRetryLimit())
@@ -106,7 +71,7 @@ public class ZendeskRestClient
                         {
                             if (exception instanceof ZendeskException) {
                                 int statusCode = ((ZendeskException) exception).getStatusCode();
-                                return isResponseStatusToRetry(statusCode, exception.getMessage(), ((ZendeskException) exception).getRetryAfter());
+                                return isResponseStatusToRetry(statusCode, exception.getMessage(), ((ZendeskException) exception).getRetryAfter(), isPreview);
                             }
                             return false;
                         }
@@ -159,7 +124,43 @@ public class ZendeskRestClient
         }
     }
 
-    private boolean isResponseStatusToRetry(int status, String message, int retryAfter) throws ConfigException
+    @VisibleForTesting
+    protected HttpClient createHttpClient()
+    {
+        RequestConfig config = RequestConfig.custom()
+                .setConnectTimeout(CONNECTION_TIME_OUT)
+                .setConnectionRequestTimeout(CONNECTION_TIME_OUT)
+                .build();
+        return HttpClientBuilder.create().setDefaultRequestConfig(config).build();
+    }
+
+    private String sendGetRequest(final String url, final PluginTask task) throws ZendeskException
+    {
+        try {
+            HttpClient client = createHttpClient();
+            HttpRequestBase request = createGetRequest(url, task);
+            logger.info(">>> {}{}", request.getURI().getPath(),
+                    request.getURI().getQuery() != null ? "?" + request.getURI().getQuery() : "");
+            HttpResponse response = client.execute(request);
+            getRateLimiter(response).acquire();
+            int statusCode = response.getStatusLine().getStatusCode();
+            if (statusCode != HttpStatus.SC_OK) {
+                if (statusCode == 429 || statusCode == 500 || statusCode == 503) {
+                    Header retryHeader = response.getFirstHeader("Retry-After");
+                    if (retryHeader != null) {
+                        throw new ZendeskException(statusCode, EntityUtils.toString(response.getEntity()), Integer.parseInt(retryHeader.getValue()));
+                    }
+                }
+                throw new ZendeskException(statusCode, EntityUtils.toString(response.getEntity()), 0);
+            }
+            return EntityUtils.toString(response.getEntity());
+        }
+        catch (IOException ex) {
+            throw new ZendeskException(-1, ex.getMessage(), 0);
+        }
+    }
+
+    private boolean isResponseStatusToRetry(final int status, final String message, int retryAfter, final boolean isPreview) throws ConfigException
     {
         if (status == 404) {
             //404 would be returned e.g. ticket comments are empty (on fetchRelatedObjects method)
@@ -176,19 +177,22 @@ public class ZendeskRestClient
                 //That means "No records from start_time". We can recognize it same as 200.
                 return false;
             }
-            else {
-                throw new ConfigException("Status: '" + status + "', error message '" + message + "'");
-            }
+            throw new ConfigException("Status: '" + status + "', error message '" + message + "'");
         }
 
         if (status == 429 || status == 500 || status == 503) {
-            if (retryAfter > 0) {
-                logger.warn("Reached API limitation, wait for at least '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
+            if (isPreview) {
+                throw new DataException("Rate Limited. Waiting '" + retryAfter + "' seconds to re-run");
             }
-            else if (status != 429) {
-                logger.warn(String.format("'%s' temporally failure.", status));
+            else {
+                if (retryAfter > 0) {
+                    logger.warn("Reached API limitation, wait for at least '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
+                }
+                else if (status != 429) {
+                    logger.warn(String.format("'%s' temporally failure.", status));
+                }
+                return true;
             }
-            return true;
         }
 
         //Won't retry for 4xx range errors except above. Almost they should be ConfigError e.g. 403 Forbidden

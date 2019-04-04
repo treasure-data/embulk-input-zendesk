@@ -41,15 +41,24 @@ public class ZendeskSupportAPIService
     public JsonNode getData(String path, final int page, final boolean isPreview, long startTime)
     {
         if (path.isEmpty()) {
-            path = buildPath(page, isPreview, startTime);
+            path = buildPath(page, startTime);
         }
         try {
-            final String response = getZendeskRestClient().doGet(path, task);
+            final String response = getZendeskRestClient().doGet(path, task, isPreview);
             return parseJsonObject(response);
         }
         catch (final Exception e) {
             throw Throwables.propagate(e);
         }
+    }
+
+    @VisibleForTesting
+    protected ZendeskRestClient getZendeskRestClient()
+    {
+        if (zendeskRestClient == null) {
+            zendeskRestClient = new ZendeskRestClient();
+        }
+        return zendeskRestClient;
     }
 
     private ObjectNode parseJsonObject(final String jsonText)
@@ -58,9 +67,8 @@ public class ZendeskSupportAPIService
         if (node.isObject()) {
             return (ObjectNode) node;
         }
-        else {
-            throw new DataException("Expected object node: " + jsonText);
-        }
+
+        throw new DataException("Expected object node to parse but doesn't get");
     }
 
     private JsonNode parseJsonNode(final String jsonText)
@@ -73,73 +81,29 @@ public class ZendeskSupportAPIService
         }
     }
 
-    private String buildPath(final int page, final boolean isPreview, long startTime)
+    private String buildPath(final int page, long startTime)
     {
-        final StringBuilder path = isPreview
-                ? new StringBuilder(buildURLForPreview())
-                : new StringBuilder(buildURLForRun(page, startTime));
+        boolean isSupportIncremental = ZendeskUtils.isSupportIncremental(task.getTarget());
 
-        if (Target.TICKET_METRICS.equals(task.getTarget())) {
-            path.append("&include=metric_sets");
-        }
-
-        return path.toString();
-    }
-
-    private String buildURLForPreview()
-    {
-        final boolean isSupportIncremental = ZendeskUtils.isSupportIncremental(task.getTarget());
-        StringBuilder previewURL = new StringBuilder(task.getLoginUrl());
-
-        previewURL.append(isSupportIncremental
-                ? ZendeskConstants.Url.API_INCREMENTAL
-                : ZendeskConstants.Url.API)
-                .append("/");
-
-        if (Target.TICKET_METRICS.equals(task.getTarget())) {
-            previewURL.append(Target.TICKETS.toString())
-                    .append(".json?");
-        }
-        else {
-            previewURL.append(task.getTarget().toString())
-                    .append(".json?");
-        }
-
-        previewURL.append(isSupportIncremental
-                ? "start_time=0"
-                : "per_page=1");
-
-        return previewURL.toString();
-    }
-
-    private String buildURLForRun(final int page, final long startTime)
-    {
-        if (Target.TICKET_METRICS.equals(task.getTarget())) {
-            return buildURLForRunBasedOnTarget(Target.TICKETS, page, startTime).toString();
-        }
-        return buildURLForRunBasedOnTarget(task.getTarget(), page, startTime).toString();
-    }
-
-    private StringBuilder buildURLForRunBasedOnTarget(final Target target, final int page, final long startTime)
-    {
-        boolean isSupportIncremental = ZendeskUtils.isSupportIncremental(target);
-        return new StringBuilder(task.getLoginUrl())
+        StringBuilder urlBuilder = new StringBuilder(task.getLoginUrl())
                 .append(isSupportIncremental
                         ? ZendeskConstants.Url.API_INCREMENTAL
                         : ZendeskConstants.Url.API)
                 .append("/")
-                .append(target.toString())
-                .append(isSupportIncremental
-                        ? ".json?start_time=" + startTime
-                        : ".json?sort_by=id&per_page=100&page=" + page);
-    }
+                .append(Target.TICKET_METRICS.equals(task.getTarget())
+                        ? Target.TICKETS.toString()
+                        : task.getTarget().toString())
+                .append(".json?");
 
-    @VisibleForTesting
-    protected ZendeskRestClient getZendeskRestClient()
-    {
-        if (zendeskRestClient == null) {
-            zendeskRestClient = new ZendeskRestClient();
+        urlBuilder
+                .append(isSupportIncremental
+                        ? "start_time=" + startTime
+                        : "sort_by=id&per_page=100&page=" + page);
+
+        if (Target.TICKET_METRICS.equals(task.getTarget())) {
+            urlBuilder.append("&include=metric_sets");
         }
-        return zendeskRestClient;
+
+        return urlBuilder.toString();
     }
 }

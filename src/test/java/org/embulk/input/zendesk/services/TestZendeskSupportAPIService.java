@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
@@ -40,7 +41,7 @@ public class TestZendeskSupportAPIService
     private void loadData(String fileName)
     {
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile(fileName);
-        when(zendeskRestClient.doGet(any(), any())).thenReturn(dataJson.toString());
+        when(zendeskRestClient.doGet(any(), any(), anyBoolean())).thenReturn(dataJson.toString());
     }
 
     private void setupZendeskSupportAPIService(ZendeskInputPlugin.PluginTask task)
@@ -60,7 +61,7 @@ public class TestZendeskSupportAPIService
     {
         zendeskSupportAPIService.getData("", page, isPreview, 0);
         final ArgumentCaptor<String> url = ArgumentCaptor.forClass(String.class);
-        verify(zendeskRestClient).doGet(url.capture(), any());
+        verify(zendeskRestClient).doGet(url.capture(), any(), anyBoolean());
         assertEquals(expectURL, url.getValue());
     }
 
@@ -76,7 +77,7 @@ public class TestZendeskSupportAPIService
     @Test
     public void buildPathWithNonIncrementalForPreview()
     {
-        String expectURL = "https://abc.zendesk.com/api/v2/ticket_fields.json?per_page=1";
+        String expectURL = "https://abc.zendesk.com/api/v2/ticket_fields.json?sort_by=id&per_page=100&page=0";
         setup("non-incremental.yml");
         loadData("data/ticket_fields.json");
         setupTestAndVerifyURL(expectURL, 0, true);
@@ -146,7 +147,7 @@ public class TestZendeskSupportAPIService
 
         zendeskSupportAPIService.getData("", 0, false, time);
         final ArgumentCaptor<String> url = ArgumentCaptor.forClass(String.class);
-        verify(zendeskRestClient).doGet(url.capture(), any());
+        verify(zendeskRestClient).doGet(url.capture(), any(), anyBoolean());
         assertEquals(expectURL, url.getValue());
     }
 

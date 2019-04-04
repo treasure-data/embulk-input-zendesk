@@ -112,7 +112,7 @@ public class TestZendeskRestClient
     {
         setup("doGet200");
         JsonNode expectedResult = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-        String result = zendeskRestClient.doGet("dummyString", task);
+        String result = zendeskRestClient.doGet("dummyString", task, false);
         assertEquals(expectedResult.toString(), result);
     }
 
@@ -125,7 +125,7 @@ public class TestZendeskRestClient
     private void verifyData(String expectedMessage, int expectedRetryTime)
     {
         try {
-            zendeskRestClient.doGet("any", task);
+            zendeskRestClient.doGet("any", task, false);
             fail("Should not reach here");
         }
         catch (final Exception e) {
@@ -203,7 +203,7 @@ public class TestZendeskRestClient
         }
 
         int expectedRetryTime = 2;
-        zendeskRestClient.doGet("any", task);
+        zendeskRestClient.doGet("any", task, false);
         verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
     }
 
@@ -232,7 +232,7 @@ public class TestZendeskRestClient
         String expectedMessage = "dummy text";
         int expectedRetryTime = 1;
         try {
-            zendeskRestClient.doGet("any", task);
+            zendeskRestClient.doGet("any", task, false);
             fail("Should not reach here");
         }
         catch (final Exception e) {
@@ -265,7 +265,7 @@ public class TestZendeskRestClient
                 .thenReturn("-5");
 
         try {
-            zendeskRestClient.doGet("any", task);
+            zendeskRestClient.doGet("any", task, false);
         }
         catch (final Exception e) {
         }
@@ -281,13 +281,13 @@ public class TestZendeskRestClient
                 .thenThrow(new IOException());
 
         int expectedRetryTime = 3;
-        assertThrows(ConfigException.class, () -> zendeskRestClient.doGet("any", task));
+        assertThrows(ConfigException.class, () -> zendeskRestClient.doGet("any", task, false));
         verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
     }
 
     private void setupAndVerifyAuthenticationString(String expectedString, PluginTask pluginTask) throws IOException
     {
-        zendeskRestClient.doGet("any", pluginTask);
+        zendeskRestClient.doGet("any", pluginTask, false);
         final ArgumentCaptor<HttpRequestBase> request = ArgumentCaptor.forClass(HttpRequestBase.class);
         verify(client).execute(request.capture());
 

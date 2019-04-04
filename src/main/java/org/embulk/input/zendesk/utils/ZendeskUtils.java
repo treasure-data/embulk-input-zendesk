@@ -36,9 +36,7 @@ public class ZendeskUtils
 
     public static int numberToSplitWithHintingInTask(int count)
     {
-        return count % ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE == 0
-                ? count / ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE
-                : (count / ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE) + 1;
+        return (int) Math.ceil((double) count / ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE);
     }
 
     public static synchronized void addRecord(JsonNode record, Schema schema, PageBuilder pageBuilder)
@@ -94,8 +92,7 @@ public class ZendeskUtils
                     pageBuilder.setNull(column);
                 }
                 else {
-                    Boolean value = getBooleanValue(data);
-                    pageBuilder.setBoolean(column, value);
+                    pageBuilder.setBoolean(column, data.asBoolean());
                 }
             }
 
@@ -107,8 +104,7 @@ public class ZendeskUtils
                     pageBuilder.setNull(column);
                 }
                 else {
-                    Long value = getLongValue(data);
-                    pageBuilder.setLong(column, value);
+                    pageBuilder.setLong(column, data.asLong());
                 }
             }
 
@@ -120,8 +116,7 @@ public class ZendeskUtils
                     pageBuilder.setNull(column);
                 }
                 else {
-                    Double value = getDoubleValue(data);
-                    pageBuilder.setDouble(column, value);
+                    pageBuilder.setDouble(column, data.asDouble());
                 }
             }
         });
@@ -148,20 +143,5 @@ public class ZendeskUtils
             logger.warn("Error when parse time stamp data " + value);
         }
         return result;
-    }
-
-    private static Long getLongValue(JsonNode value)
-    {
-        return value.asLong();
-    }
-
-    private static Boolean getBooleanValue(JsonNode value)
-    {
-        return value.asBoolean();
-    }
-
-    private static Double getDoubleValue(JsonNode value)
-    {
-        return value.asDouble();
     }
 }

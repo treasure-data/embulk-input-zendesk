@@ -186,6 +186,22 @@ public class ZendeskInputPlugin implements InputPlugin
         return Exec.newConfigDiff().set("columns", buildColumns(task));
     }
 
+    @VisibleForTesting
+    protected ZendeskSupportAPIService getZendeskSupportAPIService(final PluginTask task)
+    {
+        if (this.zendeskSupportAPIService == null) {
+            this.zendeskSupportAPIService = new ZendeskSupportAPIService(task);
+        }
+        this.zendeskSupportAPIService.setTask(task);
+        return this.zendeskSupportAPIService;
+    }
+
+    @VisibleForTesting
+    protected PageBuilder getPageBuilder(final Schema schema, final PageOutput output)
+    {
+        return new PageBuilder(Exec.getBufferAllocator(), schema, output);
+    }
+
     private ConfigDiff buildConfigDiff(final PluginTask task, final List<TaskReport> taskReports)
     {
         final ConfigDiff configDiff = Exec.newConfigDiff();
@@ -326,7 +342,6 @@ public class ZendeskInputPlugin implements InputPlugin
         if (!result.has(targetJsonName) || !result.get(targetJsonName).isArray()) {
             throw new DataException(String.format("Missing '%s' from Zendesk API response", targetJsonName));
         }
-
         return result.get(targetJsonName).elements();
     }
 
@@ -339,9 +354,7 @@ public class ZendeskInputPlugin implements InputPlugin
         if (jsonNode.has(targetName) && jsonNode.get(targetName).isArray()) {
             return addAllColumnsToSchema(jsonNode, task.getTarget(), task.getIncludes());
         }
-        else {
-            throw new ConfigException("Could not guess schema due to empty data set");
-        }
+        throw new ConfigException("Could not guess schema due to empty data set");
     }
 
     private final Pattern idPattern = Pattern.compile(ZendeskConstants.Regex.ID);
@@ -354,24 +367,29 @@ public class ZendeskInputPlugin implements InputPlugin
                 .getObjectNode().get("columns");
 
         final Iterator<JsonNode> ite = columns.elements();
+
         while (ite.hasNext()) {
             final ObjectNode entry = (ObjectNode) ite.next();
             final String name = entry.get("name").asText();
             final String type = entry.get("type").asText();
 
+            if (type.equals(Types.TIMESTAMP.getName())) {
+                entry.put("format", ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
+            }
+
             if (name.equals("id")) {
                 if (!type.equals(Types.LONG.getName())) {
+                    if (type.equals(Types.TIMESTAMP.getName())) {
+                        entry.remove("format");
+                    }
                     entry.put("type", Types.LONG.getName());
-                    entry.remove("format");
                 }
             }
             else if (idPattern.matcher(name).matches()) {
+                if (type.equals(Types.TIMESTAMP.getName())) {
+                    entry.remove("format");
+                }
                 entry.put("type", Types.STRING.getName());
-                entry.remove("format");
-            }
-
-            if (type.equals(Types.TIMESTAMP.getName())) {
-                entry.put("format", ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
             }
         }
         addIncludedObjectsToSchema((ArrayNode) columns, includes);
@@ -426,16 +444,6 @@ public class ZendeskInputPlugin implements InputPlugin
         ZendeskUtils.addRecord(jsonNode, schema, pageBuilder);
     }
 
-    @VisibleForTesting
-    protected ZendeskSupportAPIService getZendeskSupportAPIService(final PluginTask task)
-    {
-        if (this.zendeskSupportAPIService == null) {
-            this.zendeskSupportAPIService = new ZendeskSupportAPIService(task);
-        }
-        this.zendeskSupportAPIService.setTask(task);
-        return this.zendeskSupportAPIService;
-    }
-
     private ConfigSource createGuessConfig()
     {
         return Exec.newConfigSource()
@@ -459,12 +467,6 @@ public class ZendeskInputPlugin implements InputPlugin
             return arrayNode;
         }
         throw new ConfigException("Could not guess schema due to empty data set");
-    }
-
-    @VisibleForTesting
-    protected PageBuilder getPageBuilder(final Schema schema, final PageOutput output)
-    {
-        return new PageBuilder(Exec.getBufferAllocator(), schema, output);
     }
 
     private boolean isUpdatedBySystem(JsonNode recordJsonNode, long startTime)

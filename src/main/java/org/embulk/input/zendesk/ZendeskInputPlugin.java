@@ -144,6 +144,8 @@ public class ZendeskInputPlugin implements InputPlugin
         ZendeskValidatorUtils.validateInputTask(task, getZendeskSupportAPIService(task));
         final Schema schema = task.getColumns().toSchema();
         int taskCount = 1;
+
+        // For non-incremental target, we will split records based on number of pages. 100 records per page
         if (!ZendeskUtils.isSupportIncremental(task.getTarget())) {
             final JsonNode result = getZendeskSupportAPIService(task).getData("", 0, false, 0);
             if (result.has(ZendeskConstants.Field.COUNT) && result.get(ZendeskConstants.Field.COUNT).isInt()) {
@@ -246,6 +248,8 @@ public class ZendeskInputPlugin implements InputPlugin
                 startTime = ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get());
         }
 
+        // For incremental target, we will run in one task but split in multiple threads inside for data deduplication.
+        // Run with incremental will contain duplicated data.
         ThreadPoolExecutor pool = null;
         try {
             Set<String> knownIds = ConcurrentHashMap.newKeySet();

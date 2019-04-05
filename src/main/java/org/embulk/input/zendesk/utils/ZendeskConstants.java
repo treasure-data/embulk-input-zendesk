@@ -41,6 +41,7 @@ public class ZendeskConstants
         public static final String INVALID_END_POINT_RESPONSE = "\"error\":\"InvalidEndpoint\"";
         public static final int RECORDS_SIZE_PER_PAGE = 100;
         public static final int MAXIMUM_RECORDS_INCREMENTAL = 1000;
+        public static final int TOO_MANY_REQUEST = 429;
 
         // 1 MB
         public static final int GUESS_BUFFER_SIZE = 1024 * 1024;

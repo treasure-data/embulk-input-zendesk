@@ -15,6 +15,7 @@ import org.embulk.spi.time.Timestamp;
 import org.slf4j.Logger;
 
 import java.util.Base64;
+import java.util.function.Function;
 
 public class ZendeskUtils
 {
@@ -46,78 +47,80 @@ public class ZendeskUtils
             public void jsonColumn(Column column)
             {
                 JsonNode data = record.get(column.getName());
-                if (isNull(data)) {
-                    pageBuilder.setNull(column);
-                }
-                else {
-                    pageBuilder.setJson(column, new JsonParser().parse(data.toString()));
-                }
+
+                setColumn(column, data, (value) -> {
+                    pageBuilder.setJson(column, new JsonParser().parse(value.toString()));
+                    return null;
+                });
             }
 
             @Override
             public void stringColumn(Column column)
             {
                 JsonNode data = record.get(column.getName());
-                if (isNull(data)) {
-                    pageBuilder.setNull(column);
-                }
-                else {
-                    pageBuilder.setString(column, data.asText());
-                }
+
+                setColumn(column, data, (value) -> {
+                    pageBuilder.setString(column, value.asText());
+                    return null;
+                });
             }
 
             @Override
             public void timestampColumn(Column column)
             {
                 JsonNode data = record.get(column.getName());
-                if (isNull(data)) {
-                    pageBuilder.setNull(column);
-                }
-                else {
-                    Timestamp value = getTimestampValue(data.asText());
-                    if (value == null) {
+                setColumn(column, data, (value) -> {
+                    Timestamp timestamp = getTimestampValue(value.asText());
+                    if (timestamp == null) {
                         pageBuilder.setNull(column);
                     }
                     else {
-                        pageBuilder.setTimestamp(column, value);
+                        pageBuilder.setTimestamp(column, timestamp);
                     }
-                }
+                    return null;
+                });
             }
 
             @Override
             public void booleanColumn(Column column)
             {
                 JsonNode data = record.get(column.getName());
-                if (isNull(data)) {
-                    pageBuilder.setNull(column);
-                }
-                else {
-                    pageBuilder.setBoolean(column, data.asBoolean());
-                }
+
+                setColumn(column, data, (value) -> {
+                    pageBuilder.setBoolean(column, value.asBoolean());
+                    return null;
+                });
             }
 
             @Override
             public void longColumn(Column column)
             {
                 JsonNode data = record.get(column.getName());
-                if (isNull(data)) {
-                    pageBuilder.setNull(column);
-                }
-                else {
-                    pageBuilder.setLong(column, data.asLong());
-                }
+
+                setColumn(column, data, (value) -> {
+                    pageBuilder.setLong(column, value.asLong());
+                    return null;
+                });
             }
 
             @Override
             public void doubleColumn(Column column)
             {
                 JsonNode data = record.get(column.getName());
+
+                setColumn(column, data, (value) -> {
+                    pageBuilder.setDouble(column, value.asDouble());
+                    return null;
+                });
+            }
+
+            private void setColumn(Column column, JsonNode data, Function<JsonNode, Void> setter)
+            {
                 if (isNull(data)) {
                     pageBuilder.setNull(column);
+                    return;
                 }
-                else {
-                    pageBuilder.setDouble(column, data.asDouble());
-                }
+                setter.apply(data);
             }
         });
         pageBuilder.addRecord();

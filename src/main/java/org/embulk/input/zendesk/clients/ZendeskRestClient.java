@@ -3,7 +3,6 @@ package org.embulk.input.zendesk.clients;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.util.concurrent.RateLimiter;
@@ -102,7 +101,7 @@ public class ZendeskRestClient
                             }
                             else {
                                 String message = String
-                                        .format("Retrying %d/%d after %d seconds. Message: %s",
+                                        .format("Retrying '%d'/'%d' after '%d' seconds. Message: '%s'",
                                                 retryCount, retryLimit,
                                                 retryWait / 1000,
                                                 exception.getMessage());
@@ -145,7 +144,7 @@ public class ZendeskRestClient
             getRateLimiter(response).acquire();
             int statusCode = response.getStatusLine().getStatusCode();
             if (statusCode != HttpStatus.SC_OK) {
-                if (statusCode == 429 || statusCode == 500 || statusCode == 503) {
+                if (statusCode == ZendeskConstants.Misc.TOO_MANY_REQUEST || statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR || statusCode == HttpStatus.SC_SERVICE_UNAVAILABLE) {
                     Header retryHeader = response.getFirstHeader("Retry-After");
                     if (retryHeader != null) {
                         throw new ZendeskException(statusCode, EntityUtils.toString(response.getEntity()), Integer.parseInt(retryHeader.getValue()));
@@ -160,19 +159,19 @@ public class ZendeskRestClient
         }
     }
 
-    private boolean isResponseStatusToRetry(final int status, final String message, int retryAfter, final boolean isPreview) throws ConfigException
+    private boolean isResponseStatusToRetry(final int status, final String message, int retryAfter, final boolean isPreview)
     {
-        if (status == 404) {
-            //404 would be returned e.g. ticket comments are empty (on fetchRelatedObjects method)
+        if (status == HttpStatus.SC_NOT_FOUND) {
+            // 404 would be returned e.g. ticket comments are empty (on fetchRelatedObjects method)
             return false;
         }
 
-        if (status == 409) {
+        if (status == HttpStatus.SC_CONFLICT) {
             logger.warn(String.format("'%s' temporally failure.", status));
             return true;
         }
 
-        if (status == 422) {
+        if (status == HttpStatus.SC_UNPROCESSABLE_ENTITY) {
             if (message.startsWith(ZendeskConstants.Misc.TOO_RECENT_START_TIME)) {
                 //That means "No records from start_time". We can recognize it same as 200.
                 return false;
@@ -180,22 +179,20 @@ public class ZendeskRestClient
             throw new ConfigException("Status: '" + status + "', error message '" + message + "'");
         }
 
-        if (status == 429 || status == 500 || status == 503) {
-            if (isPreview) {
-                throw new DataException("Rate Limited. Waiting '" + retryAfter + "' seconds to re-run");
-            }
-            else {
+        if (status == ZendeskConstants.Misc.TOO_MANY_REQUEST || status == HttpStatus.SC_INTERNAL_SERVER_ERROR || status == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+            if (!isPreview) {
                 if (retryAfter > 0) {
                     logger.warn("Reached API limitation, wait for at least '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
                 }
-                else if (status != 429) {
+                else if (status != ZendeskConstants.Misc.TOO_MANY_REQUEST) {
                     logger.warn(String.format("'%s' temporally failure.", status));
                 }
                 return true;
             }
+            throw new DataException("Rate Limited. Waiting '" + retryAfter + "' seconds to re-run");
         }
 
-        //Won't retry for 4xx range errors except above. Almost they should be ConfigError e.g. 403 Forbidden
+        // Won't retry for 4xx range errors except above. Almost they should be ConfigError e.g. 403 Forbidden
         if (status / 100 == 4) {
             throw new ConfigException("Status '" + status + "', message '" + message + "'");
         }
@@ -208,9 +205,7 @@ public class ZendeskRestClient
     {
         HttpGet request = new HttpGet(url);
         ImmutableMap<String, String> headers = buildAuthHeader(task);
-        if (headers != null) {
-            headers.forEach(request::setHeader);
-        }
+        headers.forEach(request::setHeader);
         return request;
     }
 
@@ -262,8 +257,8 @@ public class ZendeskRestClient
             }
             permits = Double.parseDouble(rateLimit);
         }
-        catch (Exception e) {
-            throw Throwables.propagate(e);
+        catch (NumberFormatException e) {
+            throw new DataException("Error when parse x-rate-limit: '" + response.getFirstHeader("x-rate-limit").getValue() + "'");
         }
         permits = permits / 60;
         logger.info("Permits per second " + permits);

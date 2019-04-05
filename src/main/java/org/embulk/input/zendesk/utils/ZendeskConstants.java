@@ -52,4 +52,9 @@ public class ZendeskConstants
         public static final String ID = "_id$";
         public static final String HOST = "^(https:\\/\\/)?(www.)?([a-zA-Z0-9]+).zendesk.com/$";
     }
+
+    public static class HttpStatus
+    {
+        public static final int TOO_MANY_REQUEST = 429;
+    }
 }

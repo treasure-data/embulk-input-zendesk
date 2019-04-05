@@ -52,6 +52,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 public class ZendeskInputPlugin implements InputPlugin
 {
@@ -260,6 +262,8 @@ public class ZendeskInputPlugin implements InputPlugin
 
             while (true) {
                 int recordCount = 0;
+
+                // Page argument isn't used in incremental API so we just set it to 0
                 final JsonNode result = getZendeskSupportAPIService(task).getData("", 0, false, startTime);
                 final Iterator<JsonNode> iterator = getListRecords(result, task.getTarget().getJsonName());
 
@@ -356,7 +360,7 @@ public class ZendeskInputPlugin implements InputPlugin
 
         String targetName = task.getTarget().getJsonName();
 
-        if (jsonNode.has(targetName) && jsonNode.get(targetName).isArray()) {
+        if (jsonNode.has(targetName) && jsonNode.get(targetName).isArray() && jsonNode.get(targetName).size() > 0) {
             return addAllColumnsToSchema(jsonNode, task.getTarget(), task.getIncludes());
         }
         throw new ConfigException("Could not guess schema due to empty data set");
@@ -365,7 +369,8 @@ public class ZendeskInputPlugin implements InputPlugin
     private final Pattern idPattern = Pattern.compile(ZendeskConstants.Regex.ID);
     private JsonNode addAllColumnsToSchema(final JsonNode jsonNode, final Target target, final List<String> includes)
     {
-        final JsonNode sample = createSamples(jsonNode, target);
+        final JsonNode sample = new ObjectMapper().valueToTree(StreamSupport.stream(
+                jsonNode.get(target.getJsonName()).spliterator(), false).limit(10).collect(Collectors.toList()));
         final Buffer bufferSample = Buffer.copyOf(sample.toString().getBytes(StandardCharsets.UTF_8));
         final JsonNode columns = Exec.getInjector().getInstance(GuessExecutor.class)
                 .guessParserConfig(bufferSample, Exec.newConfigSource(), createGuessConfig())
@@ -444,24 +449,6 @@ public class ZendeskInputPlugin implements InputPlugin
         return Exec.newConfigSource()
                 .set("guess_plugins", ImmutableList.of("zendesk"))
                 .set("guess_sample_buffer_bytes", ZendeskConstants.Misc.GUESS_BUFFER_SIZE);
-    }
-
-    private JsonNode createSamples(final JsonNode jsonNode, final Target target)
-    {
-        JsonNode targetJsonNode = jsonNode.get(target.getJsonName());
-
-        if (targetJsonNode.isArray() && targetJsonNode.size() > 0) {
-            // prevent over buffer size
-            ArrayNode arrayNode = new ObjectMapper().createArrayNode();
-            for (int i = 0; i < targetJsonNode.size(); i++) {
-                arrayNode.add(targetJsonNode.get(i));
-                if (i >= 10) {
-                    break;
-                }
-            }
-            return arrayNode;
-        }
-        throw new ConfigException("Could not guess schema due to empty data set");
     }
 
     private boolean isUpdatedBySystem(JsonNode recordJsonNode, long startTime)

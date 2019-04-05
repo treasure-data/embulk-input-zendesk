@@ -415,6 +415,7 @@ public class ZendeskInputPlugin implements InputPlugin
     private void fetchData(final JsonNode jsonNode, final PluginTask task, final Schema schema,
                                      final PageBuilder pageBuilder)
     {
+        // FIXME:  if include is not contained in schema, data should be ignore
         task.getIncludes().forEach(include -> {
             String relatedObjectName = include.trim();
             final String url = task.getLoginUrl() + ZendeskConstants.Url.API
@@ -431,7 +432,7 @@ public class ZendeskInputPlugin implements InputPlugin
             catch (final ConfigException e) {
                 // Sometimes we get 404 when having invalid endpoint, so ignore when we get 404 InvalidEndpoint
                 if (!e.getMessage().contains(ZendeskConstants.Misc.INVALID_END_POINT_RESPONSE)) {
-                    throw new DataException(e);
+                    throw e;
                 }
             }
         });

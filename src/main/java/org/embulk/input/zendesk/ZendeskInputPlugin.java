@@ -259,7 +259,7 @@ public class ZendeskInputPlugin implements InputPlugin
             );
 
             while (true) {
-                int count = 0;
+                int recordCount = 0;
                 final JsonNode result = getZendeskSupportAPIService(task).getData("", 0, false, startTime);
                 final Iterator<JsonNode> iterator = getListRecords(result, task.getTarget().getJsonName());
 
@@ -286,12 +286,12 @@ public class ZendeskInputPlugin implements InputPlugin
                     }
 
                     pool.submit(() -> fetchData(recordJsonNode, task, schema, pageBuilder));
-                    count = count + 1;
+                    recordCount++;
                     if (Exec.isPreview()) {
                         return;
                     }
                 }
-                logger.info("Fetched '{}' records from start_time '{}'", count, startTime);
+                logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
                 if (result.has(ZendeskConstants.Field.END_TIME) && !result.get(ZendeskConstants.Field.END_TIME).isNull()
                         && result.has(task.getTarget().getJsonName())) {
                     // NOTE: start_time compared as "=>", not ">".
@@ -401,16 +401,15 @@ public class ZendeskInputPlugin implements InputPlugin
         return columns;
     }
 
-    private void addIncludedObjectsToSchema(final ArrayNode objectNode, final List<String> includes)
+    private void addIncludedObjectsToSchema(final ArrayNode arrayNode, final List<String> includes)
     {
         final ObjectMapper mapper = new ObjectMapper();
 
-        includes.forEach(include -> {
-            final ObjectNode object = mapper.createObjectNode();
-            object.put("name", include);
-            object.put("type", Types.JSON.getName());
-            objectNode.add(object);
-        });
+        includes.stream()
+                .map((include) -> mapper.createObjectNode()
+                        .put("name", include)
+                        .put("type", Types.JSON.getName()))
+                .forEach(arrayNode::add);
     }
 
     private void fetchData(final JsonNode jsonNode, final PluginTask task, final Schema schema, final PageBuilder pageBuilder)
@@ -436,7 +435,7 @@ public class ZendeskInputPlugin implements InputPlugin
             try {
                 final JsonNode result = getZendeskSupportAPIService(task).getData(url, 0, false, 0);
                 if (result != null && result.has(relatedObjectName)) {
-                    ((ObjectNode) jsonNode).put(include, result.get(relatedObjectName));
+                    ((ObjectNode) jsonNode).set(include, result.get(relatedObjectName));
                 }
             }
             catch (final ConfigException e) {

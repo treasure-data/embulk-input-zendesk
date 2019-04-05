@@ -10,7 +10,6 @@ import com.google.common.util.concurrent.Uninterruptibles;
 
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
-import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.HttpGet;
@@ -143,8 +142,9 @@ public class ZendeskRestClient
             HttpResponse response = client.execute(request);
             getRateLimiter(response).acquire();
             int statusCode = response.getStatusLine().getStatusCode();
-            if (statusCode != HttpStatus.SC_OK) {
-                if (statusCode == ZendeskConstants.Misc.TOO_MANY_REQUEST || statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR || statusCode == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+            if (statusCode != org.apache.http.HttpStatus.SC_OK) {
+                if (statusCode == HttpStatus.TOO_MANY_REQUEST || statusCode == org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR
+                        || statusCode == org.apache.http.HttpStatus.SC_SERVICE_UNAVAILABLE) {
                     Header retryHeader = response.getFirstHeader("Retry-After");
                     if (retryHeader != null) {
                         throw new ZendeskException(statusCode, EntityUtils.toString(response.getEntity()), Integer.parseInt(retryHeader.getValue()));
@@ -161,17 +161,17 @@ public class ZendeskRestClient
 
     private boolean isResponseStatusToRetry(final int status, final String message, int retryAfter, final boolean isPreview)
     {
-        if (status == HttpStatus.SC_NOT_FOUND) {
+        if (status == org.apache.http.HttpStatus.SC_NOT_FOUND) {
             // 404 would be returned e.g. ticket comments are empty (on fetchRelatedObjects method)
             return false;
         }
 
-        if (status == HttpStatus.SC_CONFLICT) {
+        if (status == org.apache.http.HttpStatus.SC_CONFLICT) {
             logger.warn(String.format("'%s' temporally failure.", status));
             return true;
         }
 
-        if (status == HttpStatus.SC_UNPROCESSABLE_ENTITY) {
+        if (status == org.apache.http.HttpStatus.SC_UNPROCESSABLE_ENTITY) {
             if (message.startsWith(ZendeskConstants.Misc.TOO_RECENT_START_TIME)) {
                 //That means "No records from start_time". We can recognize it same as 200.
                 return false;
@@ -179,12 +179,13 @@ public class ZendeskRestClient
             throw new ConfigException("Status: '" + status + "', error message '" + message + "'");
         }
 
-        if (status == ZendeskConstants.Misc.TOO_MANY_REQUEST || status == HttpStatus.SC_INTERNAL_SERVER_ERROR || status == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+        if (status == HttpStatus.TOO_MANY_REQUEST || status == org.apache.http.HttpStatus.SC_INTERNAL_SERVER_ERROR
+                || status == org.apache.http.HttpStatus.SC_SERVICE_UNAVAILABLE) {
             if (!isPreview) {
                 if (retryAfter > 0) {
                     logger.warn("Reached API limitation, wait for at least '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
                 }
-                else if (status != ZendeskConstants.Misc.TOO_MANY_REQUEST) {
+                else if (status != HttpStatus.TOO_MANY_REQUEST) {
                     logger.warn(String.format("'%s' temporally failure.", status));
                 }
                 return true;
@@ -264,5 +265,11 @@ public class ZendeskRestClient
         logger.info("Permits per second " + permits);
 
         return RateLimiter.create(permits);
+    }
+
+    private static class HttpStatus
+    {
+        private HttpStatus() {};
+        public static final int TOO_MANY_REQUEST = 429;
     }
 }

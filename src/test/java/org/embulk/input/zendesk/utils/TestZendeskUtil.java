@@ -64,19 +64,19 @@ public class TestZendeskUtil
     @Test
     public void testIsSupportIncrementalShouldReturnTrue()
     {
-        boolean result = ZendeskUtils.isSupportIncremental(Target.TICKETS);
+        boolean result = ZendeskUtils.isSupportAPIIncremental(Target.TICKETS);
         Assert.assertTrue(result);
 
-        result = ZendeskUtils.isSupportIncremental(Target.USERS);
+        result = ZendeskUtils.isSupportAPIIncremental(Target.USERS);
         Assert.assertTrue(result);
 
-        result = ZendeskUtils.isSupportIncremental(Target.ORGANIZATIONS);
+        result = ZendeskUtils.isSupportAPIIncremental(Target.ORGANIZATIONS);
         Assert.assertTrue(result);
 
-        result = ZendeskUtils.isSupportIncremental(Target.TICKET_EVENTS);
+        result = ZendeskUtils.isSupportAPIIncremental(Target.TICKET_EVENTS);
         Assert.assertTrue(result);
 
-        result = ZendeskUtils.isSupportIncremental(Target.TICKET_METRICS);
+        result = ZendeskUtils.isSupportAPIIncremental(Target.TICKET_METRICS);
         Assert.assertTrue(result);
     }
 

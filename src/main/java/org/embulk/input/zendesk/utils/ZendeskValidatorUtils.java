@@ -83,7 +83,7 @@ public class ZendeskValidatorUtils
                 logger.warn("You've selected to skip de-duplicating records, result may contain duplicated data");
             }
 
-            if (!ZendeskUtils.isSupportIncremental(task.getTarget()) && task.getStartTime().isPresent()) {
+            if (!ZendeskUtils.isSupportAPIIncremental(task.getTarget()) && task.getStartTime().isPresent()) {
                 logger.warn(String.format("Target: '%s' doesn't support incremental export API. Will be ignored start_time option",
                         task.getTarget()));
             }

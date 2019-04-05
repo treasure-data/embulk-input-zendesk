@@ -146,7 +146,7 @@ public class ZendeskInputPlugin implements InputPlugin
         int taskCount = 1;
 
         // For non-incremental target, we will split records based on number of pages. 100 records per page
-        if (!ZendeskUtils.isSupportIncremental(task.getTarget())) {
+        if (!ZendeskUtils.isSupportAPIIncremental(task.getTarget())) {
             final JsonNode result = getZendeskSupportAPIService(task).getData("", 0, false, 0);
             if (result.has(ZendeskConstants.Field.COUNT) && result.get(ZendeskConstants.Field.COUNT).isInt()) {
                 taskCount = ZendeskUtils.numberToSplitWithHintingInTask(result.get(ZendeskConstants.Field.COUNT).asInt());
@@ -209,7 +209,7 @@ public class ZendeskInputPlugin implements InputPlugin
         final ConfigDiff configDiff = Exec.newConfigDiff();
 
         if (!taskReports.isEmpty()) {
-            if (ZendeskUtils.isSupportIncremental(task.getTarget())) {
+            if (ZendeskUtils.isSupportAPIIncremental(task.getTarget())) {
                 final TaskReport taskReport = taskReports.get(0);
                 if (taskReport.has(ZendeskConstants.Field.START_TIME)) {
                     final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
@@ -229,7 +229,7 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         final TaskReport taskReport = Exec.newTaskReport();
 
-        if (ZendeskUtils.isSupportIncremental(task.getTarget())) {
+        if (ZendeskUtils.isSupportAPIIncremental(task.getTarget())) {
             importDataForIncremental(task, schema, pageBuilder, taskReport);
         }
         else {
@@ -244,7 +244,7 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         long startTime = 0;
 
-        if (ZendeskUtils.isSupportIncremental(task.getTarget()) && task.getStartTime().isPresent()) {
+        if (ZendeskUtils.isSupportAPIIncremental(task.getTarget()) && task.getStartTime().isPresent()) {
                 startTime = ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get());
         }
 

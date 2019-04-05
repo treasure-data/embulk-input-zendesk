@@ -83,7 +83,7 @@ public class ZendeskSupportAPIService
 
     private String buildPath(final int page, long startTime)
     {
-        boolean isSupportIncremental = ZendeskUtils.isSupportIncremental(task.getTarget());
+        boolean isSupportIncremental = ZendeskUtils.isSupportAPIIncremental(task.getTarget());
 
         StringBuilder urlBuilder = new StringBuilder(task.getLoginUrl())
                 .append(isSupportIncremental

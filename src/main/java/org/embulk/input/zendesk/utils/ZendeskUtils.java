@@ -24,7 +24,7 @@ public class ZendeskUtils
     private ZendeskUtils()
     {}
 
-    public static boolean isSupportIncremental(final Target target)
+    public static boolean isSupportAPIIncremental(final Target target)
     {
         return !Target.TICKET_FORMS.equals(target)
                 && !Target.TICKET_FIELDS.equals(target);

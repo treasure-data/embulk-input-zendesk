@@ -412,17 +412,7 @@ public class ZendeskInputPlugin implements InputPlugin
                 .forEach(arrayNode::add);
     }
 
-    private void fetchData(final JsonNode jsonNode, final PluginTask task, final Schema schema, final PageBuilder pageBuilder)
-    {
-        if (task.getIncludes() != null && !task.getIncludes().isEmpty()) {
-            fetchRelatedObjects(jsonNode, task, schema, pageBuilder);
-        }
-        else {
-            ZendeskUtils.addRecord(jsonNode, schema, pageBuilder);
-        }
-    }
-
-    private void fetchRelatedObjects(final JsonNode jsonNode, final PluginTask task, final Schema schema,
+    private void fetchData(final JsonNode jsonNode, final PluginTask task, final Schema schema,
                                      final PageBuilder pageBuilder)
     {
         task.getIncludes().forEach(include -> {

@@ -9,7 +9,7 @@
   },
   {
     "name": "ticket_id",
-    "type": "long"
+    "type": "string"
   },
   {
     "name": "created_at",

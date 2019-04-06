@@ -395,7 +395,7 @@ public class ZendeskInputPlugin implements InputPlugin
                     entry.put("type", Types.LONG.getName());
                 }
             }
-            else if (idPattern.matcher(name).matches()) {
+            else if (idPattern.matcher(name).find()) {
                 if (type.equals(Types.TIMESTAMP.getName())) {
                     entry.remove("format");
                 }

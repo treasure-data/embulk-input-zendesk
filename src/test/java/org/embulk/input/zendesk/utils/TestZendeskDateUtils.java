@@ -20,6 +20,9 @@ public class TestZendeskDateUtils
 
         value = ZendeskDateUtils.isoToEpochSecond("2019-02-20T06:50:45.000Z");
         Assert.assertEquals(expectedValue, value);
+
+        value = ZendeskDateUtils.isoToEpochSecond("2019-02-20T06:50:45+00:00");
+        Assert.assertEquals(expectedValue, value);
     }
 
     @Test

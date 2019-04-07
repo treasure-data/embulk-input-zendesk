@@ -19,14 +19,14 @@ public class ZendeskDateUtils
     {
     }
 
-    private static final List<String> supportedFormats =  Arrays.asList(ZendeskConstants.Misc.ISO_INSTANT,
-            ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT, ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT);
+    private static final List<String> supportedFormats =  Arrays.asList(ZendeskConstants.Misc.ISO_INSTANT, ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT,
+                                                                        ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.ISO_TIMESTAMP_FORMAT);
 
     public static long isoToEpochSecond(final String time)
     {
         Optional<String> pattern = supportedTimeFormat(time, supportedFormats);
         if (pattern.isPresent()) {
-            final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern.get());
+            final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern.get()).withZone(ZoneOffset.UTC);
             final OffsetDateTime offsetDateTime = LocalDateTime.parse(time, formatter).atOffset(ZoneOffset.UTC);
             return offsetDateTime.toInstant().getEpochSecond();
         }

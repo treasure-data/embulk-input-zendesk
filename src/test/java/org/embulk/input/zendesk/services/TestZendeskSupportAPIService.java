@@ -38,33 +38,6 @@ public class TestZendeskSupportAPIService
         zendeskRestClient = mock(ZendeskRestClient.class);
     }
 
-    private void loadData(String fileName)
-    {
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile(fileName);
-        when(zendeskRestClient.doGet(any(), any(), anyBoolean())).thenReturn(dataJson.toString());
-    }
-
-    private void setupZendeskSupportAPIService(ZendeskInputPlugin.PluginTask task)
-    {
-        zendeskSupportAPIService = spy(new ZendeskSupportAPIService(task));
-        when(zendeskSupportAPIService.getZendeskRestClient()).thenReturn(zendeskRestClient);
-    }
-
-    private void setup(String file)
-    {
-        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource(file)
-                .loadConfig(ZendeskInputPlugin.PluginTask.class);
-        setupZendeskSupportAPIService(task);
-    }
-
-    private void setupTestAndVerifyURL(String expectURL, int page, boolean isPreview)
-    {
-        zendeskSupportAPIService.getData("", page, isPreview, 0);
-        final ArgumentCaptor<String> url = ArgumentCaptor.forClass(String.class);
-        verify(zendeskRestClient).doGet(url.capture(), any(), anyBoolean());
-        assertEquals(expectURL, url.getValue());
-    }
-
     @Test
     public void buildPathWithIncrementalForPreview()
     {
@@ -168,5 +141,32 @@ public class TestZendeskSupportAPIService
         setup("non-incremental.yml");
         loadData("data/ticket_fields.json");
         setupTestAndVerifyURL(expectURL, 2, false);
+    }
+
+    private void loadData(String fileName)
+    {
+        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile(fileName);
+        when(zendeskRestClient.doGet(any(), any(), anyBoolean())).thenReturn(dataJson.toString());
+    }
+
+    private void setupZendeskSupportAPIService(ZendeskInputPlugin.PluginTask task)
+    {
+        zendeskSupportAPIService = spy(new ZendeskSupportAPIService(task));
+        when(zendeskSupportAPIService.getZendeskRestClient()).thenReturn(zendeskRestClient);
+    }
+
+    private void setup(String file)
+    {
+        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource(file)
+                .loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+    }
+
+    private void setupTestAndVerifyURL(String expectURL, int page, boolean isPreview)
+    {
+        zendeskSupportAPIService.getData("", page, isPreview, 0);
+        final ArgumentCaptor<String> url = ArgumentCaptor.forClass(String.class);
+        verify(zendeskRestClient).doGet(url.capture(), any(), anyBoolean());
+        assertEquals(expectURL, url.getValue());
     }
 }

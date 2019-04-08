@@ -42,11 +42,21 @@ public final class ZendeskTestHelper
     public static ConfigSource getConfigSource(String file)
     {
         ConfigSource configSource = null;
-        try (final InputStream is = ZendeskTestHelper.class.getResourceAsStream("/config/" + file)) {
+        InputStream is = null;
+        try {
+            is = ZendeskTestHelper.class.getResourceAsStream("/config/" + file);
             configSource = configLoader.fromYaml(is);
         }
         catch (IOException ex) {
             Assert.fail(ex.getMessage());
+        }
+        finally {
+            if (is != null) {
+                try {
+                    is.close();
+                }
+                catch (IOException ex) { }
+            }
         }
         return configSource;
     }

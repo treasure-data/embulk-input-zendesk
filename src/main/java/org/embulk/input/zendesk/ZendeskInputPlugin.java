@@ -284,9 +284,7 @@ public class ZendeskInputPlugin implements InputPlugin
                         if (knownIds.contains(recordID)) {
                             continue;
                         }
-                        else {
-                            knownIds.add(recordID);
-                        }
+                        knownIds.add(recordID);
                     }
 
                     pool.submit(() -> fetchData(recordJsonNode, task, schema, pageBuilder));

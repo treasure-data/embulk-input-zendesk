@@ -78,35 +78,6 @@ public class TestZendeskRestClient
         when(response.getStatusLine()).thenReturn(statusLine);
     }
 
-    private void setupRateLimit()
-    {
-        when(response.getFirstHeader("x-rate-limit")).thenReturn(header);
-        when(header.getValue()).thenReturn("400");
-    }
-
-    private void setup(String name)
-    {
-        setupRateLimit();
-        setupData(name);
-    }
-
-    private void setupData(String name)
-    {
-        JsonNode messageResponse = data.get(name);
-        when(statusLine.getStatusCode()).thenReturn(messageResponse.get("statusCode").asInt());
-        try {
-            if (name.equals("doGet200")) {
-                doReturn(new StringEntity(messageResponse.get("body").toString())).when(response).getEntity();
-            }
-            else {
-                doReturn(new StringEntity(messageResponse.get("description").asText())).when(response).getEntity();
-            }
-        }
-        catch (Exception e) {
-            fail("fail to setup client for UT");
-        }
-    }
-
     @Test
     public void doGetSuccess()
     {
@@ -114,24 +85,6 @@ public class TestZendeskRestClient
         JsonNode expectedResult = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
         String result = zendeskRestClient.doGet("dummyString", task, false);
         assertEquals(expectedResult.toString(), result);
-    }
-
-    private void testExceptionMessageForDoGet(String name, String expectedMessage, int expectedRetryTime)
-    {
-        setup(name);
-        verifyData(expectedMessage, expectedRetryTime);
-    }
-
-    private void verifyData(String expectedMessage, int expectedRetryTime)
-    {
-        try {
-            zendeskRestClient.doGet("any", task, false);
-            fail("Should not reach here");
-        }
-        catch (final Exception e) {
-            assertEquals(expectedMessage, e.getMessage());
-        }
-        verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
     }
 
     @Test
@@ -180,31 +133,6 @@ public class TestZendeskRestClient
         String expectedMessage = "Status: '422', error message 'dummy text'";
         int expectedRetryTime = 1;
         testExceptionMessageForDoGet("doGet422ContainTooRecentStartTime", expectedMessage, expectedRetryTime);
-    }
-
-    private void setupReTrySuccess(String entityName)
-    {
-        setupRateLimit();
-
-        JsonNode messageResponse = data.get(entityName);
-        JsonNode messageResponseSuccess = data.get("doGet200");
-
-        when(statusLine.getStatusCode())
-                .thenReturn(messageResponse.get("statusCode").asInt())
-                .thenReturn(messageResponseSuccess.get("statusCode").asInt());
-
-        try {
-            when(response.getEntity())
-                    .thenReturn(new StringEntity(messageResponse.get("description").asText()))
-                    .thenReturn(new StringEntity(messageResponseSuccess.get("body").toString()));
-        }
-        catch (Exception e) {
-            fail("fail to setup client for UT");
-        }
-
-        int expectedRetryTime = 2;
-        zendeskRestClient.doGet("any", task, false);
-        verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
     }
 
     @Test
@@ -285,16 +213,6 @@ public class TestZendeskRestClient
         verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
     }
 
-    private void setupAndVerifyAuthenticationString(String expectedString, PluginTask pluginTask) throws IOException
-    {
-        zendeskRestClient.doGet("any", pluginTask, false);
-        final ArgumentCaptor<HttpRequestBase> request = ArgumentCaptor.forClass(HttpRequestBase.class);
-        verify(client).execute(request.capture());
-
-        String credential = request.getValue().getFirstHeader(AUTHORIZATION).getValue();
-        assertEquals(expectedString, credential);
-    }
-
     @Test
     public void authenticationOauthSuccess() throws IOException
     {
@@ -345,5 +263,87 @@ public class TestZendeskRestClient
 
         String expectedValue = "Basic " + ZendeskUtils.convertBase64(String.format("%s/token:%s", username, token));
         setupAndVerifyAuthenticationString(expectedValue, pluginTask);
+    }
+
+    private void setupRateLimit()
+    {
+        when(response.getFirstHeader("x-rate-limit")).thenReturn(header);
+        when(header.getValue()).thenReturn("400");
+    }
+
+    private void setup(String name)
+    {
+        setupRateLimit();
+        setupData(name);
+    }
+
+    private void setupData(String name)
+    {
+        JsonNode messageResponse = data.get(name);
+        when(statusLine.getStatusCode()).thenReturn(messageResponse.get("statusCode").asInt());
+        try {
+            if (name.equals("doGet200")) {
+                doReturn(new StringEntity(messageResponse.get("body").toString())).when(response).getEntity();
+            }
+            else {
+                doReturn(new StringEntity(messageResponse.get("description").asText())).when(response).getEntity();
+            }
+        }
+        catch (Exception e) {
+            fail("fail to setup client for UT");
+        }
+    }
+
+    private void testExceptionMessageForDoGet(String name, String expectedMessage, int expectedRetryTime)
+    {
+        setup(name);
+        verifyData(expectedMessage, expectedRetryTime);
+    }
+
+    private void verifyData(String expectedMessage, int expectedRetryTime)
+    {
+        try {
+            zendeskRestClient.doGet("any", task, false);
+            fail("Should not reach here");
+        }
+        catch (final Exception e) {
+            assertEquals(expectedMessage, e.getMessage());
+        }
+        verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
+    }
+
+    private void setupReTrySuccess(String entityName)
+    {
+        setupRateLimit();
+
+        JsonNode messageResponse = data.get(entityName);
+        JsonNode messageResponseSuccess = data.get("doGet200");
+
+        when(statusLine.getStatusCode())
+                .thenReturn(messageResponse.get("statusCode").asInt())
+                .thenReturn(messageResponseSuccess.get("statusCode").asInt());
+
+        try {
+            when(response.getEntity())
+                    .thenReturn(new StringEntity(messageResponse.get("description").asText()))
+                    .thenReturn(new StringEntity(messageResponseSuccess.get("body").toString()));
+        }
+        catch (Exception e) {
+            fail("fail to setup client for UT");
+        }
+
+        int expectedRetryTime = 2;
+        zendeskRestClient.doGet("any", task, false);
+        verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
+    }
+
+    private void setupAndVerifyAuthenticationString(String expectedString, PluginTask pluginTask) throws IOException
+    {
+        zendeskRestClient.doGet("any", pluginTask, false);
+        final ArgumentCaptor<HttpRequestBase> request = ArgumentCaptor.forClass(HttpRequestBase.class);
+        verify(client).execute(request.capture());
+
+        String credential = request.getValue().getFirstHeader(AUTHORIZATION).getValue();
+        assertEquals(expectedString, credential);
     }
 }

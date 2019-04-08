@@ -35,14 +35,6 @@ import java.util.Random;
  */
 public class ZendeskPluginTestRuntime extends GuiceBinder
 {
-    private static ConfigSource getSystemConfig()
-    {
-        ObjectNode configNode = JsonNodeFactory.instance.objectNode();
-        configNode.set("jruby_load_path", JsonNodeFactory.instance.arrayNode().add("lib"));
-
-        return new DataSourceImpl(new ModelManager(null, new ObjectMapper()), configNode);
-    }
-
     public static class TestRuntimeModule implements Module
     {
         @Override
@@ -129,5 +121,13 @@ public class ZendeskPluginTestRuntime extends GuiceBinder
         {
             super(cause);
         }
+    }
+
+    private static ConfigSource getSystemConfig()
+    {
+        ObjectNode configNode = JsonNodeFactory.instance.objectNode();
+        configNode.set("jruby_load_path", JsonNodeFactory.instance.arrayNode().add("lib"));
+
+        return new DataSourceImpl(new ModelManager(null, new ObjectMapper()), configNode);
     }
 }

@@ -65,20 +65,6 @@ public class TestZendeskInputPlugin
         doReturn(pageBuilder).when(zendeskInputPlugin).getPageBuilder(any(Schema.class), any(PageOutput.class));
     }
 
-    private void loadData(String fileName)
-    {
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile(fileName);
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
-    }
-
-    private void setupTestGuessGenerateColumn(ConfigSource src, String fileName, String expectedSource)
-    {
-        loadData(fileName);
-        ConfigDiff configDiff = zendeskInputPlugin.guess(src);
-        JsonNode columns = configDiff.get(JsonNode.class, "columns");
-        assertEquals(ZendeskTestHelper.getJsonFromFile(expectedSource), columns);
-    }
-
     @Test
     public void testGuessGenerateColumnsForIncrementalTarget()
     {
@@ -228,5 +214,19 @@ public class TestZendeskInputPlugin
                     .collect(Collectors.toList());
             return reports;
         }
+    }
+
+    private void loadData(String fileName)
+    {
+        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile(fileName);
+        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
+    }
+
+    private void setupTestGuessGenerateColumn(ConfigSource src, String fileName, String expectedSource)
+    {
+        loadData(fileName);
+        ConfigDiff configDiff = zendeskInputPlugin.guess(src);
+        JsonNode columns = configDiff.get(JsonNode.class, "columns");
+        assertEquals(ZendeskTestHelper.getJsonFromFile(expectedSource), columns);
     }
 }

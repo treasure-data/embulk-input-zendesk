@@ -251,20 +251,18 @@ public class ZendeskRestClient
 
     private static synchronized RateLimiter initRateLimiter(final HttpResponse response)
     {
-        String rateLimit = "";
         double permits = 0.0;
-        try {
-            if (response.getFirstHeader("x-rate-limit") != null) {
-                rateLimit = response.getFirstHeader("x-rate-limit").getValue();
+        if (response.getFirstHeader("x-rate-limit") != null) {
+            String rateLimit = response.getFirstHeader("x-rate-limit").getValue();
+            try {
+                permits = Double.parseDouble(rateLimit);
             }
-            permits = Double.parseDouble(rateLimit);
+            catch (NumberFormatException e) {
+                throw new DataException("Error when parse x-rate-limit: '" + response.getFirstHeader("x-rate-limit").getValue() + "'");
+            }
+            permits = permits / 60;
         }
-        catch (NumberFormatException e) {
-            throw new DataException("Error when parse x-rate-limit: '" + response.getFirstHeader("x-rate-limit").getValue() + "'");
-        }
-        permits = permits / 60;
         logger.info("Permits per second " + permits);
-
         return RateLimiter.create(permits);
     }
 }

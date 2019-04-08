@@ -1,0 +1,92 @@
+[
+  {
+    "name": "url",
+    "type": "string"
+  },
+  {
+    "name": "id",
+    "type": "long"
+  },
+  {
+    "name": "type",
+    "type": "string"
+  },
+  {
+    "name": "title",
+    "type": "string"
+  },
+  {
+    "name": "raw_title",
+    "type": "string"
+  },
+  {
+    "name": "description",
+    "type": "string"
+  },
+  {
+    "name": "raw_description",
+    "type": "string"
+  },
+  {
+    "name": "position",
+    "type": "long"
+  },
+  {
+    "name": "active",
+    "type": "boolean"
+  },
+  {
+    "name": "required",
+    "type": "boolean"
+  },
+  {
+    "name": "collapsed_for_agents",
+    "type": "boolean"
+  },
+  {
+    "name": "regexp_for_validation",
+    "type": "string"
+  },
+  {
+    "name": "title_in_portal",
+    "type": "string"
+  },
+  {
+    "name": "raw_title_in_portal",
+    "type": "string"
+  },
+  {
+    "name": "visible_in_portal",
+    "type": "boolean"
+  },
+  {
+    "name": "editable_in_portal",
+    "type": "boolean"
+  },
+  {
+    "name": "required_in_portal",
+    "type": "boolean"
+  },
+  {
+    "name": "tag",
+    "type": "string"
+  },
+  {
+    "name": "created_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S%z"
+  },
+  {
+    "name": "updated_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S%z"
+  },
+  {
+    "name": "removable",
+    "type": "boolean"
+  },
+  {
+    "name": "agent_description",
+    "type": "string"
+  }
+]

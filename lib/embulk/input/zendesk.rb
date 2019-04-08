@@ -1,9 +1,3 @@
-require "embulk/input/zendesk/client"
-require "embulk/input/zendesk/plugin"
-
-module Embulk
-  module Input
-    module Zendesk
-    end
-  end
-end
+Embulk::JavaPlugin.register_input(
+  "zendesk", "org.embulk.input.zendesk.ZendeskInputPlugin",
+  File.expand_path('../../../../classpath', __FILE__))

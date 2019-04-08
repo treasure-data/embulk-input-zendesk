@@ -1,44 +1,5 @@
-language: ruby
-
-jdk: oraclejdk8
-
-before_install:
-  - rvm list known
-  - rvm list
-  - ruby -v
-  - |
-    # Currently, Travis can't treat jruby 9.0.4.0
-    if [[ ${TRAVIS_RUBY_VERSION} != "jruby-9.0.4.0" ]];then
-      rvm get head
-      rvm use jruby-9.0.4.0 --install
-      ruby -v
-    fi
-  - gem install bundler -v 1.10.6
-
-script: bundle exec rake cov
-
-rvm:
-  - jruby-9.0.4.0
-env:
-  # Set on Travis
-  # CODECLIMATE_REPO_TOKEN: xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
-gemfile:
-  - gemfiles/embulk-0.8.0-latest
-  - gemfiles/embulk-0.8.1
-  - gemfiles/embulk-latest
-
-matrix:
-  exclude:
-    - jdk: oraclejdk8 # Ignore all matrix at first, use `include` to allow build
-  include:
-    - {rvm: jruby-9.0.4.0, gemfile: gemfiles/embulk-0.8.0-latest}
-    - {rvm: jruby-9.0.4.0, gemfile: gemfiles/embulk-0.8.1}
-    - {rvm: jruby-9.0.4.0, gemfile: gemfiles/embulk-latest}
-    
-
-  allow_failures:
-    # Ignore failure for *-latest
-    - gemfile: gemfiles/embulk-0.8.0-latest
-    - gemfile: gemfiles/embulk-latest
-    
+language: java
+jdk:
+  - oraclejdk8
+script:
+  - ./gradlew checkstyle test jacocoTestReport

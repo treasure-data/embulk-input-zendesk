@@ -101,6 +101,7 @@ public class TestZendeskRestClient
         String expectedMessage = "Number of allowed incremental export API requests per minute exceeded";
         int expectedRetryTime = 3;
 
+        when(response.containsHeader("x-rate-limit")).thenReturn(true);
         when(response.getFirstHeader("x-rate-limit")).thenReturn(header);
         when(response.getFirstHeader("Retry-After")).thenReturn(header);
         when(header.getValue())
@@ -267,6 +268,7 @@ public class TestZendeskRestClient
 
     private void setupRateLimit()
     {
+        when(response.containsHeader("x-rate-limit")).thenReturn(true);
         when(response.getFirstHeader("x-rate-limit")).thenReturn(header);
         when(header.getValue()).thenReturn("400");
     }

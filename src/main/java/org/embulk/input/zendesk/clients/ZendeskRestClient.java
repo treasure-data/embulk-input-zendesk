@@ -252,7 +252,7 @@ public class ZendeskRestClient
     private static synchronized RateLimiter initRateLimiter(final HttpResponse response)
     {
         double permits = 0.0;
-        if (response.getFirstHeader("x-rate-limit") != null) {
+        if (response.containsHeader("x-rate-limit")) {
             String rateLimit = response.getFirstHeader("x-rate-limit").getValue();
             try {
                 permits = Double.parseDouble(rateLimit);

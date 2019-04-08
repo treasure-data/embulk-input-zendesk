@@ -1,3 +1,6 @@
+## 0.3.0 - 2019-04-08
+* [enhancement] Convert embulk-input-zendesk to Java #50 [#50](https://github.com/treasure-data/embulk-input-zendesk/pull/50)
+
 ## 0.2.14 - 2019-01-25
 * [fixed] Disable pagination and add `dedup` option for non-incremental targets [#49](https://github.com/treasure-data/embulk-input-zendesk/pull/49)
 

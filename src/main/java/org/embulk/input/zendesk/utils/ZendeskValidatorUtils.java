@@ -21,7 +21,7 @@ public class ZendeskValidatorUtils
         validateAppMarketPlace(task.getAppMarketPlaceIntegrationName().isPresent(),
                 task.getAppMarketPlaceAppId().isPresent(),
                 task.getAppMarketPlaceOrgId().isPresent());
-        validateCredentials(task, zendeskSupportAPIService);
+        validateCredentials(task);
         validateIncremental(task);
     }
 
@@ -34,7 +34,7 @@ public class ZendeskValidatorUtils
         }
     }
 
-    private static void validateCredentials(final ZendeskInputPlugin.PluginTask task, final ZendeskSupportAPIService zendeskSupportAPIService)
+    private static void validateCredentials(final ZendeskInputPlugin.PluginTask task)
     {
         switch (task.getAuthenticationMethod()) {
             case OAUTH:

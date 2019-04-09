@@ -433,12 +433,13 @@ public class ZendeskInputPlugin implements InputPlugin
                 }
             }
             catch (final ConfigException e) {
-                // Sometimes we get 404 when having invalid endpoint, so ignore when we get 404 InvalidEndpoint
-                if (!e.getMessage().contains(ZendeskConstants.Misc.INVALID_END_POINT_RESPONSE)) {
+                // Sometimes we get 404 when having invalid endpoint, so ignore when we get 404 InvalidEndpoint, for some endpoint it will re
+                if (!e.getMessage().contains(ZendeskConstants.Misc.STATUS_404_RESPONSE)) {
                     throw e;
                 }
             }
         });
+
         ZendeskUtils.addRecord(jsonNode, schema, pageBuilder);
     }
 

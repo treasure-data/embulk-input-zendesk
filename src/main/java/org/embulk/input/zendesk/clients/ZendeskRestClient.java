@@ -117,7 +117,7 @@ public class ZendeskRestClient
         }
         catch (RetryExecutor.RetryGiveupException | InterruptedException e) {
             if (e instanceof RetryExecutor.RetryGiveupException && e.getCause() != null && e.getCause() instanceof ZendeskException) {
-                throw new ConfigException(e.getCause().getMessage());
+                throw new ConfigException(e.getCause().getMessage() + ", status : " + ((ZendeskException) (e.getCause())).getStatusCode());
             }
             throw new ConfigException(e);
         }

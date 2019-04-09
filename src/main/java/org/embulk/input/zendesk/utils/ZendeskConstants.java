@@ -39,10 +39,9 @@ public class ZendeskConstants
         public static final String ISO_TIMESTAMP_FORMAT = "yyyy-MM-dd'T'HH:mm:ssXXX";
         public static final String ISO_INSTANT = "yyyy-MM-dd'T'HH:mm:ss'Z'";
         public static final String TOO_RECENT_START_TIME = "Too recent start_time.";
-        public static final String INVALID_END_POINT_RESPONSE = "\"error\":\"InvalidEndpoint\"";
+        public static final String STATUS_404_RESPONSE = "status : 404";
         public static final int RECORDS_SIZE_PER_PAGE = 100;
         public static final int MAXIMUM_RECORDS_INCREMENTAL = 1000;
-        public static final int TOO_MANY_REQUEST = 429;
 
         // 1 MB
         public static final int GUESS_BUFFER_SIZE = 1024 * 1024;

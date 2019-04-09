@@ -8,6 +8,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 
+import org.apache.http.HttpStatus;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigDiff;
@@ -19,6 +20,7 @@ import org.embulk.config.TaskSource;
 import org.embulk.exec.GuessExecutor;
 import org.embulk.input.zendesk.models.AuthenticationMethod;
 import org.embulk.input.zendesk.models.Target;
+import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
@@ -433,8 +435,8 @@ public class ZendeskInputPlugin implements InputPlugin
                 }
             }
             catch (final ConfigException e) {
-                // Sometimes we get 404 when having invalid endpoint, so ignore when we get 404 InvalidEndpoint, for some endpoint it will re
-                if (!e.getMessage().contains(ZendeskConstants.Misc.STATUS_404_RESPONSE)) {
+                // Sometimes we get 404 when having invalid endpoint, so ignore when we get 404 InvalidEndpoint
+                if (!(e.getCause() instanceof ZendeskException && ((ZendeskException) e.getCause()).getStatusCode() == HttpStatus.SC_NOT_FOUND)) {
                     throw e;
                 }
             }

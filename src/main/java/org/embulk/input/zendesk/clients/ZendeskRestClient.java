@@ -117,7 +117,8 @@ public class ZendeskRestClient
         }
         catch (RetryExecutor.RetryGiveupException | InterruptedException e) {
             if (e instanceof RetryExecutor.RetryGiveupException && e.getCause() != null && e.getCause() instanceof ZendeskException) {
-                throw new ConfigException(e.getCause().getMessage() + ", status : " + ((ZendeskException) (e.getCause())).getStatusCode());
+                throw new ConfigException("Status: '" + ((ZendeskException) (e.getCause())).getStatusCode() + "', error message: '" + e.getCause().getMessage() + "'",
+                                          e.getCause());
             }
             throw new ConfigException(e);
         }
@@ -177,7 +178,7 @@ public class ZendeskRestClient
                 //That means "No records from start_time". We can recognize it same as 200.
                 return false;
             }
-            throw new ConfigException("Status: '" + status + "', error message '" + message + "'");
+            throw new ConfigException("Status: '" + status + "', error message: '" + message + "'");
         }
 
         if (status == ZendeskConstants.HttpStatus.TOO_MANY_REQUEST || status == HttpStatus.SC_INTERNAL_SERVER_ERROR

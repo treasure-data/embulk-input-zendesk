@@ -1,3 +1,6 @@
+## 0.3.0 - 2019-04-09
+* [fixed] Fix checking 404 by status code when fetching related objects #52 [#52](https://github.com/treasure-data/embulk-input-zendesk/pull/52)
+
 ## 0.3.0 - 2019-04-08
 * [enhancement] Convert embulk-input-zendesk to Java #50 [#50](https://github.com/treasure-data/embulk-input-zendesk/pull/50)
 

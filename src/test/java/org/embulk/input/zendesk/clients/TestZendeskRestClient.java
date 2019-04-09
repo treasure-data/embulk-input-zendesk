@@ -90,7 +90,7 @@ public class TestZendeskRestClient
     @Test
     public void doGetRetryFail429WithoutRetryAfter()
     {
-        String expectedMessage = "Number of allowed incremental export API requests per minute exceeded";
+        String expectedMessage = "Status: '429', error message: 'Number of allowed incremental export API requests per minute exceeded'";
         int expectedRetryTime = 3;
         testExceptionMessageForDoGet("doGet429", expectedMessage, expectedRetryTime);
     }
@@ -98,7 +98,7 @@ public class TestZendeskRestClient
     @Test
     public void doGetRetryFail429WithRetryAfter()
     {
-        String expectedMessage = "Number of allowed incremental export API requests per minute exceeded";
+        String expectedMessage = "Status: '429', error message: 'Number of allowed incremental export API requests per minute exceeded'";
         int expectedRetryTime = 3;
 
         when(response.containsHeader("x-rate-limit")).thenReturn(true);
@@ -123,7 +123,7 @@ public class TestZendeskRestClient
     @Test
     public void doGetRetry422FailBecauseNotContainTooRecentStartTime()
     {
-        String expectedMessage = "Status: '422', error message 'dummy text'";
+        String expectedMessage = "Status: '422', error message: 'dummy text'";
         int expectedRetryTime = 1;
         testExceptionMessageForDoGet("doGet422NotContainTooRecentStartTime", expectedMessage, expectedRetryTime);
     }
@@ -131,7 +131,7 @@ public class TestZendeskRestClient
     @Test
     public void doGetNotRetry422BecauseContainTooRecentStartTime()
     {
-        String expectedMessage = "Status: '422', error message 'dummy text'";
+        String expectedMessage = "Status: '422', error message: 'dummy text'";
         int expectedRetryTime = 1;
         testExceptionMessageForDoGet("doGet422ContainTooRecentStartTime", expectedMessage, expectedRetryTime);
     }
@@ -158,7 +158,7 @@ public class TestZendeskRestClient
     public void doGetRetry404()
     {
         setup("doGet404");
-        String expectedMessage = "dummy text";
+        String expectedMessage = "Status: '404', error message: 'dummy text'";
         int expectedRetryTime = 1;
         try {
             zendeskRestClient.doGet("any", task, false);

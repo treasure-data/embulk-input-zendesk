@@ -214,7 +214,7 @@ public class ZendeskInputPlugin implements InputPlugin
         final ConfigDiff configDiff = Exec.newConfigDiff();
 
         if (!taskReports.isEmpty()) {
-            if (ZendeskUtils.isSupportAPIIncremental(task.getTarget())) {
+            if (task.getIncremental()) {
                 final TaskReport taskReport = taskReports.get(0);
                 if (taskReport.has(ZendeskConstants.Field.START_TIME)) {
                     final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(

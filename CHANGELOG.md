@@ -1,3 +1,6 @@
+## 0.3.2 - 2019-04-10
+* [fixed] Fix generate config diff based on incremental config #54 [#54](https://github.com/treasure-data/embulk-input-zendesk/pull/54)
+
 ## 0.3.1 - 2019-04-09
 * [fixed] Fix checking 404 by status code when fetching related objects #52 [#52](https://github.com/treasure-data/embulk-input-zendesk/pull/52)
 

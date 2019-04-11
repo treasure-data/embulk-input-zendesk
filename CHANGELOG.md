@@ -1,3 +1,6 @@
+## 0.3.4 - 2019-04-11
+* [enhancement] Add new time format #56 [#56](https://github.com/treasure-data/embulk-input-zendesk/pull/56)
+
 ## 0.3.3 - 2019-04-11
 * [fixed] Fix trailing slash #55 [#55](https://github.com/treasure-data/embulk-input-zendesk/pull/55)
 

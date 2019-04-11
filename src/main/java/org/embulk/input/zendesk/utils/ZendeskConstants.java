@@ -49,7 +49,6 @@ public class ZendeskConstants
     public static class Regex
     {
         public static final String ID = "_id$";
-        public static final String HOST = "^(https:\\/\\/)?(www.)?([a-zA-Z0-9]+).zendesk.com/$";
     }
 
     public static class HttpStatus

@@ -20,7 +20,8 @@ public class ZendeskDateUtils
     }
 
     private static final List<String> supportedFormats =  Arrays.asList(ZendeskConstants.Misc.ISO_INSTANT, ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT,
-                                                                        ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.ISO_TIMESTAMP_FORMAT);
+                                                                        ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.ISO_TIMESTAMP_FORMAT,
+                                                                        ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT_NO_SPACE);
 
     public static long isoToEpochSecond(final String time)
     {

@@ -423,7 +423,9 @@ public class ZendeskInputPlugin implements InputPlugin
         // FIXME:  if include is not contained in schema, data should be ignore
         task.getIncludes().forEach(include -> {
             String relatedObjectName = include.trim();
-            final String url = task.getLoginUrl() + ZendeskConstants.Url.API
+            final String url = task.getLoginUrl()
+                    + "/"
+                    + ZendeskConstants.Url.API
                     + "/" + task.getTarget().toString()
                     + "/" + jsonNode.get(ZendeskConstants.Field.ID).asText()
                     + "/" + relatedObjectName + ".json";

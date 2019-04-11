@@ -1,5 +1,5 @@
 type: zendesk
-login_url: https://abc.zendesk.com/
+login_url: https://abc.zendesk.com
 auth_method: oauth
 username: dummy
 password: dummy

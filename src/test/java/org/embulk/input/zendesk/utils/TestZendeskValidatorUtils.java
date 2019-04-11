@@ -45,14 +45,6 @@ public class TestZendeskValidatorUtils
     }
 
     @Test
-    public void validateHostShouldThrowException()
-    {
-        configSource.set("login_url", "dummyhost");
-        final ZendeskInputPlugin.PluginTask task = configSource.loadConfig(ZendeskInputPlugin.PluginTask.class);
-        assertValidation(task, "Login URL, 'dummyhost', is unmatched expectation. It should be followed this format: https://abc.zendesk.com/");
-    }
-
-    @Test
     public void validateCredentialOauthShouldThrowException()
     {
         configSource.set("auth_method", "oauth");

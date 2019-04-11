@@ -6,9 +6,6 @@ import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
 import org.embulk.spi.Exec;
 import org.slf4j.Logger;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 public class ZendeskValidatorUtils
 {
     private ZendeskValidatorUtils(){}
@@ -17,21 +14,11 @@ public class ZendeskValidatorUtils
 
     public static void validateInputTask(final ZendeskInputPlugin.PluginTask task, final ZendeskSupportAPIService zendeskSupportAPIService)
     {
-        validateHost(task.getLoginUrl());
         validateAppMarketPlace(task.getAppMarketPlaceIntegrationName().isPresent(),
                 task.getAppMarketPlaceAppId().isPresent(),
                 task.getAppMarketPlaceOrgId().isPresent());
         validateCredentials(task);
         validateIncremental(task);
-    }
-
-    private static void validateHost(final String loginUrl)
-    {
-        final Matcher matcher = Pattern.compile(ZendeskConstants.Regex.HOST).matcher(loginUrl);
-        if (!matcher.matches()) {
-            throw new ConfigException(String.format("Login URL, '%s', is unmatched expectation. " +
-                    "It should be followed this format: https://abc.zendesk.com/", loginUrl));
-        }
     }
 
     private static void validateCredentials(final ZendeskInputPlugin.PluginTask task)

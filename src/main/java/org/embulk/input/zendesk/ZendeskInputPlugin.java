@@ -296,16 +296,19 @@ public class ZendeskInputPlugin implements InputPlugin
                     }
                 }
                 logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
-                if (result.has(ZendeskConstants.Field.END_TIME) && !result.get(ZendeskConstants.Field.END_TIME).isNull()
-                        && result.has(task.getTarget().getJsonName())) {
-                    // NOTE: start_time compared as "=>", not ">".
-                    // If we will use end_time for next start_time, we got the same record that is last fetched
-                    // end_time + 1 is workaround for that
-                    taskReport.set("start_time", result.get(ZendeskConstants.Field.END_TIME).asLong() + 1);
-                }
-                else {
-                    // Sometimes no record and no end_time fetched on the job, but we should generate start_time on config_diff.
-                    taskReport.set("start_time", Instant.now().getEpochSecond());
+
+                if (task.getIncremental()) {
+                    if (result.has(ZendeskConstants.Field.END_TIME) && !result.get(ZendeskConstants.Field.END_TIME).isNull()
+                            && result.has(task.getTarget().getJsonName())) {
+                        // NOTE: start_time compared as "=>", not ">".
+                        // If we will use end_time for next start_time, we got the same record that is last fetched
+                        // end_time + 1 is workaround for that
+                        taskReport.set("start_time", result.get(ZendeskConstants.Field.END_TIME).asLong() + 1);
+                    }
+                    else {
+                        // Sometimes no record and no end_time fetched on the job, but we should generate start_time on config_diff.
+                        taskReport.set("start_time", Instant.now().getEpochSecond());
+                    }
                 }
 
                 if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL) {

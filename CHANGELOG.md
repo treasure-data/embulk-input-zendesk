@@ -1,3 +1,6 @@
+## 0.3.3 - 2019-04-11
+* [fixed] Fix trailing slash #55 [#55](https://github.com/treasure-data/embulk-input-zendesk/pull/55)
+
 ## 0.3.2 - 2019-04-10
 * [fixed] Fix generate config diff based on incremental config #54 [#54](https://github.com/treasure-data/embulk-input-zendesk/pull/54)
 

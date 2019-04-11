@@ -114,7 +114,7 @@ public class TestZendeskValidatorUtils
         configSource.set("target", "ticket_fields");
         configSource.set("incremental", true);
         configSource.set("dedup", false);
-        configSource.set("start_time", "");
+        configSource.set(ZendeskConstants.Field.START_TIME, "");
 
         final ZendeskInputPlugin.PluginTask task = configSource.loadConfig(ZendeskInputPlugin.PluginTask.class);
         ZendeskValidatorUtils.validateInputTask(task, zendeskSupportAPIService);

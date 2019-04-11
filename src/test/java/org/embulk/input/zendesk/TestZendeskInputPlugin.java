@@ -8,6 +8,7 @@ import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
+import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskPluginTestRuntime;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 
@@ -117,7 +118,7 @@ public class TestZendeskInputPlugin
         when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        String nextStartTime = configDiff.get(String.class, "start_time");
+        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
         verify(pageBuilder, times(4)).addRecord();
         verify(pageBuilder, times(1)).finish();
         assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
@@ -134,7 +135,7 @@ public class TestZendeskInputPlugin
                 .thenReturn(dataJsonNext);
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        String nextStartTime = configDiff.get(String.class, "start_time");
+        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
         verify(pageBuilder, times(1)).addRecord();
         verify(pageBuilder, times(1)).finish();
         assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
@@ -150,7 +151,7 @@ public class TestZendeskInputPlugin
         when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJsonNext);
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        String nextStartTime = configDiff.get(String.class, "start_time");
+        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
         verify(pageBuilder, times(5)).addRecord();
         verify(pageBuilder, times(1)).finish();
         assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
@@ -166,7 +167,7 @@ public class TestZendeskInputPlugin
         when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        String nextStartTime = configDiff.get(String.class, "start_time");
+        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
         verify(pageBuilder, times(3)).addRecord();
         verify(pageBuilder, times(1)).finish();
         assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
@@ -187,7 +188,7 @@ public class TestZendeskInputPlugin
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
 
         verify(pageBuilder, times(1)).finish();
-        String nextStartTime = configDiff.get(String.class, "start_time");
+        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
         assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
     }
 
@@ -202,6 +203,42 @@ public class TestZendeskInputPlugin
         verify(pageBuilder, times(7 * 2)).addRecord();
         verify(pageBuilder, times(2)).finish();
         Assert.assertTrue(configDiff.isEmpty());
+    }
+
+    @Test
+    public void testRunNotGenerateStartTimeWhenRunningInNonIncrementalModeAndTargetSupportIncremental()
+    {
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        src.set("incremental", false);
+        loadData("data/tickets.json");
+
+        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
+
+        Assert.assertTrue(configDiff.isEmpty());
+    }
+
+    @Test
+    public void testRunNotGenerateStartTimeWhenRunningInIncrementalModeAndTargetDoesNotSupportIncremental()
+    {
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("non-incremental.yml");
+        src.set("incremental", true);
+        loadData("data/ticket_fields.json");
+
+        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
+
+        Assert.assertTrue(configDiff.isEmpty());
+    }
+
+    @Test
+    public void testRunIncrementalGenerateStartTimeWhenRunningInIncrementalModeAndTargetSupportIncremental()
+    {
+        String expectedStartTime = "2019-02-20 07:17:34 +0000";
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        loadData("data/tickets.json");
+
+        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
+        Assert.assertFalse(configDiff.isEmpty());
+        Assert.assertEquals(expectedStartTime, configDiff.get(String.class, ZendeskConstants.Field.START_TIME));
     }
 
     private class Control implements InputPlugin.Control

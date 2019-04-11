@@ -213,17 +213,14 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         final ConfigDiff configDiff = Exec.newConfigDiff();
 
-        if (!taskReports.isEmpty()) {
-            if (task.getIncremental()) {
-                final TaskReport taskReport = taskReports.get(0);
-                if (taskReport.has(ZendeskConstants.Field.START_TIME)) {
-                    final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
-                            taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong()),
-                            ZoneOffset.UTC);
+        if (!taskReports.isEmpty() && task.getIncremental()) {
+            final TaskReport taskReport = taskReports.get(0);
+            if (taskReport.has(ZendeskConstants.Field.START_TIME)) {
+                final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
+                        taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong()), ZoneOffset.UTC);
 
-                    configDiff.set(ZendeskConstants.Field.START_TIME,
+                configDiff.set(ZendeskConstants.Field.START_TIME,
                             offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
-                }
             }
         }
         return configDiff;
@@ -303,11 +300,11 @@ public class ZendeskInputPlugin implements InputPlugin
                         // NOTE: start_time compared as "=>", not ">".
                         // If we will use end_time for next start_time, we got the same record that is last fetched
                         // end_time + 1 is workaround for that
-                        taskReport.set("start_time", result.get(ZendeskConstants.Field.END_TIME).asLong() + 1);
+                        taskReport.set(ZendeskConstants.Field.START_TIME, result.get(ZendeskConstants.Field.END_TIME).asLong() + 1);
                     }
                     else {
                         // Sometimes no record and no end_time fetched on the job, but we should generate start_time on config_diff.
-                        taskReport.set("start_time", Instant.now().getEpochSecond());
+                        taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
                     }
                 }
 

@@ -9,23 +9,22 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
-
 import java.util.List;
 import java.util.Optional;
 
 public class ZendeskDateUtils
 {
+    private static final List<String> supportedFormats = Arrays.asList(ZendeskConstants.Misc.ISO_INSTANT, ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT,
+            ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.ISO_TIMESTAMP_FORMAT,
+            ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT_NO_SPACE);
+
     private ZendeskDateUtils()
     {
     }
 
-    private static final List<String> supportedFormats =  Arrays.asList(ZendeskConstants.Misc.ISO_INSTANT, ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT,
-                                                                        ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.ISO_TIMESTAMP_FORMAT,
-                                                                        ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT_NO_SPACE);
-
     public static long isoToEpochSecond(final String time)
     {
-        Optional<String> pattern = supportedTimeFormat(time, supportedFormats);
+        final Optional<String> pattern = supportedTimeFormat(time, supportedFormats);
         if (pattern.isPresent()) {
             final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern.get()).withZone(ZoneOffset.UTC);
             final OffsetDateTime offsetDateTime = LocalDateTime.parse(time, formatter).atOffset(ZoneOffset.UTC);

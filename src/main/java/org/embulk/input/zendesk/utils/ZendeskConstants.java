@@ -27,8 +27,12 @@ public class ZendeskConstants
 
     public static class Url
     {
-        public static final String API = "api/v2";
+        public static final String API = "/api/v2";
         public static final String API_INCREMENTAL = API + "/incremental";
+        public static final String API_NPS_INCREMENTAL = API + "/nps/incremental";
+        public static final String API_OBJECT_RECORD = "api/sunshine/objects/records";
+        public static final String API_RELATIONSHIP_RECORD = "api/sunshine/relationships/records";
+        public static final String API_USER_EVENT = "api/sunshine/events";
     }
 
     public static class Misc

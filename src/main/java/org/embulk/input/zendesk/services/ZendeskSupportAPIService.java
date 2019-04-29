@@ -1,110 +1,94 @@
 package org.embulk.input.zendesk.services;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
+import org.apache.http.client.utils.URIBuilder;
+import org.embulk.config.TaskReport;
+import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
-import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
-import org.embulk.spi.DataException;
+import org.embulk.spi.Exec;
+import org.embulk.spi.PageBuilder;
+import org.embulk.spi.Schema;
 
-import java.io.IOException;
+import java.util.Iterator;
 
-public class ZendeskSupportAPIService
+public class ZendeskSupportAPIService extends ZendeskBaseServices implements ZendeskService
 {
-    private ZendeskRestClient zendeskRestClient;
-
-    private PluginTask task;
-
-    private static ObjectMapper mapper = new ObjectMapper();
-
-    static {
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, false);
-    }
-
     public ZendeskSupportAPIService(final PluginTask task)
     {
-        this.task = task;
+        super(task);
     }
 
-    public void setTask(PluginTask task)
+    @Override
+    public JsonNode getData(final String path, final int page, final boolean isPreview, final long startTime)
     {
-        this.task = task;
+        return super.getData(path, page, isPreview, startTime);
     }
 
-    public JsonNode getData(String path, final int page, final boolean isPreview, long startTime)
+    @Override
+    public TaskReport execute(final ZendeskInputPlugin.PluginTask task, final int taskIndex, final Schema schema, final PageBuilder pageBuilder)
     {
-        if (path.isEmpty()) {
-            path = buildPath(page, startTime);
+        TaskReport taskReport = Exec.newTaskReport();
+
+        if (ZendeskUtils.isSupportAPIIncremental(task.getTarget())) {
+            importDataForIncremental(task, schema, pageBuilder, taskReport);
         }
-        try {
-            final String response = getZendeskRestClient().doGet(path, task, isPreview);
-            return parseJsonObject(response);
+        else {
+            importDataForNonIncremental(task, taskIndex, schema, pageBuilder);
         }
-        catch (final Exception e) {
-            throw Throwables.propagate(e);
-        }
+
+        return taskReport;
     }
 
-    @VisibleForTesting
-    protected ZendeskRestClient getZendeskRestClient()
+    @Override
+    protected String buildURI(final int page, long startTime)
     {
-        if (zendeskRestClient == null) {
-            zendeskRestClient = new ZendeskRestClient();
+        final boolean isSupportIncremental = ZendeskUtils.isSupportAPIIncremental(task.getTarget());
+
+        final URIBuilder uriBuilder = getURIBuilderFromHost().setPath(buildPath(isSupportIncremental));
+
+        if (isSupportIncremental) {
+            uriBuilder.setParameter(ZendeskConstants.Field.START_TIME, String.valueOf(startTime));
+            if (Target.TICKET_METRICS.equals(task.getTarget())) {
+                uriBuilder.setParameter("include", "metric_sets");
+            }
         }
-        return zendeskRestClient;
+        else {
+            uriBuilder.setParameter("sort_by", "id")
+                    .setParameter("per_page", String.valueOf(100))
+                    .setParameter("page", String.valueOf(page));
+        }
+
+        return uriBuilder.toString();
     }
 
-    private ObjectNode parseJsonObject(final String jsonText)
+    private String buildPath(final boolean isSupportIncremental)
     {
-        JsonNode node = parseJsonNode(jsonText);
-        if (node.isObject()) {
-            return (ObjectNode) node;
-        }
-
-        throw new DataException("Expected object node to parse but doesn't get");
-    }
-
-    private JsonNode parseJsonNode(final String jsonText)
-    {
-        try {
-            return mapper.readTree(jsonText);
-        }
-        catch (final IOException e) {
-            throw Throwables.propagate(e);
-        }
-    }
-
-    private String buildPath(final int page, long startTime)
-    {
-        boolean isSupportIncremental = ZendeskUtils.isSupportAPIIncremental(task.getTarget());
-
-        StringBuilder urlBuilder = new StringBuilder(task.getLoginUrl())
-                .append("/")
-                .append(isSupportIncremental
-                        ? ZendeskConstants.Url.API_INCREMENTAL
-                        : ZendeskConstants.Url.API)
-                .append("/")
-                .append(Target.TICKET_METRICS.equals(task.getTarget())
+        return (isSupportIncremental
+                ? ZendeskConstants.Url.API_INCREMENTAL
+                : ZendeskConstants.Url.API) +
+                "/" +
+                (Target.TICKET_METRICS.equals(task.getTarget())
                         ? Target.TICKETS.toString()
                         : task.getTarget().toString())
-                .append(".json?");
+                + ".json";
+    }
 
-        urlBuilder
-                .append(isSupportIncremental
-                        ? "start_time=" + startTime
-                        : "sort_by=id&per_page=100&page=" + page);
+    private void importDataForNonIncremental(final ZendeskInputPlugin.PluginTask task, final int taskIndex, final Schema schema,
+            final PageBuilder pageBuilder)
+    {
+        // Page start from 1 => page = taskIndex + 1
+        final JsonNode result = getData("", taskIndex + 1, false, 0);
+        final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
 
-        if (Target.TICKET_METRICS.equals(task.getTarget())) {
-            urlBuilder.append("&include=metric_sets");
+        while (iterator.hasNext()) {
+            fetchData(iterator.next(), task, schema, pageBuilder);
+
+            if (Exec.isPreview()) {
+                break;
+            }
         }
-
-        return urlBuilder.toString();
     }
 }

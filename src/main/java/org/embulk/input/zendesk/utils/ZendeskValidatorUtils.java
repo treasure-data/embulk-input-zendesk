@@ -2,7 +2,7 @@ package org.embulk.input.zendesk.utils;
 
 import org.embulk.config.ConfigException;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
-import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
+import org.embulk.input.zendesk.models.Target;
 import org.embulk.spi.Exec;
 import org.slf4j.Logger;
 
@@ -12,16 +12,21 @@ public class ZendeskValidatorUtils
 
     private static final Logger logger = Exec.getLogger(ZendeskValidatorUtils.class);
 
-    public static void validateInputTask(final ZendeskInputPlugin.PluginTask task, final ZendeskSupportAPIService zendeskSupportAPIService)
+    private static ZendeskInputPlugin.PluginTask task;
+
+    public static void validateInputTask(final ZendeskInputPlugin.PluginTask task)
     {
+        ZendeskValidatorUtils.task = task;
         validateAppMarketPlace(task.getAppMarketPlaceIntegrationName().isPresent(),
                 task.getAppMarketPlaceAppId().isPresent(),
                 task.getAppMarketPlaceOrgId().isPresent());
-        validateCredentials(task);
-        validateIncremental(task);
+        validateCredentials();
+        validateIncremental();
+        validateCustomObject();
+        validateUserEvent();
     }
 
-    private static void validateCredentials(final ZendeskInputPlugin.PluginTask task)
+    private static void validateCredentials()
     {
         switch (task.getAuthenticationMethod()) {
             case OAUTH:
@@ -63,7 +68,7 @@ public class ZendeskValidatorUtils
         }
     }
 
-    private static void validateIncremental(final ZendeskInputPlugin.PluginTask task)
+    private static void validateIncremental()
     {
         if (task.getIncremental()) {
             if (!task.getDedup()) {
@@ -74,6 +79,29 @@ public class ZendeskValidatorUtils
                 logger.warn(String.format("Target: '%s' doesn't support incremental export API. Will be ignored start_time option",
                         task.getTarget()));
             }
+        }
+    }
+
+    private static void validateCustomObject()
+    {
+        if (task.getTarget().equals(Target.OBJECT_RECORDS) && task.getObjectTypes().isEmpty()) {
+                throw new ConfigException("Should have at least one Object Type");
+        }
+
+        if (task.getTarget().equals(Target.RELATIONSHIP_RECORDS) && task.getRelationshipTypes().isEmpty()) {
+            throw new ConfigException("Should have at least one Relationship Type");
+        }
+    }
+
+    private static void validateUserEvent()
+    {
+        if (task.getTarget().equals(Target.USER_EVENTS) && !task.getProfileSource().isPresent()) {
+            throw new ConfigException("Profile Source is required for User Event Target");
+        }
+
+        if (task.getStartTime().isPresent() && task.getEndTime().isPresent()
+            && ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()) < ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
+            throw new ConfigException("User Event End Time should be larger or equal than Start Time");
         }
     }
 }

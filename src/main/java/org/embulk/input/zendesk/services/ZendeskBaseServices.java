@@ -10,6 +10,7 @@ import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
+import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
@@ -70,9 +71,16 @@ public abstract class ZendeskBaseServices
     protected void importDataForIncremental(final ZendeskInputPlugin.PluginTask task, final Schema schema, final PageBuilder pageBuilder, final TaskReport taskReport)
     {
         long startTime = 0;
+        long endTime = Long.MAX_VALUE;
+        long lastTime = 0;
 
-        if (!Exec.isPreview() && ZendeskUtils.isSupportAPIIncremental(task.getTarget()) && task.getStartTime().isPresent()) {
-            startTime = ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get());
+        if (!Exec.isPreview() && ZendeskUtils.isSupportAPIIncremental(task.getTarget())) {
+            if (task.getStartTime().isPresent()) {
+                startTime = ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get());
+            }
+            if (task.getEndTime().isPresent()) {
+                endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
+            }
         }
 
         // For incremental target, we will run in one task but split in multiple threads inside for data deduplication.
@@ -90,6 +98,7 @@ public abstract class ZendeskBaseServices
                 // Page argument isn't used in incremental API so we just set it to 0
                 final JsonNode result = getData("", 0, false, startTime);
                 final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
+                final long resultEndTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
 
                 int numberOfRecords = 0;
                 if (result.has(ZendeskConstants.Field.COUNT)) {
@@ -101,6 +110,21 @@ public abstract class ZendeskBaseServices
 
                     if (isUpdatedBySystem(recordJsonNode, startTime)) {
                         continue;
+                    }
+
+                    // Contain some records  that later than end_time. Checked and don't add.
+                    // Because the api already sorted by updated_at or timestamp for ticket_events, we just need to break no need to check further.
+                    if (resultEndTime > endTime) {
+                        if (recordJsonNode.has(ZendeskConstants.Field.UPDATED_AT)
+                                && ZendeskDateUtils.isoToEpochSecond(recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).textValue()) > endTime) {
+                            break;
+                        }
+
+                        // ticket events is updated by system not user's action so it only has timestamp field
+                        if (task.getTarget().equals(Target.TICKET_EVENTS) && recordJsonNode.has("timestamp") && !recordJsonNode.get("timestamp").isNull()
+                                && recordJsonNode.get("timestamp").asLong() > endTime) {
+                            break;
+                        }
                     }
 
                     if (task.getDedup()) {
@@ -120,29 +144,22 @@ public abstract class ZendeskBaseServices
 
                 ZendeskBaseServices.logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
 
+                // store the last end_time for next run
                 if (task.getIncremental() && !Exec.isPreview()) {
-                    if (result.has(ZendeskConstants.Field.END_TIME) && !result.get(ZendeskConstants.Field.END_TIME).isNull()
-                            && result.has(task.getTarget().getJsonName())) {
-                        // NOTE: start_time compared as "=>", not ">".
-                        // If we will use end_time for next start_time, we got the same record that is last fetched
-                        // end_time + 1 is workaround for that
-                        taskReport.set(ZendeskConstants.Field.START_TIME, result.get(ZendeskConstants.Field.END_TIME).asLong() + 1);
-                    }
-                    else {
-                        // Sometimes no record and no end_time fetched on the job, but we should generate start_time on config_diff.
-                        taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
-                    }
+                    lastTime = Math.max(resultEndTime, lastTime);
                 }
 
-                if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL) {
+                if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL || resultEndTime >= endTime) {
                     break;
                 }
-                else {
-                    startTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
-                }
+
+                startTime = resultEndTime;
+            }
+
+            if (!Exec.isPreview()) {
+                storeStartTimeForConfigDiff(taskReport, lastTime);
             }
         }
-
         finally {
             if (pool != null) {
                 pool.shutdown();
@@ -287,6 +304,27 @@ public abstract class ZendeskBaseServices
         pageBuilder.addRecord();
     }
 
+    protected void storeStartTimeForConfigDiff(TaskReport taskReport, long lastTime)
+    {
+        if (task.getIncremental()) {
+            if (task.getEndTime().isPresent()) {
+                taskReport.set(ZendeskConstants.Field.START_TIME, ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1);
+            }
+            else {
+                // lastTime = 0 mean no records, we should store now time for next run
+                if (lastTime == 0) {
+                    taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
+                }
+                else {
+                    // NOTE: start_time compared as "=>", not ">".
+                    // If we will use end_time for next start_time, we got the same records that are fetched
+                    // end_time + 1 is workaround for that
+                    taskReport.set(ZendeskConstants.Field.START_TIME, lastTime + 1);
+                }
+            }
+        }
+    }
+
     private boolean isUpdatedBySystem(final JsonNode recordJsonNode, final long startTime)
     {
         /*
@@ -296,12 +334,17 @@ public abstract class ZendeskBaseServices
          * start_time for query parameter will be processed on Zendesk with generated_timestamp,
          * but it was calculated by record' updated_at time.
          * So the doesn't changed record from previous import would be appear by Zendesk internal changes.
-         * We ignore record that has updated_at <= start_time
+         * We ignore record that has generated_timestamp > start_time && updated_at < start_time
          */
         if (recordJsonNode.has(ZendeskConstants.Field.GENERATED_TIMESTAMP) && recordJsonNode.has(ZendeskConstants.Field.UPDATED_AT)) {
             final String recordUpdatedAtTime = recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).asText();
             final long recordUpdatedAtToEpochSecond = ZendeskDateUtils.isoToEpochSecond(recordUpdatedAtTime);
-            return recordUpdatedAtToEpochSecond <= startTime;
+            final long updateBySystemTimeStamp = recordJsonNode.get(ZendeskConstants.Field.GENERATED_TIMESTAMP).asLong();
+
+            // updated by system => updateBySystemTimeStamp > startTime
+            // when filter by updateBySystemTimeStamp + startTime because of the reason above it will be filtered by updateBySystemTimeStamp
+            // => recordUpdatedAtToEpochSecond < startTime;
+            return updateBySystemTimeStamp > startTime && recordUpdatedAtToEpochSecond < startTime;
         }
 
         return false;

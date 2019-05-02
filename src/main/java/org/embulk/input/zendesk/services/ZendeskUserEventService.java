@@ -17,10 +17,10 @@ import org.embulk.spi.PageBuilder;
 import org.embulk.spi.Schema;
 
 import java.io.IOException;
-import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -51,7 +51,7 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
             final List<JsonNode> organizations = StreamSupport.stream(new OrganizationSpliterator(buildOrganizationURI(), getZendeskRestClient(), task), false)
                     .collect(Collectors.toList());
             final Set<String> knownUserIds = ConcurrentHashMap.newKeySet();
-
+            final AtomicLong lastTime = new AtomicLong(0);
             organizations.parallelStream().forEach(
                     organization -> {
                         Stream<JsonNode> stream = StreamSupport.stream(new UserSpliterator(buildOrganizationWithUserURI(organization.get("url").asText()),
@@ -61,17 +61,24 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
                             stream = stream.filter(item -> !knownUserIds.contains(item.get("id").asText()))
                                     .peek(item -> knownUserIds.add(item.get("id").asText()));
                         }
-                        stream.forEach(s -> StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()), getZendeskRestClient(), task, Exec.isPreview()), true)
-                                .forEach(item -> addRecord(item, schema, pageBuilder)));
+                        stream.forEach(s ->
+                            StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()),
+                                    getZendeskRestClient(), task, Exec.isPreview()), true)
+                                    .forEach(item -> {
+                                        if (task.getIncremental() && task.getEndTime().isPresent()) {
+                                            long temp = ZendeskDateUtils.isoToEpochSecond(item.get("created_at").asText());
+                                            if (temp > lastTime.get()) {
+                                                // we need to store the created_at time of the latest records.
+                                                // So we can calculate the start_time for configDiff in case there is no specific end_time
+                                                lastTime.set(temp);
+                                            }
+                                        }
+                                        addRecord(item, schema, pageBuilder);
+                                    })
+                        );
                     }
             );
-
-            if (task.getIncremental()) {
-                if (task.getEndTime().isPresent()) {
-                    taskReport.set(ZendeskConstants.Field.START_TIME, ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1);
-                }
-                taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
-            }
+            storeStartTimeForConfigDiff(taskReport, lastTime.get());
         }
 
         return taskReport;

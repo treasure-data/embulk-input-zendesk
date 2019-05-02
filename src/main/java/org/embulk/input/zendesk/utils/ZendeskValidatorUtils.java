@@ -6,6 +6,8 @@ import org.embulk.input.zendesk.models.Target;
 import org.embulk.spi.Exec;
 import org.slf4j.Logger;
 
+import java.time.Instant;
+
 public class ZendeskValidatorUtils
 {
     private ZendeskValidatorUtils(){}
@@ -24,6 +26,7 @@ public class ZendeskValidatorUtils
         validateIncremental();
         validateCustomObject();
         validateUserEvent();
+        validateTime();
     }
 
     private static void validateCredentials()
@@ -98,10 +101,32 @@ public class ZendeskValidatorUtils
         if (task.getTarget().equals(Target.USER_EVENTS) && !task.getProfileSource().isPresent()) {
             throw new ConfigException("Profile Source is required for User Event Target");
         }
+    }
+
+    private static void validateTime()
+    {
+        // if we can't parse start_time, it will automatically set to 0
+        task.getStartTime().ifPresent(time -> {
+            if (ZendeskDateUtils.supportedTimeFormat(task.getStartTime().get()).isPresent()
+                    && ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()) > Instant.now().getEpochSecond()) {
+                    throw new ConfigException("Start Time shouldn't be in the future");
+                }
+            });
+
+        // Can't set end_time to 0, so it should be valid
+        task.getEndTime().ifPresent(time -> {
+            if (!ZendeskDateUtils.supportedTimeFormat(task.getEndTime().get()).isPresent()) {
+                throw new ConfigException("End Time should follow these format " + ZendeskConstants.Misc.SUPPORT_DATE_TIME_FORMAT.toString());
+            }
+
+            if (ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) > Instant.now().getEpochSecond()) {
+                throw new ConfigException("End Time shouldn't be in the future");
+            }
+        });
 
         if (task.getStartTime().isPresent() && task.getEndTime().isPresent()
-            && ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()) < ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
-            throw new ConfigException("User Event End Time should be larger or equal than Start Time");
+                && ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()) > ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
+            throw new ConfigException("End Time should be later or equal than Start Time");
         }
     }
 }

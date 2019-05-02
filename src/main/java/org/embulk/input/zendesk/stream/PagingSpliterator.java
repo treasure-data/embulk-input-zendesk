@@ -77,7 +77,9 @@ public abstract class PagingSpliterator<E> implements Spliterator<E>
 
             if (result != null && !result.isEmpty()) {
                 final JsonNode jsonNode = ZendeskUtils.parseJsonObject(result);
-                return isContinue(jsonNode, action);
+                if (!jsonNode.get(task.getTarget().getJsonName()).isNull()) {
+                    return isContinue(jsonNode, action);
+                }
             }
         }
         catch (final ConfigException e) {

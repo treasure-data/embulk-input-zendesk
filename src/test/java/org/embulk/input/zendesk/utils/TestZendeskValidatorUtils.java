@@ -4,7 +4,6 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.config.ConfigSource;
 
 import org.embulk.input.zendesk.ZendeskInputPlugin;
-import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
 
 import org.embulk.spi.InputPlugin;
 import org.embulk.test.TestingEmbulk;
@@ -18,8 +17,6 @@ import org.junit.rules.TestRule;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-
-import static org.mockito.Mockito.mock;
 
 import java.util.Collections;
 
@@ -35,8 +32,6 @@ public class TestZendeskValidatorUtils
     @Rule
     @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     public TestRule chain = RuleChain.outerRule(embulk).around(runtime).around(thrown);
-
-    private ZendeskSupportAPIService zendeskSupportAPIService = mock(ZendeskSupportAPIService.class);
 
     @Before
     public void prepare()
@@ -97,7 +92,7 @@ public class TestZendeskValidatorUtils
         configSource.set("target", "ticket_fields");
         configSource.set("includes", Collections.singletonList("organizations"));
         final ZendeskInputPlugin.PluginTask task = configSource.loadConfig(ZendeskInputPlugin.PluginTask.class);
-        ZendeskValidatorUtils.validateInputTask(task, zendeskSupportAPIService);
+        ZendeskValidatorUtils.validateInputTask(task);
     }
 
     @Test
@@ -109,7 +104,7 @@ public class TestZendeskValidatorUtils
         configSource.set(ZendeskConstants.Field.START_TIME, "");
 
         final ZendeskInputPlugin.PluginTask task = configSource.loadConfig(ZendeskInputPlugin.PluginTask.class);
-        ZendeskValidatorUtils.validateInputTask(task, zendeskSupportAPIService);
+        ZendeskValidatorUtils.validateInputTask(task);
     }
 
     private static ConfigSource getBaseConfigSource()
@@ -120,7 +115,7 @@ public class TestZendeskValidatorUtils
     private void assertValidation(final ZendeskInputPlugin.PluginTask task, final String message)
     {
         try {
-            ZendeskValidatorUtils.validateInputTask(task, zendeskSupportAPIService);
+            ZendeskValidatorUtils.validateInputTask(task);
             fail("Should not reach here");
         }
         catch (final Exception e) {

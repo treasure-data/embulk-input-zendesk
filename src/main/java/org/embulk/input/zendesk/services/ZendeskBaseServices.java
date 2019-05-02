@@ -231,7 +231,7 @@ public abstract class ZendeskBaseServices
             {
                 final JsonNode data = record.get(column.getName());
                 setColumn(column, data, (value) -> {
-                    final Timestamp timestamp = ZendeskBaseServices.getTimestampValue(value.asText());
+                    final Timestamp timestamp = getTimestampValue(value.asText());
                     if (timestamp == null) {
                         pageBuilder.setNull(column);
                     }
@@ -277,7 +277,7 @@ public abstract class ZendeskBaseServices
 
             private void setColumn(final Column column, final JsonNode data, final Function<JsonNode, Void> setter)
             {
-                if (ZendeskBaseServices.isNull(data)) {
+                if (isNull(data)) {
                     pageBuilder.setNull(column);
                     return;
                 }
@@ -307,7 +307,7 @@ public abstract class ZendeskBaseServices
         return false;
     }
 
-    private static boolean isNull(final JsonNode jsonNode)
+    private boolean isNull(final JsonNode jsonNode)
     {
         return jsonNode == null || jsonNode.isNull();
     }
@@ -316,7 +316,7 @@ public abstract class ZendeskBaseServices
      * For getting the timestamp value of the node
      * Sometime if the parser could not parse the value then return null
      * */
-    private static Timestamp getTimestampValue(final String value)
+    private Timestamp getTimestampValue(final String value)
     {
         Timestamp result = null;
         try {

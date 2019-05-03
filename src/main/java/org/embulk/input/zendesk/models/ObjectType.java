@@ -11,7 +11,7 @@ public enum  ObjectType
     USER, TICKET, ARTICLE, ORGANIZATION, GROUP, CHAT, BRAND, ACCOUNT;
 
     @JsonCreator
-    public static ObjectType fromString(final JsonNode jsonNode)
+    public static ObjectType fromJsonNode(final JsonNode jsonNode)
     {
         try {
             if (jsonNode.has("value")) {
@@ -21,6 +21,18 @@ public enum  ObjectType
         }
         catch (IllegalArgumentException e) {
             throw new ConfigException("Unsupported ObjectType mode '" + jsonNode.get("value").asText() + "', supported values: '"
+                    + Arrays.toString(ObjectType.values()) + "'");
+        }
+    }
+
+    @JsonCreator
+    public static ObjectType fromString(final String value)
+    {
+        try {
+            return ObjectType.valueOf(value.trim().toUpperCase());
+        }
+        catch (IllegalArgumentException e) {
+            throw new ConfigException("Unsupported ObjectType mode '" + value + "', supported values: '"
                     + Arrays.toString(ObjectType.values()) + "'");
         }
     }

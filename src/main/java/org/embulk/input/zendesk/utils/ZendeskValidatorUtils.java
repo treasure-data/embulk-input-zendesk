@@ -105,28 +105,30 @@ public class ZendeskValidatorUtils
 
     private static void validateTime()
     {
-        // if we can't parse start_time, it will automatically set to 0
-        task.getStartTime().ifPresent(time -> {
-            if (ZendeskDateUtils.supportedTimeFormat(task.getStartTime().get()).isPresent()
-                    && ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()) > Instant.now().getEpochSecond()) {
+        if (ZendeskUtils.isSupportAPIIncremental(task.getTarget())) {
+            // if we can't parse start_time, it will automatically set to 0
+            task.getStartTime().ifPresent(time -> {
+                if (ZendeskDateUtils.supportedTimeFormat(task.getStartTime().get()).isPresent()
+                        && ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()) > Instant.now().getEpochSecond()) {
                     throw new ConfigException("Start Time shouldn't be in the future");
                 }
             });
 
-        // Can't set end_time to 0, so it should be valid
-        task.getEndTime().ifPresent(time -> {
-            if (!ZendeskDateUtils.supportedTimeFormat(task.getEndTime().get()).isPresent()) {
-                throw new ConfigException("End Time should follow these format " + ZendeskConstants.Misc.SUPPORT_DATE_TIME_FORMAT.toString());
-            }
+            // Can't set end_time to 0, so it should be valid
+            task.getEndTime().ifPresent(time -> {
+                if (!ZendeskDateUtils.supportedTimeFormat(task.getEndTime().get()).isPresent()) {
+                    throw new ConfigException("End Time should follow these format " + ZendeskConstants.Misc.SUPPORT_DATE_TIME_FORMAT.toString());
+                }
 
-            if (ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) > Instant.now().getEpochSecond()) {
-                throw new ConfigException("End Time shouldn't be in the future");
-            }
-        });
+                if (ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) > Instant.now().getEpochSecond()) {
+                    throw new ConfigException("End Time shouldn't be in the future");
+                }
+            });
 
-        if (task.getStartTime().isPresent() && task.getEndTime().isPresent()
-                && ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()) > ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
-            throw new ConfigException("End Time should be later or equal than Start Time");
+            if (task.getStartTime().isPresent() && task.getEndTime().isPresent()
+                    && ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()) > ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
+                throw new ConfigException("End Time should be later or equal than Start Time");
+            }
         }
     }
 }

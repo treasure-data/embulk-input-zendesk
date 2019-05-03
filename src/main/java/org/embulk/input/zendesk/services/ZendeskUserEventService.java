@@ -74,8 +74,7 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
                                             }
                                         }
                                         addRecord(item, schema, pageBuilder);
-                                    })
-                        );
+                                    }));
                     }
             );
             storeStartTimeForConfigDiff(taskReport, lastTime.get());

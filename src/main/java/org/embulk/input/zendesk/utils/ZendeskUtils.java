@@ -32,7 +32,9 @@ public class ZendeskUtils
     public static boolean isSupportAPIIncremental(final Target target)
     {
         return !Target.TICKET_FORMS.equals(target)
-                && !Target.TICKET_FIELDS.equals(target);
+                && !Target.TICKET_FIELDS.equals(target)
+                && !Target.SCORES.equals(target)
+                && !Target.RECIPIENTS.equals(target);
     }
 
     public static String convertBase64(final String text)

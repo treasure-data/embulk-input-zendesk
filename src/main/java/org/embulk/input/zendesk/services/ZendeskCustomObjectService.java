@@ -35,7 +35,7 @@ public class ZendeskCustomObjectService extends ZendeskBaseServices implements Z
     }
 
     @Override
-    public TaskReport execute(final ZendeskInputPlugin.PluginTask task, final int taskIndex, final Schema schema, final PageBuilder pageBuilder)
+    public TaskReport execute(final int taskIndex, final Schema schema, final PageBuilder pageBuilder)
     {
         final List<String> paths = getListPathByTarget();
 

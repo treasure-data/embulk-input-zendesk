@@ -33,8 +33,8 @@ public class ZendeskUtils
     {
         return !Target.TICKET_FORMS.equals(target)
                 && !Target.TICKET_FIELDS.equals(target)
-                && !Target.SCORES.equals(target)
-                && !Target.RECIPIENTS.equals(target);
+                && !Target.OBJECT_RECORDS.equals(target)
+                && !Target.RELATIONSHIP_RECORDS.equals(target);
     }
 
     public static String convertBase64(final String text)
@@ -63,12 +63,6 @@ public class ZendeskUtils
             throw new DataException(String.format("Missing '%s' from Zendesk API response", targetJsonName));
         }
         return result.get(targetJsonName).elements();
-    }
-
-    public static String convertToDateTimeFormat(String datetime, String dateTimeFormat)
-    {
-        return OffsetDateTime.ofInstant(Instant.ofEpochSecond(ZendeskDateUtils.isoToEpochSecond(datetime)), ZoneOffset.UTC)
-                .format(DateTimeFormatter.ofPattern(dateTimeFormat));
     }
 
     private static JsonNode parseJsonNode(final String jsonText)

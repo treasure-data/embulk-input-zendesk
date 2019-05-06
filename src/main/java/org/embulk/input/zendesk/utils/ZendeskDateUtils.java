@@ -2,6 +2,7 @@ package org.embulk.input.zendesk.utils;
 
 import org.embulk.spi.DataException;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -41,5 +42,11 @@ public class ZendeskDateUtils
             }
         }
         return Optional.empty();
+    }
+
+    public static String convertToDateTimeFormat(String datetime, String dateTimeFormat)
+    {
+        return OffsetDateTime.ofInstant(Instant.ofEpochSecond(ZendeskDateUtils.isoToEpochSecond(datetime)), ZoneOffset.UTC)
+                .format(DateTimeFormatter.ofPattern(dateTimeFormat));
     }
 }

@@ -11,7 +11,6 @@ import org.embulk.input.zendesk.stream.paginator.UserEventSpliterator;
 import org.embulk.input.zendesk.stream.paginator.UserSpliterator;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
-import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.Exec;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.Schema;
@@ -39,7 +38,7 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
     }
 
     @Override
-    public TaskReport execute(final ZendeskInputPlugin.PluginTask task, final int taskIndex, final Schema schema, final PageBuilder pageBuilder)
+    public TaskReport execute(final int taskIndex, final Schema schema, final PageBuilder pageBuilder)
     {
         final TaskReport taskReport = Exec.newTaskReport();
 
@@ -112,8 +111,8 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
 
         task.getUserEventSource().ifPresent(eventSource -> uriBuilder.setParameter("source", eventSource));
         task.getUserEventType().ifPresent(eventType -> uriBuilder.setParameter("type", eventType));
-        task.getStartTime().ifPresent(startTime -> uriBuilder.setParameter("start_time", ZendeskUtils.convertToDateTimeFormat(startTime, ZendeskConstants.Misc.ISO_INSTANT)));
-        task.getEndTime().ifPresent(endTime -> uriBuilder.setParameter("end_time", ZendeskUtils.convertToDateTimeFormat(endTime, ZendeskConstants.Misc.ISO_INSTANT)));
+        task.getStartTime().ifPresent(startTime -> uriBuilder.setParameter("start_time", ZendeskDateUtils.convertToDateTimeFormat(startTime, ZendeskConstants.Misc.ISO_INSTANT)));
+        task.getEndTime().ifPresent(endTime -> uriBuilder.setParameter("end_time", ZendeskDateUtils.convertToDateTimeFormat(endTime, ZendeskConstants.Misc.ISO_INSTANT)));
 
         return uriBuilder.toString();
     }

@@ -28,7 +28,7 @@ public class ZendeskSupportAPIService extends ZendeskBaseServices implements Zen
     }
 
     @Override
-    public TaskReport execute(final ZendeskInputPlugin.PluginTask task, final int taskIndex, final Schema schema, final PageBuilder pageBuilder)
+    public TaskReport execute(final int taskIndex, final Schema schema, final PageBuilder pageBuilder)
     {
         TaskReport taskReport = Exec.newTaskReport();
 

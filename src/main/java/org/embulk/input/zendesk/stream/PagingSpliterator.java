@@ -100,10 +100,10 @@ public abstract class PagingSpliterator<E> implements Spliterator<E>
             if (iterator.hasNext()) {
                 JsonNode item = iterator.next();
                 // we have data for preview, no need to continue
-                if (!item.isNull()) {
+                if (item != null && !item.isNull()) {
                     action.accept(item);
+                    return false;
                 }
-                return false;
             }
         }
         handleRunIterator(iterator, action);
@@ -121,7 +121,7 @@ public abstract class PagingSpliterator<E> implements Spliterator<E>
     {
         iterator.forEachRemaining(
                 item -> {
-                    if (!item.isNull()) {
+                    if (item != null && !item.isNull()) {
                         action.accept(iterator.next());
                     }
                 });

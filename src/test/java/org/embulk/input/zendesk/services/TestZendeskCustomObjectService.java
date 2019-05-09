@@ -24,6 +24,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -83,10 +84,9 @@ public class TestZendeskCustomObjectService
         ZendeskTestHelper.setPreviewMode(runtime, false);
         setup("object_records.yml");
         loadData("data/object_records.json");
-        TaskReport taskReport = zendeskCustomObjectService.execute(0, schema, pageBuilder);
+        zendeskCustomObjectService.execute(0, schema, pageBuilder);
         // 2 types - each type 2 records
         verify(pageBuilder, times(4)).addRecord();
-        Assert.assertTrue(taskReport.isEmpty());
     }
 
     @Test
@@ -96,6 +96,7 @@ public class TestZendeskCustomObjectService
         setup("relationship_records.yml");
         loadData("data/relationship_records.json");
         zendeskCustomObjectService.execute(0, schema, pageBuilder);
+        // 7 records
         verify(pageBuilder, times(7)).addRecord();
     }
 
@@ -124,8 +125,9 @@ public class TestZendeskCustomObjectService
         setup("object_records.yml");
         loadData("data/object_records.json");
         TaskReport taskReport = zendeskCustomObjectService.execute(0, schema, pageBuilder);
-        // 1 type contain data and break
-        verify(pageBuilder, times(3)).addRecord();
+
+        // expect to be break and don't import all records
+        verify(pageBuilder, atMost(3)).addRecord();
         Assert.assertTrue(taskReport.isEmpty());
     }
 

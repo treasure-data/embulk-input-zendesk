@@ -10,10 +10,6 @@ import org.embulk.input.zendesk.models.Target;
 import org.embulk.spi.DataException;
 
 import java.io.IOException;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Iterator;
 

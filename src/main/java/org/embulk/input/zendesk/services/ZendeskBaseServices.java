@@ -41,6 +41,8 @@ public abstract class ZendeskBaseServices
 
     protected ZendeskInputPlugin.PluginTask task;
 
+    private ZendeskRestClient zendeskRestClient;
+
     protected ZendeskBaseServices(final ZendeskInputPlugin.PluginTask task)
     {
         this.task = task;
@@ -51,7 +53,10 @@ public abstract class ZendeskBaseServices
     @VisibleForTesting
     protected ZendeskRestClient getZendeskRestClient()
     {
-        return new ZendeskRestClient();
+        if (zendeskRestClient == null) {
+            zendeskRestClient = new ZendeskRestClient();
+        }
+        return zendeskRestClient;
     }
 
     protected JsonNode getData(String path, final int page, final boolean isPreview, final long startTime)
@@ -129,10 +134,11 @@ public abstract class ZendeskBaseServices
 
                     if (task.getDedup()) {
                         final String recordID = recordJsonNode.get(ZendeskConstants.Field.ID).asText();
-                        if (knownIds.contains(recordID)) {
+
+                        // add success -> no duplicate
+                        if (!knownIds.add(recordID)) {
                             continue;
                         }
-                        knownIds.add(recordID);
                     }
 
                     pool.submit(() -> fetchData(recordJsonNode, task, schema, pageBuilder));
@@ -301,24 +307,25 @@ public abstract class ZendeskBaseServices
                 setter.apply(data);
             }
         });
+
         pageBuilder.addRecord();
     }
 
     protected void storeStartTimeForConfigDiff(TaskReport taskReport, long lastTime)
     {
         if (task.getIncremental()) {
-            if (task.getEndTime().isPresent()) {
-                taskReport.set(ZendeskConstants.Field.START_TIME, ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1);
+            // no records
+            if (lastTime == 0) {
+                taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
             }
             else {
-                // lastTime = 0 mean no records, we should store now time for next run
-                if (lastTime == 0) {
-                    taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
+                // have end_time -> store min of (end_time + 1, last_time + 1)
+                // end_time can be set in the future
+                if (task.getEndTime().isPresent()) {
+                    taskReport.set(ZendeskConstants.Field.START_TIME, Math.min(ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1,  lastTime + 1));
                 }
                 else {
-                    // NOTE: start_time compared as "=>", not ">".
-                    // If we will use end_time for next start_time, we got the same records that are fetched
-                    // end_time + 1 is workaround for that
+                    // don't have end_time -> store last_time + 1
                     taskReport.set(ZendeskConstants.Field.START_TIME, lastTime + 1);
                 }
             }
@@ -334,17 +341,12 @@ public abstract class ZendeskBaseServices
          * start_time for query parameter will be processed on Zendesk with generated_timestamp,
          * but it was calculated by record' updated_at time.
          * So the doesn't changed record from previous import would be appear by Zendesk internal changes.
-         * We ignore record that has generated_timestamp > start_time && updated_at < start_time
          */
         if (recordJsonNode.has(ZendeskConstants.Field.GENERATED_TIMESTAMP) && recordJsonNode.has(ZendeskConstants.Field.UPDATED_AT)) {
             final String recordUpdatedAtTime = recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).asText();
             final long recordUpdatedAtToEpochSecond = ZendeskDateUtils.isoToEpochSecond(recordUpdatedAtTime);
-            final long updateBySystemTimeStamp = recordJsonNode.get(ZendeskConstants.Field.GENERATED_TIMESTAMP).asLong();
 
-            // updated by system => updateBySystemTimeStamp > startTime
-            // when filter by updateBySystemTimeStamp + startTime because of the reason above it will be filtered by updateBySystemTimeStamp
-            // => recordUpdatedAtToEpochSecond < startTime;
-            return updateBySystemTimeStamp > startTime && recordUpdatedAtToEpochSecond < startTime;
+            return recordUpdatedAtToEpochSecond <= startTime;
         }
 
         return false;

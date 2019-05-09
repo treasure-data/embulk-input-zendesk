@@ -32,7 +32,7 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
     }
 
     @Override
-    protected String buildURI(final int page, final long startTime)
+    protected String buildURI(int page, long startTime)
     {
         throw new UnsupportedOperationException();
     }
@@ -57,23 +57,30 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
                                 getZendeskRestClient(), task, Exec.isPreview()), true);
 
                         if (task.getDedup()) {
-                            stream = stream.filter(item -> !knownUserIds.contains(item.get("id").asText()))
-                                    .peek(item -> knownUserIds.add(item.get("id").asText()));
+                            stream = stream.filter(item -> knownUserIds.add(item.get("id").asText()));
                         }
+
                         stream.forEach(s ->
-                            StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()),
-                                    getZendeskRestClient(), task, Exec.isPreview()), true)
-                                    .forEach(item -> {
-                                        if (task.getIncremental() && task.getEndTime().isPresent()) {
-                                            long temp = ZendeskDateUtils.isoToEpochSecond(item.get("created_at").asText());
-                                            if (temp > lastTime.get()) {
-                                                // we need to store the created_at time of the latest records.
-                                                // So we can calculate the start_time for configDiff in case there is no specific end_time
-                                                lastTime.set(temp);
-                                            }
-                                        }
-                                        addRecord(item, schema, pageBuilder);
-                                    }));
+                                {
+                                    Stream<JsonNode> userEventStream = StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()),
+                                            getZendeskRestClient(), task, Exec.isPreview()), true);
+
+                                    if (task.getEndTime().isPresent()) {
+                                        long endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
+                                        userEventStream = userEventStream.filter(item -> ZendeskDateUtils.isoToEpochSecond(item.get("created_at").asText()) <= endTime);
+                                    }
+                                    userEventStream.forEach(item -> {
+                                                if (task.getIncremental()) {
+                                                    long temp = ZendeskDateUtils.isoToEpochSecond(item.get("created_at").asText());
+                                                    if (temp > lastTime.get()) {
+                                                        // we need to store the created_at time of the latest records.
+                                                        // So we can calculate the start_time for configDiff in case there is no specific end_time
+                                                        lastTime.set(temp);
+                                                    }
+                                                }
+                                                addRecord(item, schema, pageBuilder);
+                                            });
+                                });
                     }
             );
             storeStartTimeForConfigDiff(taskReport, lastTime.get());

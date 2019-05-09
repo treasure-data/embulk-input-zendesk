@@ -39,7 +39,7 @@ public class ZendeskRestClient
 
     private static final Logger logger = Exec.getLogger(ZendeskRestClient.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
-    private static volatile RateLimiter rateLimiter;
+    private static RateLimiter rateLimiter;
 
     static {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);

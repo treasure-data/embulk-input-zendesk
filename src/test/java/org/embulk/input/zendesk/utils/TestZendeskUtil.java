@@ -34,6 +34,22 @@ public class TestZendeskUtil
     }
 
     @Test
+    public void testIsSupportIncrementalShouldReturnFail()
+    {
+        boolean result = ZendeskUtils.isSupportAPIIncremental(Target.TICKET_FORMS);
+        Assert.assertFalse(result);
+
+        result = ZendeskUtils.isSupportAPIIncremental(Target.TICKET_FIELDS);
+        Assert.assertFalse(result);
+
+        result = ZendeskUtils.isSupportAPIIncremental(Target.OBJECT_RECORDS);
+        Assert.assertFalse(result);
+
+        result = ZendeskUtils.isSupportAPIIncremental(Target.RELATIONSHIP_RECORDS);
+        Assert.assertFalse(result);
+    }
+
+    @Test
     public void testConvertBase64()
     {
         String expectedResult = "YWhrc2RqZmhramFzZGhma2phaGRma2phaGRramZoYWtqZGY=";

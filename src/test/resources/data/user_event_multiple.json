@@ -1,0 +1,33 @@
+{
+  "data": [
+    {
+      "id": "5c7f31aef8df240001e60bbf",
+      "type": "remove_from_cart",
+      "source": "shopify",
+      "description": "",
+      "authenticated": true,
+      "created_at": "2019-03-06T02:34:22Z",
+      "received_at": "2019-03-06T02:34:22Z",
+      "properties": {
+        "model": 221,
+        "size": 6
+      },
+      "user_id": "123123121232"
+    },
+    {
+      "id": "5c7f31aef8df240001e60b3f",
+      "type": "remove_from_cart2",
+      "source": "shopify",
+      "description": "",
+      "authenticated": true,
+      "created_at": "2019-03-06T02:34:30Z",
+      "received_at": "2019-03-06T02:34:30Z",
+      "properties": {
+        "model": 221,
+        "size": 6
+      },
+      "user_id": "123123121232"
+    }
+  ],
+  "links": null
+}

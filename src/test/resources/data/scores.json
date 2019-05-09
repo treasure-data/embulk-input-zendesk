@@ -1,0 +1,21 @@
+{
+  "responses": [
+    {
+      "id": 360003359234,
+      "survey_id": 360000012233,
+      "delivery_id": 360000156034,
+      "recipient_id": 360061097853,
+      "user_id": 378157424634,
+      "rating": 9,
+      "comment": "testing purpose",
+      "delivered_at": "2019-04-16T10:33:35.000Z",
+      "rated_at": "2019-04-16T12:47:50.000Z",
+      "user_email": "dummy@gmail.com",
+      "user_name": "dummy",
+      "survey_name": "abc"
+    }
+  ],
+  "next_page": "https://abc.zendesk.com/api/v2/nps/incremental/responses.json?start_time=1555418870",
+  "count": 1,
+  "end_time": 1555418870
+}

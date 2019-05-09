@@ -4,9 +4,15 @@ import com.fasterxml.jackson.databind.JsonNode;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigSource;
+import org.embulk.config.TaskReport;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
+import org.embulk.input.zendesk.models.Target;
+import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
+import org.embulk.spi.PageBuilder;
+import org.embulk.spi.Schema;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -17,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -31,6 +38,10 @@ public class TestZendeskSupportAPIService
     private ZendeskRestClient zendeskRestClient;
 
     private ZendeskSupportAPIService zendeskSupportAPIService;
+
+    private Schema schema = mock(Schema.class);
+
+    private PageBuilder pageBuilder = mock(PageBuilder.class);
 
     @Before
     public void prepare()
@@ -141,6 +152,109 @@ public class TestZendeskSupportAPIService
         setup("non-incremental.yml");
         loadData("data/ticket_fields.json");
         setupTestAndVerifyURL(expectURL, 2, false);
+    }
+
+    @Test
+    public void executeIncremental()
+    {
+        setup("incremental.yml");
+        loadData("data/tickets.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
+        verify(pageBuilder, times(4)).addRecord();
+        Assert.assertFalse(taskReport.isEmpty());
+        Assert.assertEquals(1550647054, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalWithoutDedup()
+    {
+        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        src.set("dedup", false);
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/tickets.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
+        verify(pageBuilder, times(5)).addRecord();
+        Assert.assertFalse(taskReport.isEmpty());
+        Assert.assertEquals(1550647054, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalContainUpdatedBySystemRecord()
+    {
+        setup("incremental.yml");
+        loadData("data/ticket_with_updated_by_system_records.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
+        verify(pageBuilder, times(3)).addRecord();
+        Assert.assertFalse(taskReport.isEmpty());
+        Assert.assertEquals(1550647054, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalContainEndTime()
+    {
+        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        // same updated_at time of last record
+        src.set("end_time", "2019-02-20T07:17:32Z");
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/tickets.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
+        verify(pageBuilder, times(3)).addRecord();
+        Assert.assertFalse(taskReport.isEmpty());
+        // start_time = end_time + 1
+        Assert.assertEquals(1550647053, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalContainEndTimeFilterOutLastRecord()
+    {
+        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        // earlier than updated_at time of last record
+        src.set("end_time", "2019-02-20T07:17:32Z");
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/tickets.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
+        verify(pageBuilder, times(3)).addRecord();
+        Assert.assertFalse(taskReport.isEmpty());
+        //
+        Assert.assertEquals(1550647053, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalContainEndTimeFilterOutLastRecordTicketEvents()
+    {
+        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        src.set("target", Target.TICKET_EVENTS.toString());
+        // earlier than updated_at time of last record
+        // 1550645520
+        src.set("end_time", "2019-02-20T06:52:00Z");
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/ticket_events_updated_by_system_records.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
+        verify(pageBuilder, times(3)).addRecord();
+        Assert.assertFalse(taskReport.isEmpty());
+        // end_time + 1
+        Assert.assertEquals(1550645521, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeNonIncremental()
+    {
+        setup("non-incremental.yml");
+        loadData("data/ticket_fields.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
+        verify(pageBuilder, times(7)).addRecord();
+        Assert.assertTrue(taskReport.isEmpty());
     }
 
     private void loadData(String fileName)

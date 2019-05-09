@@ -54,7 +54,7 @@ public abstract class PagingSpliterator<E> implements Spliterator<E>
             final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(jsonNode, target.getJsonName());
             iterator.forEachRemaining(
                     item -> {
-                        if (!item.isNull()) {
+                        if (item != null && !item.isNull()) {
                             action.accept(item);
                         }
                     });
@@ -77,7 +77,8 @@ public abstract class PagingSpliterator<E> implements Spliterator<E>
 
             if (result != null && !result.isEmpty()) {
                 final JsonNode jsonNode = ZendeskUtils.parseJsonObject(result);
-                if (!jsonNode.get(task.getTarget().getJsonName()).isNull()) {
+                final JsonNode targetJsonNode = jsonNode.get(task.getTarget().getJsonName());
+                if (targetJsonNode != null && !targetJsonNode.isNull()) {
                     return isContinue(jsonNode, action);
                 }
             }

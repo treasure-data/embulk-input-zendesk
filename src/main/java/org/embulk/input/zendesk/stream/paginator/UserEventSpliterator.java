@@ -30,7 +30,7 @@ public class UserEventSpliterator extends PagingSpliterator<JsonNode>
     {
         iterator.forEachRemaining(
                 item -> {
-                    if (!item.isNull()) {
+                    if (item != null && !item.isNull()) {
                         JsonNode temp = iterator.next();
                         // Because in the returned json doesn't have user_id, so we try to add to it
                         ((ObjectNode) temp).put("user_id", this.userID);

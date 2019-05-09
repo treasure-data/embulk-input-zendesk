@@ -17,7 +17,6 @@ import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.exec.GuessExecutor;
 import org.embulk.input.zendesk.models.AuthenticationMethod;
-import org.embulk.input.zendesk.models.ObjectType;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.services.ZendeskCustomObjectService;
 import org.embulk.input.zendesk.services.ZendeskNPSService;
@@ -130,7 +129,7 @@ public class ZendeskInputPlugin implements InputPlugin
 
         @Config("object_types")
         @ConfigDefault("[]")
-        List<ObjectType> getObjectTypes();
+        List<String> getObjectTypes();
 
         @Config("relationship_types")
         @ConfigDefault("[]")

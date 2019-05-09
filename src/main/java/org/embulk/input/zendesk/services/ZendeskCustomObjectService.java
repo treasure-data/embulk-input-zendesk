@@ -39,7 +39,7 @@ public class ZendeskCustomObjectService extends ZendeskBaseServices implements Z
     {
         final List<String> paths = getListPathByTarget();
 
-        paths.parallelStream().forEach(path -> StreamSupport.stream(new CustomObjectSpliterator(path, getZendeskRestClient(), task, Exec.isPreview()), true)
+        paths.parallelStream().forEach(path -> StreamSupport.stream(new CustomObjectSpliterator(path, getZendeskRestClient(), task, Exec.isPreview()), Exec.isPreview())
                 .forEach(jsonNode -> addRecord(jsonNode, schema, pageBuilder)));
 
         return Exec.newTaskReport();
@@ -56,9 +56,10 @@ public class ZendeskCustomObjectService extends ZendeskBaseServices implements Z
 
         for (final String temp : paths) {
             try {
-                response = Optional.ofNullable(getZendeskRestClient().doGet(temp, task, isPreview));
+                response = Optional.ofNullable(getZendeskRestClient().doGet(temp, task, true));
 
-                if (isPreview) {
+                // in guessing, break when we have data
+                if (response.isPresent()) {
                     break;
                 }
             }
@@ -76,10 +77,8 @@ public class ZendeskCustomObjectService extends ZendeskBaseServices implements Z
     private List<String> getListPathByTarget()
     {
         return task.getTarget().equals(Target.OBJECT_RECORDS)
-                ? task.getObjectTypes().stream().map(
-                    objectType -> buildPath(objectType.getStringType())).collect(Collectors.toList())
-                : task.getRelationshipTypes().stream().map(
-                    this::buildPath).collect(Collectors.toList());
+                ? task.getObjectTypes().stream().map(this::buildPath).collect(Collectors.toList())
+                : task.getRelationshipTypes().stream().map(this::buildPath).collect(Collectors.toList());
     }
 
     private String buildPath(final String value)

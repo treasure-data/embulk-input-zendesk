@@ -120,15 +120,26 @@ public abstract class ZendeskBaseServices
                     // Contain some records  that later than end_time. Checked and don't add.
                     // Because the api already sorted by updated_at or timestamp for ticket_events, we just need to break no need to check further.
                     if (resultEndTime > endTime) {
-                        if (recordJsonNode.has(ZendeskConstants.Field.UPDATED_AT)
-                                && ZendeskDateUtils.isoToEpochSecond(recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).textValue()) > endTime) {
-                            break;
+                        long checkedTime = 0;
+                        if (recordJsonNode.has(ZendeskConstants.Field.UPDATED_AT) && !recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).isNull()) {
+                            checkedTime = ZendeskDateUtils.isoToEpochSecond(recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).textValue());
                         }
 
                         // ticket events is updated by system not user's action so it only has timestamp field
-                        if (task.getTarget().equals(Target.TICKET_EVENTS) && recordJsonNode.has("timestamp") && !recordJsonNode.get("timestamp").isNull()
-                                && recordJsonNode.get("timestamp").asLong() > endTime) {
+                        if (task.getTarget().equals(Target.TICKET_EVENTS) && recordJsonNode.has("timestamp") && !recordJsonNode.get("timestamp").isNull()) {
+                            checkedTime = recordJsonNode.get("timestamp").asLong();
+                        }
+
+                        // scores (or response) is only store rated_at time
+                        if (task.getTarget().equals(Target.SCORES) && recordJsonNode.has("rated_at") && !recordJsonNode.get("rated_at").isNull()) {
+                            checkedTime = ZendeskDateUtils.isoToEpochSecond(recordJsonNode.get("rated_at").textValue());
+                        }
+
+                        if (checkedTime > endTime) {
                             break;
+                        }
+                        else {
+                            lastTime = Math.max(checkedTime, lastTime);
                         }
                     }
 

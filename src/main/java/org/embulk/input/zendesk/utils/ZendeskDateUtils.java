@@ -49,4 +49,15 @@ public class ZendeskDateUtils
         return OffsetDateTime.ofInstant(Instant.ofEpochSecond(ZendeskDateUtils.isoToEpochSecond(datetime)), ZoneOffset.UTC)
                 .format(DateTimeFormatter.ofPattern(dateTimeFormat));
     }
+
+    // start_time should be start from 0
+    public static long getStartTime(final  String time)
+    {
+        try {
+            return isoToEpochSecond(time);
+        }
+        catch (DataException ex) {
+            return 0;
+        }
+    }
 }

@@ -460,7 +460,7 @@ public class ZendeskInputPlugin implements InputPlugin
             });
 
             if (task.getStartTime().isPresent() && task.getEndTime().isPresent()
-                    && ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()) > ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
+                    && ZendeskDateUtils.getStartTime(task.getStartTime().get()) > ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
                 throw new ConfigException("End Time should be later or equal than Start Time");
             }
         }

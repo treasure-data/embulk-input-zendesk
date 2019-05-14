@@ -70,4 +70,18 @@ public class TestZendeskDateUtils
         optional = ZendeskDateUtils.supportedTimeFormat("2019-05-01T07:14:50");
         assertFalse(optional.isPresent());
     }
+
+    @Test
+    public void testGetStartTime()
+    {
+        long expectedValue = 1550645445;
+        long actualValue = ZendeskDateUtils.getStartTime("2019-02-20 06:512310:45 +0000");
+        assertEquals(0, actualValue);
+
+        actualValue = ZendeskDateUtils.getStartTime("2019-02-30 06:50:45 +0000");
+        assertEquals(ZendeskDateUtils.getStartTime("2019-02-28 06:50:45 +0000"), actualValue);
+
+        actualValue = ZendeskDateUtils.getStartTime("2019-02-20 06:50:45 +0000");
+        assertEquals(expectedValue, actualValue);
+    }
 }

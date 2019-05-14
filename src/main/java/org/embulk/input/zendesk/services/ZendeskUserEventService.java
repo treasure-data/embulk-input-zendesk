@@ -15,6 +15,7 @@ import org.embulk.input.zendesk.stream.paginator.UserSpliterator;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
+import org.embulk.spi.DataException;
 import org.embulk.spi.Exec;
 
 import java.io.IOException;
@@ -133,7 +134,15 @@ public class ZendeskUserEventService implements ZendeskService
 
         task.getUserEventSource().ifPresent(eventSource -> uriBuilder.setParameter("source", eventSource));
         task.getUserEventType().ifPresent(eventType -> uriBuilder.setParameter("type", eventType));
-        task.getStartTime().ifPresent(startTime -> uriBuilder.setParameter("start_time", ZendeskDateUtils.convertToDateTimeFormat(startTime, ZendeskConstants.Misc.ISO_INSTANT)));
+        task.getStartTime().ifPresent(startTime -> {
+            try {
+                uriBuilder.setParameter("start_time", ZendeskDateUtils.convertToDateTimeFormat(startTime, ZendeskConstants.Misc.ISO_INSTANT));
+            }
+            catch (DataException e) {
+                uriBuilder.setParameter("start_time", ZendeskDateUtils.convertToDateTimeFormat(Instant.EPOCH.toString(), ZendeskConstants.Misc.ISO_INSTANT));
+            }
+        });
+
         task.getEndTime().ifPresent(endTime -> uriBuilder.setParameter("end_time", ZendeskDateUtils.convertToDateTimeFormat(endTime, ZendeskConstants.Misc.ISO_INSTANT)));
 
         return uriBuilder.toString();
@@ -168,7 +177,7 @@ public class ZendeskUserEventService implements ZendeskService
 
     private void storeStartTimeForConfigDiff(final TaskReport taskReport, final long lastTime)
     {
-        long nextStartTime = lastTime + 1;
+        long nextStartTime;
         if (task.getIncremental()) {
             // no records
             if (lastTime == 0) {
@@ -191,7 +200,7 @@ public class ZendeskUserEventService implements ZendeskService
             if (task.getEndTime().isPresent()) {
                 long endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
                 long startTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
-                taskReport.set(ZendeskConstants.Field.END_TIME, nextStartTime + startTime - endTime);
+                taskReport.set(ZendeskConstants.Field.END_TIME, nextStartTime + endTime - startTime);
             }
         }
     }

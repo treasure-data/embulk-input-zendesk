@@ -235,6 +235,30 @@ public class TestZendeskUserEventService
         assertEquals(expectedNextStartTime, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }
 
+    @Test
+    public void testNextEndTime()
+    {
+        ZendeskTestHelper.setPreviewMode(runtime, false);
+        long expectedNextStartTime = 1551839663;
+        PluginTask task = ZendeskTestHelper.getConfigSource("user_events.yml")
+                .set("end_time", "2019-03-06T02:34:25Z")
+                .loadConfig(PluginTask.class);
+        setupZendeskSupportAPIService(task);
+
+        JsonNode dataJsonOrganization = ZendeskTestHelper.getJsonFromFile("data/simple_organization.json");
+        JsonNode dataJsonUser = ZendeskTestHelper.getJsonFromFile("data/simple_user.json");
+        // contain 2 records but 1 later records
+        JsonNode dataJsonUserEvent = ZendeskTestHelper.getJsonFromFile("data/user_event_multiple.json");
+        when(zendeskRestClient.doGet(any(), any(), anyBoolean()))
+                .thenReturn(dataJsonOrganization.toString())
+                .thenReturn(dataJsonUser.toString())
+                .thenReturn(dataJsonUserEvent.toString());
+
+        TaskReport taskReport = zendeskUserEventService.execute(0, recordImporter);
+        // Next start time will be the latter imported records time
+        assertEquals(expectedNextStartTime, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
     private void setupZendeskSupportAPIService(PluginTask task)
     {
         zendeskUserEventService = spy(new ZendeskUserEventService(task));

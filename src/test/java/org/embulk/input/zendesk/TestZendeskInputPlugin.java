@@ -276,11 +276,7 @@ public class TestZendeskInputPlugin
         configSource.set("target", Target.TICKETS.name().toLowerCase());
         configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
         configSource.set("end_time", "2019-12-2 22-12-22");
-
         assertValidation(configSource, "End Time should follow these format " + ZendeskConstants.Misc.SUPPORT_DATE_TIME_FORMAT.toString());
-
-        configSource.set("end_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond() - 3600), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
-        assertValidation(configSource, "End Time shouldn't be in the past");
 
         configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond() + 3600), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
         configSource.set("end_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));

@@ -1,6 +1,5 @@
 package org.embulk.input.zendesk.services;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.client.utils.URIBuilder;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.models.Target;

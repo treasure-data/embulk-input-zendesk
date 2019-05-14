@@ -234,6 +234,14 @@ public class ZendeskInputPlugin implements InputPlugin
                 configDiff.set(ZendeskConstants.Field.START_TIME,
                         offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
             }
+
+            if (taskReport.has(ZendeskConstants.Field.END_TIME)) {
+                final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
+                        taskReport.get(JsonNode.class, ZendeskConstants.Field.END_TIME).asLong()), ZoneOffset.UTC);
+
+                configDiff.set(ZendeskConstants.Field.END_TIME,
+                        offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
+            }
         }
         return configDiff;
     }
@@ -448,10 +456,6 @@ public class ZendeskInputPlugin implements InputPlugin
             task.getEndTime().ifPresent(time -> {
                 if (!ZendeskDateUtils.supportedTimeFormat(task.getEndTime().get()).isPresent()) {
                     throw new ConfigException("End Time should follow these format " + ZendeskConstants.Misc.SUPPORT_DATE_TIME_FORMAT.toString());
-                }
-
-                if (ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) < Instant.now().getEpochSecond()) {
-                    throw new ConfigException("End Time shouldn't be in the past");
                 }
             });
 

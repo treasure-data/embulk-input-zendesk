@@ -166,23 +166,32 @@ public class ZendeskUserEventService implements ZendeskService
         }
     }
 
-    private void storeStartTimeForConfigDiff(TaskReport taskReport, long lastTime)
+    private void storeStartTimeForConfigDiff(final TaskReport taskReport, final long lastTime)
     {
+        long nextStartTime = lastTime + 1;
         if (task.getIncremental()) {
             // no records
             if (lastTime == 0) {
-                taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
+                nextStartTime = Instant.now().getEpochSecond();
             }
             else {
                 // have end_time -> store min of (end_time + 1, last_time + 1)
                 // end_time can be set in the future
                 if (task.getEndTime().isPresent()) {
-                    taskReport.set(ZendeskConstants.Field.START_TIME, Math.min(ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1,  lastTime + 1));
+                    nextStartTime = Math.min(ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1,  lastTime + 1);
                 }
                 else {
                     // don't have end_time -> store last_time + 1
-                    taskReport.set(ZendeskConstants.Field.START_TIME, lastTime + 1);
+                    nextStartTime = lastTime + 1;
                 }
+            }
+
+            taskReport.set(ZendeskConstants.Field.START_TIME, nextStartTime);
+
+            if (task.getEndTime().isPresent()) {
+                long endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
+                long startTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
+                taskReport.set(ZendeskConstants.Field.END_TIME, nextStartTime + startTime - endTime);
             }
         }
     }

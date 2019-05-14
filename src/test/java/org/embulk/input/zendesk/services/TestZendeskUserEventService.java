@@ -4,12 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.TaskReport;
+import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
-import org.embulk.spi.PageBuilder;
-import org.embulk.spi.Schema;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -33,9 +32,10 @@ import static org.mockito.Mockito.when;
 
 public class TestZendeskUserEventService
 {
-    private final Schema schema = mock(Schema.class);
-    private final PageBuilder pageBuilder = mock(PageBuilder.class);
-    private final TaskReport taskReport = mock(TaskReport.class);
+    private RecordImporter recordImporter;
+
+    private TaskReport taskReport = mock(TaskReport.class);
+
     @Rule
     @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
@@ -46,6 +46,7 @@ public class TestZendeskUserEventService
     public void prepare()
     {
         zendeskRestClient = mock(ZendeskRestClient.class);
+        recordImporter = mock(RecordImporter.class);
     }
 
     @Test
@@ -64,8 +65,8 @@ public class TestZendeskUserEventService
     {
         setup();
         ZendeskTestHelper.setPreviewMode(runtime, true);
-        zendeskUserEventService.execute(0, schema, pageBuilder);
-        verify(pageBuilder, times(1)).addRecord();
+        zendeskUserEventService.execute(0, recordImporter);
+        verify(recordImporter, times(1)).addRecord(any());
     }
 
     @Test
@@ -87,7 +88,7 @@ public class TestZendeskUserEventService
         String expectedURIForUserEvent = "https://abc.zendesk.com/api/sunshine/events?identifier=support%3Auser_id%3A1194092277&start_time=2019-01-20T07%3A14%3A50Z&end_time=2019-06-20T07%3A14%3A53Z";
         List<String> expectedURI = Arrays.asList(expectedURIForOrganization, expectedURIForUser, expectedURIForUserEvent);
 
-        zendeskUserEventService.execute(0, schema, pageBuilder);
+        zendeskUserEventService.execute(0, recordImporter);
         ArgumentCaptor<String> uri = ArgumentCaptor.forClass(String.class);
         verify(zendeskRestClient, times(3)).doGet(uri.capture(), any(), anyBoolean());
         assertEquals(expectedURI, uri.getAllValues());
@@ -113,9 +114,9 @@ public class TestZendeskUserEventService
         when(zendeskRestClient.doGet(eq("https://abc.zendesk.com/api/sunshine/events?identifier=support%3Auser_id%3A1194092277&start_time=2019-01-20T07%3A14%3A50Z&end_time=2019-06-20T07%3A14%3A53Z"), eq(task), eq(false)))
                 .thenReturn(dataJsonUserEvent.toString());
 
-        zendeskUserEventService.execute(0, schema, pageBuilder);
+        zendeskUserEventService.execute(0, recordImporter);
         // non dedup
-        verify(pageBuilder, times(2)).addRecord();
+        verify(recordImporter, times(2)).addRecord(any());
         assertFalse(taskReport.isEmpty());
     }
 
@@ -141,10 +142,10 @@ public class TestZendeskUserEventService
         when(zendeskRestClient.doGet(eq("https://abc.zendesk.com/api/sunshine/events?identifier=support%3Auser_id%3A1194092277&start_time=2019-01-20T07%3A14%3A50Z&end_time=2019-06-20T07%3A14%3A53Z"), eq(task), eq(false)))
                 .thenReturn(dataJsonUserEvent.toString());
 
-        zendeskUserEventService.execute(0, schema, pageBuilder);
+        zendeskUserEventService.execute(0, recordImporter);
 
         // expected to call fetchUserEvent only one time
-        verify(pageBuilder, times(1)).addRecord();
+        verify(recordImporter, times(1)).addRecord(any());
     }
 
     @Test
@@ -166,9 +167,9 @@ public class TestZendeskUserEventService
                 .thenReturn(dataJsonUser.toString())
                 .thenReturn(dataJsonUserEventWithLatterTime.toString());
 
-        zendeskUserEventService.execute(0, schema, pageBuilder);
+        zendeskUserEventService.execute(0, recordImporter);
         // one record to add
-        verify(pageBuilder, times(1)).addRecord();
+        verify(recordImporter, times(1)).addRecord(any());
     }
 
     @Test
@@ -186,7 +187,7 @@ public class TestZendeskUserEventService
                 .thenReturn(dataJsonUser.toString())
                 .thenReturn(dataJsonUserEvent.toString());
 
-        TaskReport taskReport = zendeskUserEventService.execute(0, schema, pageBuilder);
+        TaskReport taskReport = zendeskUserEventService.execute(0, recordImporter);
         assertEquals(expectedNextStartTime, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }
 
@@ -205,7 +206,7 @@ public class TestZendeskUserEventService
                 .thenReturn(dataJsonUser.toString())
                 .thenReturn(dataJsonUserEvent.toString());
 
-        TaskReport taskReport = zendeskUserEventService.execute(0, schema, pageBuilder);
+        TaskReport taskReport = zendeskUserEventService.execute(0, recordImporter);
         // Start_time will be now
         assertNotEquals(expectedNextStartTime, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }
@@ -229,7 +230,7 @@ public class TestZendeskUserEventService
                 .thenReturn(dataJsonUser.toString())
                 .thenReturn(dataJsonUserEvent.toString());
 
-        TaskReport taskReport = zendeskUserEventService.execute(0, schema, pageBuilder);
+        TaskReport taskReport = zendeskUserEventService.execute(0, recordImporter);
         // Next start time will be the latter imported records time
         assertEquals(expectedNextStartTime, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }

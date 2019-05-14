@@ -6,10 +6,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import org.embulk.input.zendesk.models.Target;
+import org.apache.http.client.utils.URIBuilder;
+import org.embulk.config.ConfigException;
 import org.embulk.spi.DataException;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Base64;
 import java.util.Iterator;
 
@@ -24,14 +27,6 @@ public class ZendeskUtils
 
     private ZendeskUtils()
     {}
-
-    public static boolean isSupportAPIIncremental(final Target target)
-    {
-        return !Target.TICKET_FORMS.equals(target)
-                && !Target.TICKET_FIELDS.equals(target)
-                && !Target.OBJECT_RECORDS.equals(target)
-                && !Target.RELATIONSHIP_RECORDS.equals(target);
-    }
 
     public static String convertBase64(final String text)
     {
@@ -59,6 +54,26 @@ public class ZendeskUtils
             throw new DataException(String.format("Missing '%s' from Zendesk API response", targetJsonName));
         }
         return result.get(targetJsonName).elements();
+    }
+
+    public static boolean isNull(final JsonNode jsonNode)
+    {
+        return jsonNode == null || jsonNode.isNull();
+    }
+
+    public static URIBuilder getURIBuilder(String urlString)
+    {
+        final URI uri;
+        try {
+            uri = new URI(urlString);
+        }
+        catch (final URISyntaxException e) {
+            throw new ConfigException("Login url is invalid format " + urlString);
+        }
+
+        return new URIBuilder()
+                .setScheme(uri.getScheme())
+                .setHost(uri.getHost());
     }
 
     private static JsonNode parseJsonNode(final String jsonText)

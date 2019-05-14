@@ -32,6 +32,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -46,6 +47,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -144,7 +149,8 @@ public class TestZendeskInputPlugin
         TaskReport taskReport = Exec.newTaskReport();
         taskReport.set(ZendeskConstants.Field.START_TIME, 1557026576);
 
-        when(zendeskSupportAPIService.execute(anyInt(), any(Schema.class), any(PageBuilder.class))).thenReturn(taskReport);
+        when(zendeskSupportAPIService.isSupportIncremental()).thenReturn(true);
+        when(zendeskSupportAPIService.execute(anyInt(), any())).thenReturn(taskReport);
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
         String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
@@ -196,6 +202,100 @@ public class TestZendeskInputPlugin
         ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskUserEventService);
+    }
+
+    @Test
+    public void validateCredentialOauthShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("auth_method", "oauth");
+        configSource.remove("access_token");
+        assertValidation(configSource, "access_token is required for authentication method 'oauth'");
+    }
+
+    @Test
+    public void validateCredentialBasicShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("auth_method", "basic");
+        configSource.remove("username");
+        assertValidation(configSource, "username and password are required for authentication method 'basic'");
+
+        configSource.set("username", "");
+        configSource.remove("password");
+        assertValidation(configSource, "username and password are required for authentication method 'basic'");
+    }
+
+    @Test
+    public void validateCredentialTokenShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("auth_method", "token");
+        configSource.remove("token");
+        assertValidation(configSource, "username and token are required for authentication method 'token'");
+
+        configSource.set("token", "");
+        configSource.remove("username");
+        assertValidation(configSource, "username and token are required for authentication method 'token'");
+    }
+
+    @Test
+    public void validateAppMarketPlaceShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.remove("app_marketplace_integration_name");
+        assertValidation(configSource, "All of app_marketplace_integration_name, app_marketplace_org_id, " +
+                "app_marketplace_app_id " +
+                "are required to fill out for Apps Marketplace API header");
+    }
+
+    @Test
+    public void validateCustomObjectShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("target", Target.OBJECT_RECORDS.name().toLowerCase());
+        assertValidation(configSource, "Should have at least one Object Type");
+
+        configSource.set("target", Target.RELATIONSHIP_RECORDS.name().toLowerCase());
+        assertValidation(configSource, "Should have at least one Relationship Type");
+    }
+
+    @Test
+    public void validateUserEventShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("target", Target.USER_EVENTS.name().toLowerCase());
+        assertValidation(configSource, "Profile Source is required for User Event Target");
+    }
+
+    @Test
+    public void validateTimeShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        when(zendeskSupportAPIService.isSupportIncremental()).thenReturn(true);
+        configSource.set("target", Target.TICKETS.name().toLowerCase());
+        configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        configSource.set("end_time", "2019-12-2 22-12-22");
+
+        assertValidation(configSource, "End Time should follow these format " + ZendeskConstants.Misc.SUPPORT_DATE_TIME_FORMAT.toString());
+
+        configSource.set("end_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond() - 3600), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        assertValidation(configSource, "End Time shouldn't be in the past");
+
+        configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond() + 3600), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        configSource.set("end_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        assertValidation(configSource, "End Time should be later or equal than Start Time");
+    }
+
+    private void assertValidation(final ConfigSource configSource, final String message)
+    {
+        try {
+            zendeskInputPlugin.guess(configSource);
+            fail("Should not reach here");
+        }
+        catch (final Exception e) {
+            assertEquals(message, e.getMessage());
+        }
     }
 
     private void testReturnSupportAPIService(Target target)

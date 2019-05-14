@@ -30,7 +30,6 @@ import org.junit.rules.RuleChain;
 import org.junit.rules.TestRule;
 
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 
 import static org.apache.http.HttpHeaders.AUTHORIZATION;
 import static org.junit.Assert.assertEquals;
@@ -63,10 +62,10 @@ public class TestZendeskRestClient
     private PluginTask task = ZendeskTestHelper.getConfigSource("incremental.yml").loadConfig(PluginTask.class);
     private JsonNode data = ZendeskTestHelper.getJsonFromFile("data/client.json");
 
-    private HttpClient client = Mockito.mock(HttpClient.class);
-    private HttpResponse response = Mockito.mock(HttpResponse.class);
+    private HttpClient client = mock(HttpClient.class);
+    private HttpResponse response = mock(HttpResponse.class);
     private Header header =  mock(Header.class);
-    private StatusLine statusLine = Mockito.mock(StatusLine.class);
+    private StatusLine statusLine = mock(StatusLine.class);
 
     @Before
     public void prepare() throws IOException

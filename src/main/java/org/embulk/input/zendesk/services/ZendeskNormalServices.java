@@ -8,6 +8,7 @@ import org.apache.http.HttpStatus;
 import org.apache.http.client.utils.URIBuilder;
 import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
+import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.models.Target;
@@ -15,35 +16,27 @@ import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
-import org.embulk.spi.Column;
-import org.embulk.spi.ColumnVisitor;
 import org.embulk.spi.Exec;
-import org.embulk.spi.PageBuilder;
-import org.embulk.spi.Schema;
-import org.embulk.spi.json.JsonParser;
-import org.embulk.spi.time.Timestamp;
 import org.slf4j.Logger;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Instant;
+
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 
-public abstract class ZendeskBaseServices
+public abstract class ZendeskNormalServices implements ZendeskService
 {
-    protected static final Logger logger = Exec.getLogger(ZendeskBaseServices.class);
+    private static final Logger logger = Exec.getLogger(ZendeskNormalServices.class);
 
     protected ZendeskInputPlugin.PluginTask task;
 
     private ZendeskRestClient zendeskRestClient;
 
-    protected ZendeskBaseServices(final ZendeskInputPlugin.PluginTask task)
+    protected ZendeskNormalServices(final ZendeskInputPlugin.PluginTask task)
     {
         this.task = task;
     }
@@ -59,7 +52,21 @@ public abstract class ZendeskBaseServices
         return zendeskRestClient;
     }
 
-    protected JsonNode getData(String path, final int page, final boolean isPreview, final long startTime)
+    public TaskReport execute(final int taskIndex, final RecordImporter recordImporter)
+    {
+        TaskReport taskReport = Exec.newTaskReport();
+
+        if (isSupportIncremental()) {
+            importDataForIncremental(task, recordImporter, taskReport);
+        }
+        else {
+            importDataForNonIncremental(task, taskIndex, recordImporter);
+        }
+
+        return taskReport;
+    }
+
+    public JsonNode getData(String path, final int page, final boolean isPreview, final long startTime)
     {
         if (path.isEmpty()) {
             path = buildURI(page, startTime);
@@ -73,13 +80,18 @@ public abstract class ZendeskBaseServices
         }
     }
 
-    protected void importDataForIncremental(final ZendeskInputPlugin.PluginTask task, final Schema schema, final PageBuilder pageBuilder, final TaskReport taskReport)
+    protected URIBuilder getURIBuilderFromHost()
+    {
+        return ZendeskUtils.getURIBuilder(task.getLoginUrl());
+    }
+
+    private void importDataForIncremental(final ZendeskInputPlugin.PluginTask task, final RecordImporter recordImporter, final TaskReport taskReport)
     {
         long startTime = 0;
         long endTime = Long.MAX_VALUE;
         long lastTime = 0;
 
-        if (!Exec.isPreview() && ZendeskUtils.isSupportAPIIncremental(task.getTarget())) {
+        if (!Exec.isPreview() && isSupportIncremental()) {
             if (task.getStartTime().isPresent()) {
                 startTime = ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get());
             }
@@ -152,14 +164,14 @@ public abstract class ZendeskBaseServices
                         }
                     }
 
-                    pool.submit(() -> fetchData(recordJsonNode, task, schema, pageBuilder));
+                    pool.submit(() -> fetchData(recordJsonNode, task, recordImporter));
                     recordCount++;
                     if (Exec.isPreview()) {
                         return;
                     }
                 }
 
-                ZendeskBaseServices.logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
+                ZendeskNormalServices.logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
 
                 // store the last end_time for next run
                 if (task.getIncremental() && !Exec.isPreview()) {
@@ -184,30 +196,35 @@ public abstract class ZendeskBaseServices
                     pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
                 }
                 catch (final InterruptedException e) {
-                    ZendeskBaseServices.logger.warn("Error when wait pool to finish");
+                    ZendeskNormalServices.logger.warn("Error when wait pool to finish");
                     throw Throwables.propagate(e);
                 }
             }
         }
     }
 
-    protected URIBuilder getURIBuilderFromHost()
+    private void storeStartTimeForConfigDiff(TaskReport taskReport, long lastTime)
     {
-        final URI uri;
-        try {
-            uri = new URI(task.getLoginUrl());
+        if (task.getIncremental()) {
+            // no records
+            if (lastTime == 0) {
+                taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
+            }
+            else {
+                // have end_time -> store min of (end_time + 1, last_time + 1)
+                // end_time can be set in the future
+                if (task.getEndTime().isPresent()) {
+                    taskReport.set(ZendeskConstants.Field.START_TIME, Math.min(ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1,  lastTime + 1));
+                }
+                else {
+                    // don't have end_time -> store last_time + 1
+                    taskReport.set(ZendeskConstants.Field.START_TIME, lastTime + 1);
+                }
+            }
         }
-        catch (final URISyntaxException e) {
-            throw new ConfigException("Login url is invalid format " + e.getMessage());
-        }
-
-        return new URIBuilder()
-                .setScheme(uri.getScheme())
-                .setHost(uri.getHost());
     }
 
-    protected void fetchData(final JsonNode jsonNode, final ZendeskInputPlugin.PluginTask task, final Schema schema,
-            final PageBuilder pageBuilder)
+    private void fetchData(final JsonNode jsonNode, final ZendeskInputPlugin.PluginTask task, final RecordImporter recordImporter)
     {
         task.getIncludes().forEach(include -> {
             final String relatedObjectName = include.trim();
@@ -231,116 +248,7 @@ public abstract class ZendeskBaseServices
             }
         });
 
-        addRecord(jsonNode, schema, pageBuilder);
-    }
-
-    protected synchronized void addRecord(final JsonNode record, final Schema schema, final PageBuilder pageBuilder)
-    {
-        schema.visitColumns(new ColumnVisitor()
-        {
-            @Override
-            public void jsonColumn(final Column column)
-            {
-                final JsonNode data = record.get(column.getName());
-
-                setColumn(column, data, (value) -> {
-                    pageBuilder.setJson(column, new JsonParser().parse(value.toString()));
-                    return null;
-                });
-            }
-
-            @Override
-            public void stringColumn(final Column column)
-            {
-                final JsonNode data = record.get(column.getName());
-
-                setColumn(column, data, (value) -> {
-                    pageBuilder.setString(column, value.asText());
-                    return null;
-                });
-            }
-
-            @Override
-            public void timestampColumn(final Column column)
-            {
-                final JsonNode data = record.get(column.getName());
-                setColumn(column, data, (value) -> {
-                    final Timestamp timestamp = getTimestampValue(value.asText());
-                    if (timestamp == null) {
-                        pageBuilder.setNull(column);
-                    }
-                    else {
-                        pageBuilder.setTimestamp(column, timestamp);
-                    }
-                    return null;
-                });
-            }
-
-            @Override
-            public void booleanColumn(final Column column)
-            {
-                final JsonNode data = record.get(column.getName());
-
-                setColumn(column, data, (value) -> {
-                    pageBuilder.setBoolean(column, value.asBoolean());
-                    return null;
-                });
-            }
-
-            @Override
-            public void longColumn(final Column column)
-            {
-                final JsonNode data = record.get(column.getName());
-
-                setColumn(column, data, (value) -> {
-                    pageBuilder.setLong(column, value.asLong());
-                    return null;
-                });
-            }
-
-            @Override
-            public void doubleColumn(final Column column)
-            {
-                final JsonNode data = record.get(column.getName());
-
-                setColumn(column, data, (value) -> {
-                    pageBuilder.setDouble(column, value.asDouble());
-                    return null;
-                });
-            }
-
-            private void setColumn(final Column column, final JsonNode data, final Function<JsonNode, Void> setter)
-            {
-                if (isNull(data)) {
-                    pageBuilder.setNull(column);
-                    return;
-                }
-                setter.apply(data);
-            }
-        });
-
-        pageBuilder.addRecord();
-    }
-
-    protected void storeStartTimeForConfigDiff(TaskReport taskReport, long lastTime)
-    {
-        if (task.getIncremental()) {
-            // no records
-            if (lastTime == 0) {
-                taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
-            }
-            else {
-                // have end_time -> store min of (end_time + 1, last_time + 1)
-                // end_time can be set in the future
-                if (task.getEndTime().isPresent()) {
-                    taskReport.set(ZendeskConstants.Field.START_TIME, Math.min(ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1,  lastTime + 1));
-                }
-                else {
-                    // don't have end_time -> store last_time + 1
-                    taskReport.set(ZendeskConstants.Field.START_TIME, lastTime + 1);
-                }
-            }
-        }
+        recordImporter.addRecord(jsonNode);
     }
 
     private boolean isUpdatedBySystem(final JsonNode recordJsonNode, final long startTime)
@@ -363,25 +271,18 @@ public abstract class ZendeskBaseServices
         return false;
     }
 
-    private boolean isNull(final JsonNode jsonNode)
+    private void importDataForNonIncremental(final ZendeskInputPlugin.PluginTask task, final int taskIndex, RecordImporter recordImporter)
     {
-        return jsonNode == null || jsonNode.isNull();
-    }
+        // Page start from 1 => page = taskIndex + 1
+        final JsonNode result = getData("", taskIndex + 1, false, 0);
+        final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
 
-    /*
-     * For getting the timestamp value of the node
-     * Sometime if the parser could not parse the value then return null
-     * */
-    private Timestamp getTimestampValue(final String value)
-    {
-        Timestamp result = null;
-        try {
-            final long timeStamp = ZendeskDateUtils.isoToEpochSecond(value);
-            result = Timestamp.ofEpochSecond(timeStamp);
+        while (iterator.hasNext()) {
+            fetchData(iterator.next(), task, recordImporter);
+
+            if (Exec.isPreview()) {
+                break;
+            }
         }
-        catch (final Exception e) {
-            ZendeskBaseServices.logger.warn("Error when parse time stamp data " + value);
-        }
-        return result;
     }
 }

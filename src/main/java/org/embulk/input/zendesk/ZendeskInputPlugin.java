@@ -24,8 +24,8 @@ import org.embulk.input.zendesk.services.ZendeskService;
 import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
 import org.embulk.input.zendesk.services.ZendeskUserEventService;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
+import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
-import org.embulk.input.zendesk.utils.ZendeskValidatorUtils;
 import org.embulk.spi.Buffer;
 import org.embulk.spi.Exec;
 import org.embulk.spi.InputPlugin;
@@ -34,6 +34,7 @@ import org.embulk.spi.PageOutput;
 import org.embulk.spi.Schema;
 import org.embulk.spi.SchemaConfig;
 import org.embulk.spi.type.Types;
+import org.slf4j.Logger;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
@@ -157,17 +158,21 @@ public class ZendeskInputPlugin implements InputPlugin
 
     private ZendeskService zendeskService;
 
+    private RecordImporter recordImporter;
+
+    private static final Logger logger = Exec.getLogger(ZendeskInputPlugin.class);
+
     @Override
     public ConfigDiff transaction(final ConfigSource config, final Control control)
     {
         final PluginTask task = config.loadConfig(PluginTask.class);
-        ZendeskValidatorUtils.validateInputTask(task);
+        validateInputTask(task);
         final Schema schema = task.getColumns().toSchema();
         int taskCount = 1;
 
         // For non-incremental target, we will split records based on number of pages. 100 records per page
         // In preview, run with taskCount = 1
-        if (!ZendeskUtils.isSupportAPIIncremental(task.getTarget()) && !Exec.isPreview()) {
+        if (!Exec.isPreview() && !getZendeskService(task).isSupportIncremental()) {
             final JsonNode result = getZendeskService(task).getData("", 0, false, 0);
             if (result.has(ZendeskConstants.Field.COUNT) && !result.get(ZendeskConstants.Field.COUNT).isNull()
                     && result.get(ZendeskConstants.Field.COUNT).isInt()) {
@@ -195,7 +200,7 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         final PluginTask task = taskSource.loadTask(PluginTask.class);
         try (final PageBuilder pageBuilder = getPageBuilder(schema, output)) {
-            final TaskReport taskReport = getZendeskService(task).execute(taskIndex, schema, pageBuilder);
+            final TaskReport taskReport = getZendeskService(task).execute(taskIndex, recordImporter);
             pageBuilder.finish();
             return taskReport;
         }
@@ -206,7 +211,7 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         config.set("columns", new ObjectMapper().createArrayNode());
         final PluginTask task = config.loadConfig(PluginTask.class);
-        ZendeskValidatorUtils.validateInputTask(task);
+        validateInputTask(task);
         return Exec.newConfigDiff().set("columns", buildColumns(task));
     }
 
@@ -339,6 +344,121 @@ public class ZendeskInputPlugin implements InputPlugin
                 return new ZendeskUserEventService(task);
             default:
                 throw new ConfigException("Unsupported " + task.getTarget() + ", supported values: '" + Arrays.toString(Target.values()) + "'");
+        }
+    }
+
+    private RecordImporter getRecordImporter(Schema schema, PageBuilder pageBuilder)
+    {
+        if (recordImporter == null) {
+            recordImporter = new RecordImporter(schema, pageBuilder);
+        }
+        return recordImporter;
+    }
+
+    private void validateInputTask(PluginTask task)
+    {
+        validateAppMarketPlace(task.getAppMarketPlaceIntegrationName().isPresent(),
+                task.getAppMarketPlaceAppId().isPresent(),
+                task.getAppMarketPlaceOrgId().isPresent());
+        validateCredentials(task);
+        validateIncremental(task);
+        validateCustomObject(task);
+        validateUserEvent(task);
+        validateTime(task);
+    }
+
+    private void validateCredentials(PluginTask task)
+    {
+        switch (task.getAuthenticationMethod()) {
+            case OAUTH:
+                if (!task.getAccessToken().isPresent()) {
+                    throw new ConfigException(String.format("access_token is required for authentication method '%s'",
+                            task.getAuthenticationMethod().name().toLowerCase()));
+                }
+                break;
+            case TOKEN:
+                if (!task.getUsername().isPresent() || !task.getToken().isPresent()) {
+                    throw new ConfigException(String.format("username and token are required for authentication method '%s'",
+                            task.getAuthenticationMethod().name().toLowerCase()));
+                }
+                break;
+            case BASIC:
+                if (!task.getUsername().isPresent() || !task.getPassword().isPresent()) {
+                    throw new ConfigException(String.format("username and password are required for authentication method '%s'",
+                            task.getAuthenticationMethod().name().toLowerCase()));
+                }
+                break;
+            default:
+                throw new ConfigException("Unknown authentication method");
+        }
+    }
+
+    private void validateAppMarketPlace(final boolean isAppMarketIntegrationNamePresent,
+            final boolean isAppMarketAppIdPresent,
+            final boolean isAppMarketOrgIdPresent)
+    {
+        final boolean isAllAvailable =
+                isAppMarketIntegrationNamePresent && isAppMarketAppIdPresent && isAppMarketOrgIdPresent;
+        final boolean isAllUnAvailable =
+                !isAppMarketIntegrationNamePresent && !isAppMarketAppIdPresent && !isAppMarketOrgIdPresent;
+        // All or nothing needed
+        if (!(isAllAvailable || isAllUnAvailable)) {
+            throw new ConfigException("All of app_marketplace_integration_name, app_marketplace_org_id, " +
+                    "app_marketplace_app_id " +
+                    "are required to fill out for Apps Marketplace API header");
+        }
+    }
+
+    private void validateIncremental(PluginTask task)
+    {
+        if (task.getIncremental()) {
+            if (!task.getDedup()) {
+                logger.warn("You've selected to skip de-duplicating records, result may contain duplicated data");
+            }
+
+            if (!getZendeskService(task).isSupportIncremental() && task.getStartTime().isPresent()) {
+                logger.warn(String.format("Target: '%s' doesn't support incremental export API. Will be ignored start_time option",
+                        task.getTarget()));
+            }
+        }
+    }
+
+    private void validateCustomObject(PluginTask task)
+    {
+        if (task.getTarget().equals(Target.OBJECT_RECORDS) && task.getObjectTypes().isEmpty()) {
+            throw new ConfigException("Should have at least one Object Type");
+        }
+
+        if (task.getTarget().equals(Target.RELATIONSHIP_RECORDS) && task.getRelationshipTypes().isEmpty()) {
+            throw new ConfigException("Should have at least one Relationship Type");
+        }
+    }
+
+    private void validateUserEvent(PluginTask task)
+    {
+        if (task.getTarget().equals(Target.USER_EVENTS) && !task.getProfileSource().isPresent()) {
+            throw new ConfigException("Profile Source is required for User Event Target");
+        }
+    }
+
+    private void validateTime(PluginTask task)
+    {
+        if (getZendeskService(task).isSupportIncremental()) {
+            // Can't set end_time to 0, so it should be valid
+            task.getEndTime().ifPresent(time -> {
+                if (!ZendeskDateUtils.supportedTimeFormat(task.getEndTime().get()).isPresent()) {
+                    throw new ConfigException("End Time should follow these format " + ZendeskConstants.Misc.SUPPORT_DATE_TIME_FORMAT.toString());
+                }
+
+                if (ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) < Instant.now().getEpochSecond()) {
+                    throw new ConfigException("End Time shouldn't be in the past");
+                }
+            });
+
+            if (task.getStartTime().isPresent() && task.getEndTime().isPresent()
+                    && ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()) > ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
+                throw new ConfigException("End Time should be later or equal than Start Time");
+            }
         }
     }
 }

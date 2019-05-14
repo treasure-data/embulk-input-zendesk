@@ -4,12 +4,11 @@ import com.fasterxml.jackson.databind.JsonNode;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.TaskReport;
+import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
-import org.embulk.spi.PageBuilder;
-import org.embulk.spi.Schema;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -34,14 +33,13 @@ public class TestZendeskNPSService
 
     private ZendeskNPSService zendeskNPSService;
 
-    private Schema schema = mock(Schema.class);
-
-    private PageBuilder pageBuilder = mock(PageBuilder.class);
+    private RecordImporter recordImporter;
 
     @Before
     public void prepare()
     {
         zendeskRestClient = mock(ZendeskRestClient.class);
+        recordImporter = mock(RecordImporter.class);
     }
 
     @Test
@@ -60,8 +58,8 @@ public class TestZendeskNPSService
         setup();
         loadData();
 
-        TaskReport taskReport = zendeskNPSService.execute(0, schema, pageBuilder);
-        verify(pageBuilder, times(1)).addRecord();
+        TaskReport taskReport = zendeskNPSService.execute(0, recordImporter);
+        verify(recordImporter, times(1)).addRecord(any());
         Assert.assertFalse(taskReport.isEmpty());
         Assert.assertEquals(1547968494, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }

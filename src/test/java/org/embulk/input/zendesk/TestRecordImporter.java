@@ -1,10 +1,8 @@
-package org.embulk.input.zendesk.services;
+package org.embulk.input.zendesk;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
-import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
-
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 import org.embulk.spi.Column;
 import org.embulk.spi.PageBuilder;
@@ -12,7 +10,6 @@ import org.embulk.spi.Schema;
 import org.embulk.spi.json.JsonParser;
 import org.embulk.spi.time.Timestamp;
 import org.embulk.spi.time.TimestampParser;
-
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -25,11 +22,13 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-public class TestZendeskBaseService
+public class TestRecordImporter
 {
     @Rule
     @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
+
+    public PageBuilder pageBuilder = mock(PageBuilder.class);
 
     private static Schema schema;
     private static Column booleanColumn;
@@ -38,14 +37,14 @@ public class TestZendeskBaseService
     private static Column stringColumn;
     private static Column dateColumn;
     private static Column jsonColumn;
-    private static PluginTask pluginTask;
+    private static ZendeskInputPlugin.PluginTask pluginTask;
 
-    private ZendeskBaseServices zendeskBaseServices;
+    private RecordImporter recordImporter;
 
     @BeforeClass
     public static void setUp()
     {
-        pluginTask = ZendeskTestHelper.getConfigSource("util.yml").loadConfig(PluginTask.class);
+        pluginTask = ZendeskTestHelper.getConfigSource("util.yml").loadConfig(ZendeskInputPlugin.PluginTask.class);
         schema = pluginTask.getColumns().toSchema();
         booleanColumn = schema.getColumn(0);
         longColumn = schema.getColumn(1);
@@ -58,7 +57,7 @@ public class TestZendeskBaseService
     @Before
     public void prepare()
     {
-        zendeskBaseServices = spy(new ZendeskSupportAPIService(pluginTask));
+        recordImporter = spy(new RecordImporter(schema, pageBuilder));
     }
 
     @Test
@@ -66,7 +65,6 @@ public class TestZendeskBaseService
     {
         String name = "allRight";
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/util.json").get(name);
-        PageBuilder mock = mock(PageBuilder.class);
 
         Boolean boolValue = Boolean.TRUE;
         long longValue = 1;
@@ -75,14 +73,14 @@ public class TestZendeskBaseService
         Timestamp dateValue = TimestampParser.of("%Y-%m-%dT%H:%M:%S%z", "UTC").parse("2019-01-01T00:00:00Z");
         Value jsonValue = new JsonParser().parse("{}");
 
-        zendeskBaseServices.addRecord(dataJson, schema, mock);
+        recordImporter.addRecord(dataJson);
 
-        verify(mock, times(1)).setBoolean(booleanColumn, boolValue);
-        verify(mock, times(1)).setLong(longColumn, longValue);
-        verify(mock, times(1)).setDouble(doubleColumn, doubleValue);
-        verify(mock, times(1)).setString(stringColumn, stringValue);
-        verify(mock, times(1)).setTimestamp(dateColumn, dateValue);
-        verify(mock, times(1)).setJson(jsonColumn, jsonValue);
+        verify(pageBuilder, times(1)).setBoolean(booleanColumn, boolValue);
+        verify(pageBuilder, times(1)).setLong(longColumn, longValue);
+        verify(pageBuilder, times(1)).setDouble(doubleColumn, doubleValue);
+        verify(pageBuilder, times(1)).setString(stringColumn, stringValue);
+        verify(pageBuilder, times(1)).setTimestamp(dateColumn, dateValue);
+        verify(pageBuilder, times(1)).setJson(jsonColumn, jsonValue);
     }
 
     @Test
@@ -90,18 +88,17 @@ public class TestZendeskBaseService
     {
         String name = "allWrong";
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/util.json").get(name);
-        PageBuilder mock = mock(PageBuilder.class);
 
         Value jsonValue = new JsonParser().parse("{}");
 
-        zendeskBaseServices.addRecord(dataJson, schema, mock);
+        recordImporter.addRecord(dataJson);
 
-        verify(mock, times(1)).setNull(booleanColumn);
-        verify(mock, times(1)).setNull(longColumn);
-        verify(mock, times(1)).setNull(doubleColumn);
-        verify(mock, times(1)).setNull(stringColumn);
-        verify(mock, times(1)).setNull(dateColumn);
-        verify(mock, times(1)).setJson(jsonColumn, jsonValue);
+        verify(pageBuilder, times(1)).setNull(booleanColumn);
+        verify(pageBuilder, times(1)).setNull(longColumn);
+        verify(pageBuilder, times(1)).setNull(doubleColumn);
+        verify(pageBuilder, times(1)).setNull(stringColumn);
+        verify(pageBuilder, times(1)).setNull(dateColumn);
+        verify(pageBuilder, times(1)).setJson(jsonColumn, jsonValue);
     }
 
     @Test
@@ -109,10 +106,9 @@ public class TestZendeskBaseService
     {
         String name = "allMissing";
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/util.json").get(name);
-        PageBuilder mock = mock(PageBuilder.class);
 
-        zendeskBaseServices.addRecord(dataJson, schema, mock);
+        recordImporter.addRecord(dataJson);
 
-        verify(mock, times(6)).setNull(Mockito.any());
+        verify(pageBuilder, times(6)).setNull(Mockito.any());
     }
 }

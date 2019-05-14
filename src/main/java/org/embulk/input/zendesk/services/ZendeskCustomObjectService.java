@@ -2,18 +2,19 @@ package org.embulk.input.zendesk.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.http.HttpStatus;
 import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
+import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
+import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.stream.paginator.CustomObjectSpliterator;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.Exec;
-import org.embulk.spi.PageBuilder;
-import org.embulk.spi.Schema;
 
 import java.util.Collections;
 import java.util.List;
@@ -21,26 +22,38 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-public class ZendeskCustomObjectService extends ZendeskBaseServices implements ZendeskService
+public class ZendeskCustomObjectService implements ZendeskService
 {
+    protected ZendeskInputPlugin.PluginTask task;
+
+    private ZendeskRestClient zendeskRestClient;
+
     public ZendeskCustomObjectService(final ZendeskInputPlugin.PluginTask task)
     {
-        super(task);
+        this.task = task;
     }
 
-    @Override
-    protected String buildURI(final int page, final long startTime)
+    @VisibleForTesting
+    protected ZendeskRestClient getZendeskRestClient()
     {
-        throw new UnsupportedOperationException();
+        if (zendeskRestClient == null) {
+            zendeskRestClient = new ZendeskRestClient();
+        }
+        return zendeskRestClient;
+    }
+
+    public boolean isSupportIncremental()
+    {
+        return false;
     }
 
     @Override
-    public TaskReport execute(final int taskIndex, final Schema schema, final PageBuilder pageBuilder)
+    public TaskReport execute(final int taskIndex, final RecordImporter recordImporter)
     {
         final List<String> paths = getListPathByTarget();
 
         paths.parallelStream().forEach(path -> StreamSupport.stream(new CustomObjectSpliterator(path, getZendeskRestClient(), task, Exec.isPreview()), Exec.isPreview())
-                .forEach(jsonNode -> addRecord(jsonNode, schema, pageBuilder)));
+                .forEach(jsonNode -> recordImporter.addRecord(jsonNode)));
 
         return Exec.newTaskReport();
     }
@@ -85,7 +98,7 @@ public class ZendeskCustomObjectService extends ZendeskBaseServices implements Z
     {
         final String perPage = Exec.isPreview() ? "1" : "1000";
 
-        return getURIBuilderFromHost()
+        return ZendeskUtils.getURIBuilder(task.getLoginUrl())
                 .setPath(task.getTarget().equals(Target.OBJECT_RECORDS)
                         ? ZendeskConstants.Url.API_OBJECT_RECORD
                         : ZendeskConstants.Url.API_RELATIONSHIP_RECORD)

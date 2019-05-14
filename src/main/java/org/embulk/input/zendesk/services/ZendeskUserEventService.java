@@ -2,20 +2,23 @@ package org.embulk.input.zendesk.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.http.client.utils.URIBuilder;
 import org.embulk.config.TaskReport;
+import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
+import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.stream.paginator.OrganizationSpliterator;
 import org.embulk.input.zendesk.stream.paginator.UserEventSpliterator;
 import org.embulk.input.zendesk.stream.paginator.UserSpliterator;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
+import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.Exec;
-import org.embulk.spi.PageBuilder;
-import org.embulk.spi.Schema;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -24,27 +27,39 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-public class ZendeskUserEventService extends ZendeskBaseServices implements ZendeskService
+public class ZendeskUserEventService implements ZendeskService
 {
+    protected ZendeskInputPlugin.PluginTask task;
+
+    private ZendeskRestClient zendeskRestClient;
+
     public ZendeskUserEventService(final ZendeskInputPlugin.PluginTask task)
     {
-        super(task);
+        this.task = task;
     }
 
-    @Override
-    protected String buildURI(int page, long startTime)
+    @VisibleForTesting
+    protected ZendeskRestClient getZendeskRestClient()
     {
-        throw new UnsupportedOperationException();
+        if (zendeskRestClient == null) {
+            zendeskRestClient = new ZendeskRestClient();
+        }
+        return zendeskRestClient;
+    }
+
+    public boolean isSupportIncremental()
+    {
+        return true;
     }
 
     @Override
-    public TaskReport execute(final int taskIndex, final Schema schema, final PageBuilder pageBuilder)
+    public TaskReport execute(final int taskIndex, final RecordImporter recordImporter)
     {
         final TaskReport taskReport = Exec.newTaskReport();
 
         if (Exec.isPreview()) {
             JsonNode  jsonNode = mockJsonNode();
-            addRecord(jsonNode.get(0), schema, pageBuilder);
+            recordImporter.addRecord(jsonNode.get(0));
         }
         else {
             final List<JsonNode> organizations = StreamSupport.stream(new OrganizationSpliterator(buildOrganizationURI(), getZendeskRestClient(), task), false)
@@ -78,7 +93,7 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
                                                         lastTime.set(temp);
                                                     }
                                                 }
-                                                addRecord(item, schema, pageBuilder);
+                                                recordImporter.addRecord(item);
                                             });
                                 });
                     }
@@ -97,7 +112,7 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
 
     private String buildOrganizationURI()
     {
-        return getURIBuilderFromHost()
+        return ZendeskUtils.getURIBuilder(task.getLoginUrl())
                 .setPath(ZendeskConstants.Url.API + "/" + Target.ORGANIZATIONS.getJsonName())
                 .setParameter("per_page", "100")
                 .setParameter("page", "1")
@@ -112,7 +127,7 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
 
     private String buildUserEventURI(final String userID)
     {
-        final URIBuilder uriBuilder = getURIBuilderFromHost()
+        final URIBuilder uriBuilder = ZendeskUtils.getURIBuilder(task.getLoginUrl())
                 .setPath(ZendeskConstants.Url.API_USER_EVENT)
                 .setParameter("identifier", task.getProfileSource().get() + ":user_id:" + userID);
 
@@ -148,6 +163,27 @@ public class ZendeskUserEventService extends ZendeskBaseServices implements Zend
         }
         catch (IOException ex) {
             throw new RuntimeException("Error when mock data for guess or preview " + ex.getMessage());
+        }
+    }
+
+    private void storeStartTimeForConfigDiff(TaskReport taskReport, long lastTime)
+    {
+        if (task.getIncremental()) {
+            // no records
+            if (lastTime == 0) {
+                taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
+            }
+            else {
+                // have end_time -> store min of (end_time + 1, last_time + 1)
+                // end_time can be set in the future
+                if (task.getEndTime().isPresent()) {
+                    taskReport.set(ZendeskConstants.Field.START_TIME, Math.min(ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1,  lastTime + 1));
+                }
+                else {
+                    // don't have end_time -> store last_time + 1
+                    taskReport.set(ZendeskConstants.Field.START_TIME, lastTime + 1);
+                }
+            }
         }
     }
 }

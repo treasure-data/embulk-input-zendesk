@@ -5,13 +5,12 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
+import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
-import org.embulk.spi.PageBuilder;
-import org.embulk.spi.Schema;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
@@ -39,14 +38,13 @@ public class TestZendeskSupportAPIService
 
     private ZendeskSupportAPIService zendeskSupportAPIService;
 
-    private Schema schema = mock(Schema.class);
-
-    private PageBuilder pageBuilder = mock(PageBuilder.class);
+    private RecordImporter recordImporter;
 
     @Before
     public void prepare()
     {
         zendeskRestClient = mock(ZendeskRestClient.class);
+        recordImporter = mock(RecordImporter.class);
     }
 
     @Test
@@ -160,8 +158,8 @@ public class TestZendeskSupportAPIService
         setup("incremental.yml");
         loadData("data/tickets.json");
 
-        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
-        verify(pageBuilder, times(4)).addRecord();
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(4)).addRecord(any());
         Assert.assertFalse(taskReport.isEmpty());
         Assert.assertEquals(1550647054, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }
@@ -175,8 +173,8 @@ public class TestZendeskSupportAPIService
         setupZendeskSupportAPIService(task);
         loadData("data/tickets.json");
 
-        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
-        verify(pageBuilder, times(5)).addRecord();
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(5)).addRecord(any());
         Assert.assertFalse(taskReport.isEmpty());
         Assert.assertEquals(1550647054, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }
@@ -187,8 +185,8 @@ public class TestZendeskSupportAPIService
         setup("incremental.yml");
         loadData("data/ticket_with_updated_by_system_records.json");
 
-        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
-        verify(pageBuilder, times(3)).addRecord();
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(3)).addRecord(any());
         Assert.assertFalse(taskReport.isEmpty());
         Assert.assertEquals(1550647054, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }
@@ -203,8 +201,8 @@ public class TestZendeskSupportAPIService
         setupZendeskSupportAPIService(task);
         loadData("data/tickets.json");
 
-        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
-        verify(pageBuilder, times(3)).addRecord();
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(3)).addRecord(any());
         Assert.assertFalse(taskReport.isEmpty());
         // start_time = end_time + 1
         Assert.assertEquals(1550647053, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
@@ -220,8 +218,8 @@ public class TestZendeskSupportAPIService
         setupZendeskSupportAPIService(task);
         loadData("data/tickets.json");
 
-        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
-        verify(pageBuilder, times(3)).addRecord();
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(3)).addRecord(any());
         Assert.assertFalse(taskReport.isEmpty());
         //
         Assert.assertEquals(1550647053, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
@@ -239,8 +237,8 @@ public class TestZendeskSupportAPIService
         setupZendeskSupportAPIService(task);
         loadData("data/ticket_events_updated_by_system_records.json");
 
-        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
-        verify(pageBuilder, times(3)).addRecord();
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(3)).addRecord(any());
         Assert.assertFalse(taskReport.isEmpty());
         // end_time + 1
         Assert.assertEquals(1550645521, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
@@ -252,8 +250,8 @@ public class TestZendeskSupportAPIService
         setup("non-incremental.yml");
         loadData("data/ticket_fields.json");
 
-        TaskReport taskReport = zendeskSupportAPIService.execute(0, schema, pageBuilder);
-        verify(pageBuilder, times(7)).addRecord();
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(7)).addRecord(any());
         Assert.assertTrue(taskReport.isEmpty());
     }
 

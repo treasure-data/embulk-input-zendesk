@@ -21,8 +21,8 @@ public class ZendeskUtils
     private static final ObjectMapper mapper = new ObjectMapper();
 
     static {
-        ZendeskUtils.mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-        ZendeskUtils.mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, false);
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, false);
     }
 
     private ZendeskUtils()
@@ -61,7 +61,7 @@ public class ZendeskUtils
         return jsonNode == null || jsonNode.isNull();
     }
 
-    public static URIBuilder getURIBuilder(String urlString)
+    public static URIBuilder getURIBuilder(final String urlString)
     {
         final URI uri;
         try {

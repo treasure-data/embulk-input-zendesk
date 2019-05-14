@@ -19,12 +19,6 @@ public class ZendeskSupportAPIService extends ZendeskNormalServices
     }
 
     @Override
-    public JsonNode getData(final String path, final int page, final boolean isPreview, final long startTime)
-    {
-        return super.getData(path, page, isPreview, startTime);
-    }
-
-    @Override
     protected String buildURI(final int page, long startTime)
     {
         final URIBuilder uriBuilder = getURIBuilderFromHost().setPath(buildPath());

@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.stream.PagingSpliterator;
+import org.embulk.input.zendesk.utils.ZendeskUtils;
 
 import java.util.Iterator;
 import java.util.function.Consumer;
@@ -30,7 +31,7 @@ public class UserEventSpliterator extends PagingSpliterator<JsonNode>
     {
         iterator.forEachRemaining(
                 item -> {
-                    if (item != null && !item.isNull()) {
+                    if (!ZendeskUtils.isNull(item)) {
                         JsonNode temp = iterator.next();
                         // Because in the returned json doesn't have user_id, so we try to add to it
                         ((ObjectNode) temp).put("user_id", this.userID);

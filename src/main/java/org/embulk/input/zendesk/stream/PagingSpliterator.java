@@ -18,7 +18,7 @@ public abstract class PagingSpliterator<E> implements Spliterator<E>
     protected ZendeskRestClient zendeskRestClient;
     protected boolean isPreview;
     protected ZendeskInputPlugin.PluginTask task;
-    protected String path;
+    private String path;
 
     protected PagingSpliterator(final String path, final ZendeskRestClient zendeskRestClient, final ZendeskInputPlugin.PluginTask task, final boolean isPreview)
     {
@@ -29,7 +29,7 @@ public abstract class PagingSpliterator<E> implements Spliterator<E>
     }
 
     @Override
-    public Spliterator trySplit()
+    public Spliterator<E> trySplit()
     {
         return null;
     }
@@ -54,7 +54,7 @@ public abstract class PagingSpliterator<E> implements Spliterator<E>
             final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(jsonNode, target.getJsonName());
             iterator.forEachRemaining(
                     item -> {
-                        if (item != null && !item.isNull()) {
+                        if (!ZendeskUtils.isNull(item)) {
                             action.accept(item);
                         }
                     });
@@ -78,7 +78,7 @@ public abstract class PagingSpliterator<E> implements Spliterator<E>
             if (result != null && !result.isEmpty()) {
                 final JsonNode jsonNode = ZendeskUtils.parseJsonObject(result);
                 final JsonNode targetJsonNode = jsonNode.get(task.getTarget().getJsonName());
-                if (targetJsonNode != null && !targetJsonNode.isNull()) {
+                if (!ZendeskUtils.isNull(targetJsonNode)) {
                     return isContinue(jsonNode, action);
                 }
             }
@@ -108,8 +108,8 @@ public abstract class PagingSpliterator<E> implements Spliterator<E>
         }
         handleRunIterator(iterator, action);
 
-        if (jsonNode.has("links") && !jsonNode.get("links").isNull()
-                && jsonNode.get("links").has("next") && !jsonNode.get("links").get("next").isNull()) {
+        if (jsonNode.has("links") && !ZendeskUtils.isNull(jsonNode.get("links"))
+                && jsonNode.get("links").has("next") && !ZendeskUtils.isNull(jsonNode.get("links").get("next"))) {
             path = task.getLoginUrl() + jsonNode.get("links").get("next");
             return true;
         }

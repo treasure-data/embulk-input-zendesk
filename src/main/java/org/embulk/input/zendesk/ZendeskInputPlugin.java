@@ -200,7 +200,7 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         final PluginTask task = taskSource.loadTask(PluginTask.class);
         try (final PageBuilder pageBuilder = getPageBuilder(schema, output)) {
-            final TaskReport taskReport = getZendeskService(task).execute(taskIndex, recordImporter);
+            final TaskReport taskReport = getZendeskService(task).execute(taskIndex, getRecordImporter(schema, pageBuilder));
             pageBuilder.finish();
             return taskReport;
         }

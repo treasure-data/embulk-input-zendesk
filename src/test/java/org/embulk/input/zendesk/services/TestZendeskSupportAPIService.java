@@ -193,59 +193,6 @@ public class TestZendeskSupportAPIService
     }
 
     @Test
-    public void executeIncrementalContainEndTime()
-    {
-        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        // same updated_at time of last record
-        src.set("end_time", "2019-02-20T07:17:32Z");
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
-        setupZendeskSupportAPIService(task);
-        loadData("data/tickets.json");
-
-        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
-        verify(recordImporter, times(3)).addRecord(any());
-        Assert.assertFalse(taskReport.isEmpty());
-        // start_time = end_time + 1
-        Assert.assertEquals(1550647053, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
-    }
-
-    @Test
-    public void executeIncrementalContainEndTimeFilterOutLastRecord()
-    {
-        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        // earlier than updated_at time of last record
-        src.set("end_time", "2019-02-20T07:17:32Z");
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
-        setupZendeskSupportAPIService(task);
-        loadData("data/tickets.json");
-
-        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
-        verify(recordImporter, times(3)).addRecord(any());
-        Assert.assertFalse(taskReport.isEmpty());
-        //
-        Assert.assertEquals(1550647053, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
-    }
-
-    @Test
-    public void executeIncrementalContainEndTimeFilterOutLastRecordTicketEvents()
-    {
-        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        src.set("target", Target.TICKET_EVENTS.toString());
-        // earlier than updated_at time of last record
-        // 1550645520
-        src.set("end_time", "2019-02-20T06:52:00Z");
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
-        setupZendeskSupportAPIService(task);
-        loadData("data/ticket_events_updated_by_system_records.json");
-
-        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
-        verify(recordImporter, times(3)).addRecord(any());
-        Assert.assertFalse(taskReport.isEmpty());
-        // end_time + 1
-        Assert.assertEquals(1550645521, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
-    }
-
-    @Test
     public void executeIncrementalUpdateStartTimeWhenEmptyResult()
     {
         ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");

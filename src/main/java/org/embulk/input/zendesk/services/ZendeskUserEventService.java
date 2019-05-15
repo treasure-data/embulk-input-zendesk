@@ -23,7 +23,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
@@ -50,14 +49,12 @@ public class ZendeskUserEventService implements ZendeskService
 
     public boolean isSupportIncremental()
     {
-        return true;
+        return false;
     }
 
     @Override
     public TaskReport execute(final int taskIndex, final RecordImporter recordImporter)
     {
-        final TaskReport taskReport = Exec.newTaskReport();
-
         if (Exec.isPreview()) {
             JsonNode  jsonNode = mockJsonNode();
             recordImporter.addRecord(jsonNode.get(0));
@@ -66,42 +63,22 @@ public class ZendeskUserEventService implements ZendeskService
             final List<JsonNode> organizations = StreamSupport.stream(new OrganizationSpliterator(buildOrganizationURI(), getZendeskRestClient(), task), false)
                     .collect(Collectors.toList());
             final Set<String> knownUserIds = ConcurrentHashMap.newKeySet();
-            final AtomicLong lastTime = new AtomicLong(0);
             organizations.parallelStream().forEach(
                     organization -> {
                         Stream<JsonNode> stream = StreamSupport.stream(new UserSpliterator(buildOrganizationWithUserURI(organization.get("url").asText()),
                                 getZendeskRestClient(), task, Exec.isPreview()), true);
-
                         if (task.getDedup()) {
+                            // Because a user can belong to multiple organizations
                             stream = stream.filter(item -> knownUserIds.add(item.get("id").asText()));
                         }
-
                         stream.forEach(s ->
-                                {
-                                    Stream<JsonNode> userEventStream = StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()),
-                                            getZendeskRestClient(), task, Exec.isPreview()), true);
-
-                                    if (task.getEndTime().isPresent()) {
-                                        long endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
-                                        userEventStream = userEventStream.filter(item -> ZendeskDateUtils.isoToEpochSecond(item.get("created_at").asText()) <= endTime);
-                                    }
-                                    userEventStream.forEach(item -> {
-                                                if (task.getIncremental()) {
-                                                    long temp = ZendeskDateUtils.isoToEpochSecond(item.get("created_at").asText());
-                                                    if (temp > lastTime.get()) {
-                                                        // we need to store the created_at time of the latest records.
-                                                        // So we can calculate the start_time for configDiff in case there is no specific end_time
-                                                        lastTime.set(temp);
-                                                    }
-                                                }
-                                                recordImporter.addRecord(item);
-                                            });
-                                });
+                            StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()),
+                                    getZendeskRestClient(), task, Exec.isPreview()), true)
+                                    .forEach(recordImporter::addRecord));
                     }
             );
-            storeStartTimeForConfigDiff(taskReport, lastTime.get());
         }
-
+        final TaskReport taskReport = Exec.newTaskReport();
         return taskReport;
     }
 
@@ -115,7 +92,7 @@ public class ZendeskUserEventService implements ZendeskService
     {
         return ZendeskUtils.getURIBuilder(task.getLoginUrl())
                 .setPath(ZendeskConstants.Url.API + "/" + Target.ORGANIZATIONS.getJsonName())
-                .setParameter("per_page", "100")
+                .setParameter("per_page", "1")
                 .setParameter("page", "1")
                 .toString();
     }
@@ -123,7 +100,7 @@ public class ZendeskUserEventService implements ZendeskService
     private String buildOrganizationWithUserURI(final String path)
     {
         return path.replace(".json", "")
-                + "/users.json?per_page=100&page=1";
+                + "/users.json?per_page=1&page=1";
     }
 
     private String buildUserEventURI(final String userID)
@@ -172,36 +149,6 @@ public class ZendeskUserEventService implements ZendeskService
         }
         catch (IOException ex) {
             throw new RuntimeException("Error when mock data for guess or preview " + ex.getMessage());
-        }
-    }
-
-    private void storeStartTimeForConfigDiff(final TaskReport taskReport, final long lastTime)
-    {
-        long nextStartTime;
-        if (task.getIncremental()) {
-            // no records
-            if (lastTime == 0) {
-                nextStartTime = Instant.now().getEpochSecond();
-            }
-            else {
-                // have end_time -> store min of (end_time + 1, last_time + 1)
-                // end_time can be set in the future
-                if (task.getEndTime().isPresent()) {
-                    nextStartTime = Math.min(ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1,  lastTime + 1);
-                }
-                else {
-                    // don't have end_time -> store last_time + 1
-                    nextStartTime = lastTime + 1;
-                }
-            }
-
-            taskReport.set(ZendeskConstants.Field.START_TIME, nextStartTime);
-
-            if (task.getEndTime().isPresent()) {
-                long endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
-                long startTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
-                taskReport.set(ZendeskConstants.Field.END_TIME, nextStartTime + endTime - startTime);
-            }
         }
     }
 }

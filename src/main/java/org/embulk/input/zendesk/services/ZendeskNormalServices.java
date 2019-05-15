@@ -11,7 +11,6 @@ import org.embulk.config.TaskReport;
 import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
-import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
@@ -88,14 +87,9 @@ public abstract class ZendeskNormalServices implements ZendeskService
     private void importDataForIncremental(final ZendeskInputPlugin.PluginTask task, final RecordImporter recordImporter, final TaskReport taskReport)
     {
         long startTime = 0;
-        long endTime = Long.MAX_VALUE;
-
         if (!Exec.isPreview() && isSupportIncremental()) {
             if (task.getStartTime().isPresent()) {
                 startTime = ZendeskDateUtils.getStartTime(task.getStartTime().get());
-            }
-            if (task.getEndTime().isPresent()) {
-                endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
             }
         }
 
@@ -129,29 +123,6 @@ public abstract class ZendeskNormalServices implements ZendeskService
                         continue;
                     }
 
-                    // Contain some records  that later than end_time. Checked and don't add.
-                    // Because the api already sorted by updated_at or timestamp for ticket_events, we just need to break no need to check further.
-                    if (resultEndTime > endTime) {
-                        long checkedTime = 0;
-                        if (recordJsonNode.has(ZendeskConstants.Field.UPDATED_AT) && !recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).isNull()) {
-                            checkedTime = ZendeskDateUtils.isoToEpochSecond(recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).textValue());
-                        }
-
-                        // ticket events is updated by system not user's action so it only has timestamp field
-                        if (task.getTarget().equals(Target.TICKET_EVENTS) && recordJsonNode.has("timestamp") && !recordJsonNode.get("timestamp").isNull()) {
-                            checkedTime = recordJsonNode.get("timestamp").asLong();
-                        }
-
-                        // scores (or response) is only store rated_at time
-                        if (task.getTarget().equals(Target.SCORES) && recordJsonNode.has("rated_at") && !recordJsonNode.get("rated_at").isNull()) {
-                            checkedTime = ZendeskDateUtils.isoToEpochSecond(recordJsonNode.get("rated_at").textValue());
-                        }
-
-                        if (checkedTime > endTime) {
-                            break;
-                        }
-                    }
-
                     if (task.getDedup()) {
                         final String recordID = recordJsonNode.get(ZendeskConstants.Field.ID).asText();
 
@@ -170,7 +141,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
                 ZendeskNormalServices.logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
 
-                if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL || resultEndTime >= endTime) {
+                if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL) {
                     break;
                 }
 
@@ -198,34 +169,21 @@ public abstract class ZendeskNormalServices implements ZendeskService
     private void storeStartTimeForConfigDiff(final TaskReport taskReport, final long resultEndTime)
     {
         if (task.getIncremental()) {
-            long startTime = ZendeskDateUtils.getStartTime(task.getStartTime().get());
-            long nextStartTime;
-            long now = Instant.now().getEpochSecond();
-            // no record to add
-            if (resultEndTime == 0) {
-                nextStartTime = now;
-                if (task.getEndTime().isPresent()) {
-                    long endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
-                    taskReport.set(ZendeskConstants.Field.END_TIME, nextStartTime + endTime - startTime);
-                }
+            if (task.getEndTime().isPresent()) {
+                taskReport.set(ZendeskConstants.Field.START_TIME, ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1);
             }
             else {
-                if (task.getEndTime().isPresent()) {
-                    long endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
-                    if (endTime <= now) {
-                        nextStartTime = endTime + 1;
-                    }
-                    else {
-                        // in the future so just ignore end_time here
-                        nextStartTime = resultEndTime + 1;
-                    }
-                    taskReport.set(ZendeskConstants.Field.END_TIME, nextStartTime + endTime - startTime);
+                // resultEndTime = 0 mean no records, we should store now time for next run
+                if (resultEndTime == 0) {
+                    taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
                 }
                 else {
-                    nextStartTime = resultEndTime + 1;
+                    // NOTE: start_time compared as "=>", not ">".
+                    // If we will use end_time for next start_time, we got the same records that are fetched
+                    // end_time + 1 is workaround for that
+                    taskReport.set(ZendeskConstants.Field.START_TIME, resultEndTime + 1);
                 }
             }
-            taskReport.set(ZendeskConstants.Field.START_TIME, nextStartTime);
         }
     }
 

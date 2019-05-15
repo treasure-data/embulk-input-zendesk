@@ -266,14 +266,8 @@ public class TestZendeskInputPlugin
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
         configSource.set("target", Target.USER_EVENTS.name().toLowerCase());
         assertValidation(configSource, "Profile Source is required for User Event Target");
-    }
 
-    @Test
-    public void validateTimeShouldThrowException()
-    {
-        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
-        when(zendeskSupportAPIService.isSupportIncremental()).thenReturn(true);
-        configSource.set("target", Target.TICKETS.name().toLowerCase());
+        configSource.set("profile_source", "");
         configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
         configSource.set("end_time", "2019-12-2 22-12-22");
         assertValidation(configSource, "End Time should follow these format " + ZendeskConstants.Misc.SUPPORT_DATE_TIME_FORMAT.toString());

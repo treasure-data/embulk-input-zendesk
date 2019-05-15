@@ -7,7 +7,6 @@ import org.embulk.config.TaskReport;
 import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
-import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 import org.junit.Before;
 import org.junit.Rule;
@@ -19,7 +18,6 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -146,117 +144,6 @@ public class TestZendeskUserEventService
 
         // expected to call fetchUserEvent only one time
         verify(recordImporter, times(1)).addRecord(any());
-    }
-
-    @Test
-    public void testRunContainSomeRecordsLatterThanEndTime()
-    {
-        ZendeskTestHelper.setPreviewMode(runtime, false);
-        PluginTask task = ZendeskTestHelper.getConfigSource("user_events.yml")
-                .set("end_time", "2019-03-06T02:34:25Z")
-                .loadConfig(PluginTask.class);
-        setupZendeskSupportAPIService(task);
-
-        JsonNode dataJsonOrganization = ZendeskTestHelper.getJsonFromFile("data/simple_organization.json");
-        JsonNode dataJsonUser = ZendeskTestHelper.getJsonFromFile("data/simple_user.json");
-        // contain 2 records but 1 latter records
-        JsonNode dataJsonUserEventWithLatterTime = ZendeskTestHelper.getJsonFromFile("data/user_event_multiple.json");
-
-        when(zendeskRestClient.doGet(any(), any(), anyBoolean()))
-                .thenReturn(dataJsonOrganization.toString())
-                .thenReturn(dataJsonUser.toString())
-                .thenReturn(dataJsonUserEventWithLatterTime.toString());
-
-        zendeskUserEventService.execute(0, recordImporter);
-        // one record to add
-        verify(recordImporter, times(1)).addRecord(any());
-    }
-
-    @Test
-    public void testNextStartTimeWhenImportRecord()
-    {
-        ZendeskTestHelper.setPreviewMode(runtime, false);
-        long expectedNextStartTime = 1551839663;
-        setup();
-
-        JsonNode dataJsonOrganization = ZendeskTestHelper.getJsonFromFile("data/simple_organization.json");
-        JsonNode dataJsonUser = ZendeskTestHelper.getJsonFromFile("data/simple_user.json");
-        JsonNode dataJsonUserEvent = ZendeskTestHelper.getJsonFromFile("data/user_event.json");
-        when(zendeskRestClient.doGet(any(), any(), anyBoolean()))
-                .thenReturn(dataJsonOrganization.toString())
-                .thenReturn(dataJsonUser.toString())
-                .thenReturn(dataJsonUserEvent.toString());
-
-        TaskReport taskReport = zendeskUserEventService.execute(0, recordImporter);
-        assertEquals(expectedNextStartTime, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
-    }
-
-    @Test
-    public void testNextStartTimeWhenNoRecord()
-    {
-        ZendeskTestHelper.setPreviewMode(runtime, false);
-        long expectedNextStartTime = 1551839663;
-        setup();
-
-        JsonNode dataJsonOrganization = ZendeskTestHelper.getJsonFromFile("data/simple_organization.json");
-        JsonNode dataJsonUser = ZendeskTestHelper.getJsonFromFile("data/simple_user.json");
-        JsonNode dataJsonUserEvent = ZendeskTestHelper.getJsonFromFile("data/user_event_contain_latter_create_at.json");
-        when(zendeskRestClient.doGet(any(), any(), anyBoolean()))
-                .thenReturn(dataJsonOrganization.toString())
-                .thenReturn(dataJsonUser.toString())
-                .thenReturn(dataJsonUserEvent.toString());
-
-        TaskReport taskReport = zendeskUserEventService.execute(0, recordImporter);
-        // Start_time will be now
-        assertNotEquals(expectedNextStartTime, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
-    }
-
-    @Test
-    public void testNextStartTimeWithEndTime()
-    {
-        ZendeskTestHelper.setPreviewMode(runtime, false);
-        long expectedNextStartTime = 1551839663;
-        PluginTask task = ZendeskTestHelper.getConfigSource("user_events.yml")
-                .set("end_time", "2019-03-06T02:34:25Z")
-                .loadConfig(PluginTask.class);
-        setupZendeskSupportAPIService(task);
-
-        JsonNode dataJsonOrganization = ZendeskTestHelper.getJsonFromFile("data/simple_organization.json");
-        JsonNode dataJsonUser = ZendeskTestHelper.getJsonFromFile("data/simple_user.json");
-        // contain 2 records but 1 later records
-        JsonNode dataJsonUserEvent = ZendeskTestHelper.getJsonFromFile("data/user_event_multiple.json");
-        when(zendeskRestClient.doGet(any(), any(), anyBoolean()))
-                .thenReturn(dataJsonOrganization.toString())
-                .thenReturn(dataJsonUser.toString())
-                .thenReturn(dataJsonUserEvent.toString());
-
-        TaskReport taskReport = zendeskUserEventService.execute(0, recordImporter);
-        // Next start time will be the latter imported records time
-        assertEquals(expectedNextStartTime, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
-    }
-
-    @Test
-    public void testNextEndTime()
-    {
-        ZendeskTestHelper.setPreviewMode(runtime, false);
-        long expectedNextStartTime = 1551839663;
-        PluginTask task = ZendeskTestHelper.getConfigSource("user_events.yml")
-                .set("end_time", "2019-03-06T02:34:25Z")
-                .loadConfig(PluginTask.class);
-        setupZendeskSupportAPIService(task);
-
-        JsonNode dataJsonOrganization = ZendeskTestHelper.getJsonFromFile("data/simple_organization.json");
-        JsonNode dataJsonUser = ZendeskTestHelper.getJsonFromFile("data/simple_user.json");
-        // contain 2 records but 1 later records
-        JsonNode dataJsonUserEvent = ZendeskTestHelper.getJsonFromFile("data/user_event_multiple.json");
-        when(zendeskRestClient.doGet(any(), any(), anyBoolean()))
-                .thenReturn(dataJsonOrganization.toString())
-                .thenReturn(dataJsonUser.toString())
-                .thenReturn(dataJsonUserEvent.toString());
-
-        TaskReport taskReport = zendeskUserEventService.execute(0, recordImporter);
-        // Next start time will be the latter imported records time
-        assertEquals(expectedNextStartTime, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }
 
     private void setupZendeskSupportAPIService(PluginTask task)

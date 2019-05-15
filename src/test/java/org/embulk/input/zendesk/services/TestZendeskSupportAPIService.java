@@ -4,9 +4,14 @@ import com.fasterxml.jackson.databind.JsonNode;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigSource;
+import org.embulk.config.TaskReport;
+import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
+import org.embulk.input.zendesk.models.Target;
+import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -17,9 +22,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
 import java.util.Collections;
 
 public class TestZendeskSupportAPIService
@@ -32,10 +39,13 @@ public class TestZendeskSupportAPIService
 
     private ZendeskSupportAPIService zendeskSupportAPIService;
 
+    private RecordImporter recordImporter;
+
     @Before
     public void prepare()
     {
         zendeskRestClient = mock(ZendeskRestClient.class);
+        recordImporter = mock(RecordImporter.class);
     }
 
     @Test
@@ -141,6 +151,72 @@ public class TestZendeskSupportAPIService
         setup("non-incremental.yml");
         loadData("data/ticket_fields.json");
         setupTestAndVerifyURL(expectURL, 2, false);
+    }
+
+    @Test
+    public void executeIncremental()
+    {
+        setup("incremental.yml");
+        loadData("data/tickets.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(4)).addRecord(any());
+        Assert.assertFalse(taskReport.isEmpty());
+        Assert.assertEquals(1550647054, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalWithoutDedup()
+    {
+        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        src.set("dedup", false);
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/tickets.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(5)).addRecord(any());
+        Assert.assertFalse(taskReport.isEmpty());
+        Assert.assertEquals(1550647054, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalContainUpdatedBySystemRecord()
+    {
+        setup("incremental.yml");
+        loadData("data/ticket_with_updated_by_system_records.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(3)).addRecord(any());
+        Assert.assertFalse(taskReport.isEmpty());
+        Assert.assertEquals(1550647054, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalUpdateStartTimeWhenEmptyResult()
+    {
+        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        src.set("target", Target.TICKETS.toString());
+
+        src.set("start_time", "2219-02-20T06:52:00Z");
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/empty_result.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        Assert.assertFalse(taskReport.isEmpty());
+        Assert.assertTrue(Instant.now().getEpochSecond() <= taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong() + 50);
+    }
+
+    @Test
+    public void executeNonIncremental()
+    {
+        setup("non-incremental.yml");
+        loadData("data/ticket_fields.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.execute(0, recordImporter);
+        verify(recordImporter, times(7)).addRecord(any());
+        Assert.assertTrue(taskReport.isEmpty());
     }
 
     private void loadData(String fileName)

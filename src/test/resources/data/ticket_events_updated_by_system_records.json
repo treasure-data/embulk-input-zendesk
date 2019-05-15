@@ -1,0 +1,279 @@
+{
+  "ticket_events": [
+    {
+      "child_events": [
+        {
+          "id": 614323587494,
+          "via": "Sample Ticket",
+          "via_reference_id": null,
+          "comment_present": true,
+          "comment_public": true,
+          "event_type": "Comment"
+        },
+        {
+          "id": 614323587594,
+          "via": "Sample Ticket",
+          "via_reference_id": null,
+          "assignee_id": 374673563333,
+          "event_type": "Create"
+        },
+        {
+          "id": 614323587674,
+          "via": "Sample Ticket",
+          "via_reference_id": null,
+          "subject": "Sample ticket: Meet the ticket",
+          "event_type": "Create"
+        },
+        {
+          "id": 614323587694,
+          "via": "Sample Ticket",
+          "via_reference_id": null,
+          "tags": [
+            "sample",
+            "support",
+            "zendesk"
+          ],
+          "added_tags": [
+            "sample",
+            "support",
+            "zendesk"
+          ],
+          "removed_tags": [],
+          "event_type": "Create"
+        },
+        {
+          "id": 614323587734,
+          "via": "Sample Ticket",
+          "via_reference_id": null,
+          "group_id": 360003235353,
+          "event_type": "Create"
+        },
+        {
+          "id": 614323587774,
+          "via": "Sample Ticket",
+          "via_reference_id": null,
+          "status": "open",
+          "event_type": "Create"
+        },
+        {
+          "id": 614323587794,
+          "via": "Sample Ticket",
+          "via_reference_id": null,
+          "requester_id": 374737473854,
+          "event_type": "Create"
+        }
+      ],
+      "id": 614323587394,
+      "ticket_id": 1,
+      "timestamp": 1550645445,
+      "created_at": "2019-02-20T06:50:45Z",
+      "updater_id": 374737473854,
+      "via": "Sample Ticket",
+      "system": {
+        "client": null,
+        "location": null,
+        "latitude": null,
+        "longitude": null
+      },
+      "event_type": "Audit"
+    },
+    {
+      "child_events": [
+        {
+          "id": 614323589934,
+          "via": "Sample Ticket",
+          "via_reference_id": null,
+          "type": "incident",
+          "event_type": "Change",
+          "previous_value": "0"
+        },
+        {
+          "id": 614323589954,
+          "via": "Sample Ticket",
+          "via_reference_id": null,
+          "priority": "normal",
+          "event_type": "Change",
+          "previous_value": "0"
+        }
+      ],
+      "id": 614323589894,
+      "ticket_id": 1,
+      "timestamp": 1550645445,
+      "created_at": "2019-02-20T06:50:45Z",
+      "updater_id": 374673563333,
+      "via": "Sample Ticket",
+      "system": {
+        "client": null,
+        "location": null,
+        "latitude": null,
+        "longitude": null
+      },
+      "event_type": "Audit"
+    },
+    {
+      "child_events": [
+        {
+          "id": 613784741493,
+          "via": "Web form",
+          "via_reference_id": null,
+          "comment_present": true,
+          "comment_public": true,
+          "event_type": "Comment"
+        },
+        {
+          "id": 613784741673,
+          "via": "Web form",
+          "via_reference_id": null,
+          "subject": "ticket1",
+          "event_type": "Create"
+        },
+        {
+          "id": 613784741713,
+          "via": "Web form",
+          "via_reference_id": null,
+          "requester_id": 374673563333,
+          "event_type": "Create"
+        },
+        {
+          "id": 613784741753,
+          "via": "Web form",
+          "via_reference_id": null,
+          "status": "open",
+          "event_type": "Create"
+        },
+        {
+          "id": 613784741773,
+          "via": "Web form",
+          "via_reference_id": null,
+          "priority": null,
+          "event_type": "Create"
+        },
+        {
+          "id": 613784741793,
+          "via": "Web form",
+          "via_reference_id": null,
+          "type": null,
+          "event_type": "Create"
+        },
+        {
+          "id": 613784741813,
+          "via": "Web form",
+          "via_reference_id": null,
+          "assignee_id": 374673563333,
+          "event_type": "Create"
+        },
+        {
+          "id": 613784741833,
+          "via": "Web form",
+          "via_reference_id": null,
+          "group_id": 360003235353,
+          "event_type": "Create"
+        },
+        {
+          "id": 613784741853,
+          "via": "Web form",
+          "via_reference_id": null,
+          "organization_id": "360857467053",
+          "event_type": "Create"
+        }
+      ],
+      "id": 613784741453,
+      "ticket_id": 2,
+      "timestamp": 1550645510,
+      "created_at": "2019-02-20T06:51:50Z",
+      "updater_id": 374673563333,
+      "via": "Web form",
+      "system": {
+        "client": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36",
+        "location": "Quang Ngai, 63, Vietnam",
+        "latitude": 15.116700000000009,
+        "longitude": 108.80000000000001
+      },
+      "event_type": "Audit"
+    },
+    {
+      "child_events": [
+        {
+          "id": 613784845113,
+          "via": "Web form",
+          "via_reference_id": null,
+          "comment_present": true,
+          "comment_public": true,
+          "event_type": "Comment"
+        },
+        {
+          "id": 613784845173,
+          "via": "Web form",
+          "via_reference_id": null,
+          "subject": "ticket2",
+          "event_type": "Create"
+        },
+        {
+          "id": 613784845193,
+          "via": "Web form",
+          "via_reference_id": null,
+          "requester_id": 374673563333,
+          "event_type": "Create"
+        },
+        {
+          "id": 613784845233,
+          "via": "Web form",
+          "via_reference_id": null,
+          "status": "open",
+          "event_type": "Create"
+        },
+        {
+          "id": 613784845253,
+          "via": "Web form",
+          "via_reference_id": null,
+          "priority": null,
+          "event_type": "Create"
+        },
+        {
+          "id": 613784845293,
+          "via": "Web form",
+          "via_reference_id": null,
+          "type": null,
+          "event_type": "Create"
+        },
+        {
+          "id": 613784845353,
+          "via": "Web form",
+          "via_reference_id": null,
+          "assignee_id": 374673563333,
+          "event_type": "Create"
+        },
+        {
+          "id": 613784845393,
+          "via": "Web form",
+          "via_reference_id": null,
+          "group_id": 360003235353,
+          "event_type": "Create"
+        },
+        {
+          "id": 613784845433,
+          "via": "Web form",
+          "via_reference_id": null,
+          "organization_id": "360857467053",
+          "event_type": "Create"
+        }
+      ],
+      "id": 613784845093,
+      "ticket_id": 3,
+      "timestamp": 1550645522,
+      "created_at": "2019-02-20T06:52:02Z",
+      "updater_id": 374673563333,
+      "via": "Web form",
+      "system": {
+        "client": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_3) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.109 Safari/537.36",
+        "location": "Quang Ngai, 63, Vietnam",
+        "latitude": 15.116700000000009,
+        "longitude": 108.80000000000001
+      },
+      "event_type": "Audit"
+    }
+  ],
+  "count": 999,
+  "next_page": "https://abc.zendesk.com/api/v2/incremental/ticket_events.json?sort_by=updated_at&start_time=1550645522",
+  "end_time": 1550645522
+}

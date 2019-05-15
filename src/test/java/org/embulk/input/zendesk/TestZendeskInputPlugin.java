@@ -7,25 +7,32 @@ import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
+import org.embulk.input.zendesk.models.Target;
+import org.embulk.input.zendesk.services.ZendeskCustomObjectService;
+import org.embulk.input.zendesk.services.ZendeskNPSService;
+import org.embulk.input.zendesk.services.ZendeskService;
 import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
+import org.embulk.input.zendesk.services.ZendeskUserEventService;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskPluginTestRuntime;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 
+import org.embulk.spi.Exec;
 import org.embulk.spi.InputPlugin;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.Schema;
+
 import org.embulk.spi.TestPageBuilderReader;
 import org.junit.Assert;
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mockito;
 
 import static org.junit.Assert.assertEquals;
 
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -35,10 +42,15 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -50,19 +62,19 @@ public class TestZendeskInputPlugin
     @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     public ZendeskPluginTestRuntime embulk = new ZendeskPluginTestRuntime();
 
-    private ZendeskSupportAPIService zendeskSupportAPIService = mock(ZendeskSupportAPIService.class);
+    private ZendeskService zendeskSupportAPIService;
 
     private ZendeskInputPlugin zendeskInputPlugin;
 
-    private TestPageBuilderReader.MockPageOutput output = new TestPageBuilderReader.MockPageOutput();
+    private PageBuilder pageBuilder = mock(PageBuilder.class);
 
-    private PageBuilder pageBuilder = Mockito.mock(PageBuilder.class);
+    private TestPageBuilderReader.MockPageOutput output = new TestPageBuilderReader.MockPageOutput();
 
     @Before
     public void prepare()
     {
         zendeskInputPlugin = spy(new ZendeskInputPlugin());
-        when(zendeskInputPlugin.getZendeskSupportAPIService(any(ZendeskInputPlugin.PluginTask.class))).thenReturn(zendeskSupportAPIService);
+        setupSupportAPIService();
         doReturn(pageBuilder).when(zendeskInputPlugin).getPageBuilder(any(Schema.class), any(PageOutput.class));
     }
 
@@ -92,6 +104,15 @@ public class TestZendeskInputPlugin
     }
 
     @Test
+    public void testGuessGenerateColumnsForUserEvents()
+    {
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
+        src.set("target", "user_events");
+        src.set("profile_source", "dummy");
+        setupTestGuessGenerateColumn(src, "data/user_event.json", "data/expected/user_events_column.json");
+    }
+
+    @Test
     public void testGuessGenerateColumnsForNonIncrementalTarget()
     {
         final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
@@ -110,147 +131,193 @@ public class TestZendeskInputPlugin
     }
 
     @Test
-    public void testRunIncrementalDedup()
-    {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
-
-        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
-        verify(pageBuilder, times(4)).addRecord();
-        verify(pageBuilder, times(1)).finish();
-        assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
-    }
-
-    @Test
-    public void testRunIncrementalWithNextPage()
-    {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets_continue.json");
-        JsonNode dataJsonNext = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong()))
-                .thenReturn(dataJson)
-                .thenReturn(dataJsonNext);
-
-        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
-        verify(pageBuilder, times(1)).addRecord();
-        verify(pageBuilder, times(1)).finish();
-        assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
-    }
-
-    @Test
-    public void testRunIncrementalNonDedup()
-    {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        src.set("dedup", false);
-
-        JsonNode dataJsonNext = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJsonNext);
-
-        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
-        verify(pageBuilder, times(5)).addRecord();
-        verify(pageBuilder, times(1)).finish();
-        assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
-    }
-
-    @Test
-    public void testRunIncrementalForTicketMetrics()
-    {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        src.set("target", "ticket_metrics");
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/ticket_metrics.json");
-
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
-
-        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
-        verify(pageBuilder, times(3)).addRecord();
-        verify(pageBuilder, times(1)).finish();
-        assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
-    }
-
-    @Test
-    public void testRunIncrementalWithRelatedObject()
-    {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        src.set("includes", Collections.singletonList("organizations"));
-
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
-        JsonNode dataJsonObject = ZendeskTestHelper.getJsonFromFile("data/ticket_with_related_objects.json");
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong()))
-                .thenReturn(dataJson)
-                .thenReturn(dataJsonObject);
-
-        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-
-        verify(pageBuilder, times(1)).finish();
-        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
-        assertEquals("2019-02-20 07:17:34 +0000", nextStartTime);
-    }
-
-    @Test
-    public void testRunNonIncremental()
+    public void testRunSupportAPINonIncremental()
     {
         final ConfigSource src = ZendeskTestHelper.getConfigSource("non-incremental.yml");
         loadData("data/ticket_fields.json");
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
         // running in 2 pages
-        verify(pageBuilder, times(7 * 2)).addRecord();
         verify(pageBuilder, times(2)).finish();
         Assert.assertTrue(configDiff.isEmpty());
     }
 
     @Test
-    public void testRunNotGenerateStartTimeWhenRunningInNonIncrementalModeAndTargetSupportIncremental()
+    public void testRunIncrementalStoreStartTime()
     {
         final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        src.set("incremental", false);
-        loadData("data/tickets.json");
+        TaskReport taskReport = Exec.newTaskReport();
+        taskReport.set(ZendeskConstants.Field.START_TIME, 1557026576);
+
+        when(zendeskSupportAPIService.isSupportIncremental()).thenReturn(true);
+        when(zendeskSupportAPIService.execute(anyInt(), any())).thenReturn(taskReport);
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-
-        Assert.assertTrue(configDiff.isEmpty());
+        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
+        verify(pageBuilder, times(1)).finish();
+        assertEquals("2019-05-05 03:22:56 +0000", nextStartTime);
     }
 
     @Test
-    public void testRunNotGenerateStartTimeWhenRunningInIncrementalModeAndTargetDoesNotSupportIncremental()
+    public void testDispatchPerTargetShouldReturnSupportAPIService()
     {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("non-incremental.yml");
-        src.set("incremental", true);
-        loadData("data/ticket_fields.json");
-
-        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-
-        Assert.assertTrue(configDiff.isEmpty());
+        // create a new one so it doesn't mock the ZendeskService
+        zendeskInputPlugin = spy(new ZendeskInputPlugin());
+        testReturnSupportAPIService(Target.TICKETS);
+        testReturnSupportAPIService(Target.TICKET_METRICS);
+        testReturnSupportAPIService(Target.TICKET_EVENTS);
+        testReturnSupportAPIService(Target.TICKET_FORMS);
+        testReturnSupportAPIService(Target.TICKET_FIELDS);
+        testReturnSupportAPIService(Target.USERS);
+        testReturnSupportAPIService(Target.ORGANIZATIONS);
     }
 
     @Test
-    public void testRunIncrementalGenerateStartTimeWhenRunningInIncrementalModeAndTargetSupportIncremental()
+    public void testDispatchPerTargetShouldReturnNPSService()
     {
-        String expectedStartTime = "2019-02-20 07:17:34 +0000";
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        loadData("data/tickets.json");
-
-        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
-        Assert.assertFalse(configDiff.isEmpty());
-        Assert.assertEquals(expectedStartTime, configDiff.get(String.class, ZendeskConstants.Field.START_TIME));
+        // create a new one so it doesn't mock the ZendeskService
+        zendeskInputPlugin = spy(new ZendeskInputPlugin());
+        testReturnNPSService(Target.SCORES);
+        testReturnNPSService(Target.RECIPIENTS);
     }
 
-    private class Control implements InputPlugin.Control
+    @Test
+    public void testDispatchPerTargetShouldReturnCustomObjectService()
     {
-        @Override
-        public List<TaskReport> run(final TaskSource taskSource, final Schema schema, final int taskCount)
-        {
-            List<TaskReport> reports = IntStream.range(0, taskCount)
-                    .mapToObj(i -> zendeskInputPlugin.run(taskSource, schema, i, output))
-                    .collect(Collectors.toList());
-            return reports;
+        // create a new one so it doesn't mock the ZendeskService
+        zendeskInputPlugin = spy(new ZendeskInputPlugin());
+        testReturnCustomObjectService(Target.OBJECT_RECORDS);
+        testReturnCustomObjectService(Target.RELATIONSHIP_RECORDS);
+    }
+
+    @Test
+    public void testDispatchPerTargetShouldReturnUserEventService()
+    {
+        // create a new one so it doesn't mock the ZendeskService
+        zendeskInputPlugin = spy(new ZendeskInputPlugin());
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
+        src.set("target", Target.USER_EVENTS.name().toLowerCase());
+        src.set("profile_source", "dummy");
+        src.set("columns", Collections.EMPTY_LIST);
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
+        assertTrue(zendeskService instanceof ZendeskUserEventService);
+    }
+
+    @Test
+    public void validateCredentialOauthShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("auth_method", "oauth");
+        configSource.remove("access_token");
+        assertValidation(configSource, "access_token is required for authentication method 'oauth'");
+    }
+
+    @Test
+    public void validateCredentialBasicShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("auth_method", "basic");
+        configSource.remove("username");
+        assertValidation(configSource, "username and password are required for authentication method 'basic'");
+
+        configSource.set("username", "");
+        configSource.remove("password");
+        assertValidation(configSource, "username and password are required for authentication method 'basic'");
+    }
+
+    @Test
+    public void validateCredentialTokenShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("auth_method", "token");
+        configSource.remove("token");
+        assertValidation(configSource, "username and token are required for authentication method 'token'");
+
+        configSource.set("token", "");
+        configSource.remove("username");
+        assertValidation(configSource, "username and token are required for authentication method 'token'");
+    }
+
+    @Test
+    public void validateAppMarketPlaceShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.remove("app_marketplace_integration_name");
+        assertValidation(configSource, "All of app_marketplace_integration_name, app_marketplace_org_id, " +
+                "app_marketplace_app_id " +
+                "are required to fill out for Apps Marketplace API header");
+    }
+
+    @Test
+    public void validateCustomObjectShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("target", Target.OBJECT_RECORDS.name().toLowerCase());
+        assertValidation(configSource, "Should have at least one Object Type");
+
+        configSource.set("target", Target.RELATIONSHIP_RECORDS.name().toLowerCase());
+        assertValidation(configSource, "Should have at least one Relationship Type");
+    }
+
+    @Test
+    public void validateUserEventShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("target", Target.USER_EVENTS.name().toLowerCase());
+        assertValidation(configSource, "Profile Source is required for User Event Target");
+
+        configSource.set("profile_source", "");
+        configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        configSource.set("end_time", "2019-12-2 22-12-22");
+        assertValidation(configSource, "End Time should follow these format " + ZendeskConstants.Misc.SUPPORT_DATE_TIME_FORMAT.toString());
+
+        configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond() + 3600), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        configSource.set("end_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        assertValidation(configSource, "End Time should be later or equal than Start Time");
+    }
+
+    private void assertValidation(final ConfigSource configSource, final String message)
+    {
+        try {
+            zendeskInputPlugin.guess(configSource);
+            fail("Should not reach here");
         }
+        catch (final Exception e) {
+            assertEquals(message, e.getMessage());
+        }
+    }
+
+    private void testReturnSupportAPIService(Target target)
+    {
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
+        src.set("target", target.name().toLowerCase());
+        src.set("columns", Collections.EMPTY_LIST);
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
+        assertTrue(zendeskService instanceof ZendeskSupportAPIService);
+    }
+
+    private void testReturnNPSService(Target target)
+    {
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
+        src.set("target", target.name().toLowerCase());
+        src.set("columns", Collections.EMPTY_LIST);
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
+        assertTrue(zendeskService instanceof ZendeskNPSService);
+    }
+
+    private void testReturnCustomObjectService(Target target)
+    {
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
+        src.set("target", target.name().toLowerCase());
+        src.set("relationship_types", Collections.singletonList("dummy"));
+        src.set("object_types", Collections.singletonList("account"));
+        src.set("columns", Collections.EMPTY_LIST);
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
+        assertTrue(zendeskService instanceof ZendeskCustomObjectService);
     }
 
     private void loadData(String fileName)
@@ -265,5 +332,23 @@ public class TestZendeskInputPlugin
         ConfigDiff configDiff = zendeskInputPlugin.guess(src);
         JsonNode columns = configDiff.get(JsonNode.class, "columns");
         assertEquals(ZendeskTestHelper.getJsonFromFile(expectedSource), columns);
+    }
+
+    private void setupSupportAPIService()
+    {
+        zendeskSupportAPIService = mock(ZendeskSupportAPIService.class);
+        doReturn(zendeskSupportAPIService).when(zendeskInputPlugin).dispatchPerTarget(any(ZendeskInputPlugin.PluginTask.class));
+    }
+
+    private class Control implements InputPlugin.Control
+    {
+        @Override
+        public List<TaskReport> run(final TaskSource taskSource, final Schema schema, final int taskCount)
+        {
+            List<TaskReport> reports = IntStream.range(0, taskCount)
+                    .mapToObj(i -> zendeskInputPlugin.run(taskSource, schema, i, output))
+                    .collect(Collectors.toList());
+            return reports;
+        }
     }
 }

@@ -1,150 +1,88 @@
 package org.embulk.input.zendesk.utils;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Charsets;
-import org.embulk.input.zendesk.models.Target;
+import com.google.common.base.Throwables;
+import org.apache.http.client.utils.URIBuilder;
+import org.embulk.config.ConfigException;
+import org.embulk.spi.DataException;
 
-import org.embulk.spi.Column;
-import org.embulk.spi.ColumnVisitor;
-
-import org.embulk.spi.Exec;
-import org.embulk.spi.PageBuilder;
-import org.embulk.spi.Schema;
-import org.embulk.spi.json.JsonParser;
-import org.embulk.spi.time.Timestamp;
-import org.slf4j.Logger;
-
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Base64;
-import java.util.function.Function;
+import java.util.Iterator;
 
 public class ZendeskUtils
 {
-    private static final Logger logger = Exec.getLogger(ZendeskUtils.class);
+    private static final ObjectMapper mapper = new ObjectMapper();
+
+    static {
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        mapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, false);
+    }
 
     private ZendeskUtils()
     {}
-
-    public static boolean isSupportAPIIncremental(final Target target)
-    {
-        return !Target.TICKET_FORMS.equals(target)
-                && !Target.TICKET_FIELDS.equals(target);
-    }
 
     public static String convertBase64(final String text)
     {
         return Base64.getEncoder().encodeToString(text.getBytes(Charsets.UTF_8));
     }
 
-    public static int numberToSplitWithHintingInTask(int count)
+    public static int numberToSplitWithHintingInTask(final int count)
     {
         return (int) Math.ceil((double) count / ZendeskConstants.Misc.RECORDS_SIZE_PER_PAGE);
     }
 
-    public static synchronized void addRecord(JsonNode record, Schema schema, PageBuilder pageBuilder)
+    public static ObjectNode parseJsonObject(final String jsonText)
     {
-        schema.visitColumns(new ColumnVisitor() {
-            @Override
-            public void jsonColumn(Column column)
-            {
-                JsonNode data = record.get(column.getName());
+        final JsonNode node = ZendeskUtils.parseJsonNode(jsonText);
+        if (node.isObject()) {
+            return (ObjectNode) node;
+        }
 
-                setColumn(column, data, (value) -> {
-                    pageBuilder.setJson(column, new JsonParser().parse(value.toString()));
-                    return null;
-                });
-            }
-
-            @Override
-            public void stringColumn(Column column)
-            {
-                JsonNode data = record.get(column.getName());
-
-                setColumn(column, data, (value) -> {
-                    pageBuilder.setString(column, value.asText());
-                    return null;
-                });
-            }
-
-            @Override
-            public void timestampColumn(Column column)
-            {
-                JsonNode data = record.get(column.getName());
-                setColumn(column, data, (value) -> {
-                    Timestamp timestamp = getTimestampValue(value.asText());
-                    if (timestamp == null) {
-                        pageBuilder.setNull(column);
-                    }
-                    else {
-                        pageBuilder.setTimestamp(column, timestamp);
-                    }
-                    return null;
-                });
-            }
-
-            @Override
-            public void booleanColumn(Column column)
-            {
-                JsonNode data = record.get(column.getName());
-
-                setColumn(column, data, (value) -> {
-                    pageBuilder.setBoolean(column, value.asBoolean());
-                    return null;
-                });
-            }
-
-            @Override
-            public void longColumn(Column column)
-            {
-                JsonNode data = record.get(column.getName());
-
-                setColumn(column, data, (value) -> {
-                    pageBuilder.setLong(column, value.asLong());
-                    return null;
-                });
-            }
-
-            @Override
-            public void doubleColumn(Column column)
-            {
-                JsonNode data = record.get(column.getName());
-
-                setColumn(column, data, (value) -> {
-                    pageBuilder.setDouble(column, value.asDouble());
-                    return null;
-                });
-            }
-
-            private void setColumn(Column column, JsonNode data, Function<JsonNode, Void> setter)
-            {
-                if (isNull(data)) {
-                    pageBuilder.setNull(column);
-                    return;
-                }
-                setter.apply(data);
-            }
-        });
-        pageBuilder.addRecord();
+        throw new DataException("Expected object node to parse but doesn't get");
     }
 
-    private static boolean isNull(JsonNode jsonNode)
+    public static Iterator<JsonNode> getListRecords(final JsonNode result, final String targetJsonName)
+    {
+        if (!result.has(targetJsonName) || !result.get(targetJsonName).isArray()) {
+            throw new DataException(String.format("Missing '%s' from Zendesk API response", targetJsonName));
+        }
+        return result.get(targetJsonName).elements();
+    }
+
+    public static boolean isNull(final JsonNode jsonNode)
     {
         return jsonNode == null || jsonNode.isNull();
     }
 
-    /*
-     * For getting the timestamp value of the node
-     * Sometime if the parser could not parse the value then return null
-     * */
-    private static Timestamp getTimestampValue(String value)
+    public static URIBuilder getURIBuilder(final String urlString)
     {
-        Timestamp result = null;
+        final URI uri;
         try {
-            long timeStamp = ZendeskDateUtils.isoToEpochSecond(value);
-            result = Timestamp.ofEpochSecond(timeStamp);
+            uri = new URI(urlString);
         }
-        catch (Exception e) {
-            logger.warn("Error when parse time stamp data " + value);
+        catch (final URISyntaxException e) {
+            throw new ConfigException("Login url is invalid format " + urlString);
         }
-        return result;
+
+        return new URIBuilder()
+                .setScheme(uri.getScheme())
+                .setHost(uri.getHost());
+    }
+
+    private static JsonNode parseJsonNode(final String jsonText)
+    {
+        try {
+            return ZendeskUtils.mapper.readTree(jsonText);
+        }
+        catch (final IOException e) {
+            throw Throwables.propagate(e);
+        }
     }
 }

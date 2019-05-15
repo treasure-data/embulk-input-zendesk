@@ -1,0 +1,40 @@
+[
+  {
+    "name": "id",
+    "type": "string"
+  },
+  {
+    "name": "type",
+    "type": "string"
+  },
+  {
+    "name": "source",
+    "type": "string"
+  },
+  {
+  "name": "description",
+  "type": "string"
+  },
+  {
+    "name": "authenticated",
+    "type": "boolean"
+  },
+  {
+    "name": "created_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S%z"
+  },
+  {
+    "name": "received_at",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S%z"
+  },
+  {
+    "name": "properties",
+    "type": "json"
+  },
+  {
+    "name": "user_id",
+    "type": "string"
+  }
+]

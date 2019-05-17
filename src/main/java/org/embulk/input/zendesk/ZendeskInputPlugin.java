@@ -410,7 +410,7 @@ public class ZendeskInputPlugin implements InputPlugin
 
     private void validateIncremental(PluginTask task)
     {
-        if (task.getIncremental()) {
+        if (task.getIncremental() && getZendeskService(task).isSupportIncremental())  {
             if (!task.getDedup()) {
                 logger.warn("You've selected to skip de-duplicating records, result may contain duplicated data");
             }

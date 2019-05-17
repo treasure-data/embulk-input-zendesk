@@ -60,24 +60,6 @@ public class ZendeskUserEventService implements ZendeskService
             recordImporter.addRecord(jsonNode.get(0));
         }
         else {
-//            final List<JsonNode> organizations = StreamSupport.stream(new OrganizationSpliterator(buildOrganizationURI(), getZendeskRestClient(), task), false)
-//                    .collect(Collectors.toList());
-//            final Set<String> knownUserIds = ConcurrentHashMap.newKeySet();
-//            organizations.parallelStream().forEach(
-//                    organization -> {
-//                        Stream<JsonNode> stream = StreamSupport.stream(new UserSpliterator(buildOrganizationWithUserURI(organization.get("url").asText()),
-//                                getZendeskRestClient(), task, Exec.isPreview()), true);
-//                        if (task.getDedup()) {
-//                            // Because a user can belong to multiple organizations
-//                            stream = stream.filter(item -> knownUserIds.add(item.get("id").asText()));
-//                        }
-//                        stream.forEach(s ->
-//                            StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()),
-//                                    getZendeskRestClient(), task, Exec.isPreview()), true)
-//                                    .forEach(recordImporter::addRecord));
-//                    }
-//            );
-
             final List<JsonNode> organizations = StreamSupport.stream(new OrganizationSpliterator(buildOrganizationURI(), getZendeskRestClient(), task), false)
                     .collect(Collectors.toList());
             final Set<String> knownUserIds = ConcurrentHashMap.newKeySet();

@@ -1,16 +1,15 @@
-package org.embulk.input.zendesk.stream.paginator;
+package org.embulk.input.zendesk.stream.paginator.sunshine;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
-import org.embulk.input.zendesk.stream.PagingSpliterator;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 
 import java.util.Iterator;
 import java.util.function.Consumer;
 
-public class UserEventSpliterator extends PagingSpliterator<JsonNode>
+public class UserEventSpliterator extends SunshineSpliterator
 {
     private String userID;
 
@@ -18,12 +17,6 @@ public class UserEventSpliterator extends PagingSpliterator<JsonNode>
     {
         super(path, zendeskRestClient, task, isPreview);
         this.userID = userID;
-    }
-
-    @Override
-    public boolean tryAdvance(final Consumer<? super JsonNode> action)
-    {
-        return super.tryAdvanceSunshineEndpoint(action);
     }
 
     @Override

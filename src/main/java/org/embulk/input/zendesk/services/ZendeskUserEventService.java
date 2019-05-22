@@ -79,9 +79,7 @@ public class ZendeskUserEventService implements ZendeskService
                     {
                         Stream<JsonNode> userEventStream = StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()),
                                 getZendeskRestClient(), task, Exec.isPreview()), true);
-                        userEventStream.forEach(item -> {
-                            recordImporter.addRecord(item);
-                        });
+                        userEventStream.forEach(recordImporter::addRecord);
                     });
                 }
         );

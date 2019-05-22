@@ -68,7 +68,7 @@ public class ZendeskUtils
             uri = new URI(urlString);
         }
         catch (final URISyntaxException e) {
-            throw new ConfigException("Login url is invalid format " + urlString);
+            throw new ConfigException("URL is invalid format " + urlString);
         }
 
         return new URIBuilder()

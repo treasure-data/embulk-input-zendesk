@@ -4,6 +4,7 @@ import org.apache.http.client.utils.URIBuilder;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
+import org.embulk.input.zendesk.utils.ZendeskUtils;
 
 public class ZendeskSupportAPIService extends ZendeskNormalServices
 {
@@ -20,7 +21,7 @@ public class ZendeskSupportAPIService extends ZendeskNormalServices
     @Override
     protected String buildURI(final int page, long startTime)
     {
-        final URIBuilder uriBuilder = getURIBuilderFromHost().setPath(buildPath());
+        final URIBuilder uriBuilder = ZendeskUtils.getURIBuilder(task.getLoginUrl()).setPath(buildPath());
 
         if (isSupportIncremental()) {
             uriBuilder.setParameter(ZendeskConstants.Field.START_TIME, String.valueOf(startTime));

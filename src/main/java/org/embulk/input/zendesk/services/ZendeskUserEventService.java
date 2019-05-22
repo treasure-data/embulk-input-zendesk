@@ -9,9 +9,9 @@ import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.models.Target;
-import org.embulk.input.zendesk.stream.paginator.OrganizationSpliterator;
-import org.embulk.input.zendesk.stream.paginator.UserEventSpliterator;
-import org.embulk.input.zendesk.stream.paginator.UserSpliterator;
+import org.embulk.input.zendesk.stream.paginator.sunshine.UserEventSpliterator;
+import org.embulk.input.zendesk.stream.paginator.support.OrganizationSpliterator;
+import org.embulk.input.zendesk.stream.paginator.support.UserSpliterator;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
@@ -55,36 +55,36 @@ public class ZendeskUserEventService implements ZendeskService
     @Override
     public TaskReport execute(final int taskIndex, final RecordImporter recordImporter)
     {
-        if (Exec.isPreview()) {
-            JsonNode  jsonNode = mockJsonNode();
-            recordImporter.addRecord(jsonNode.get(0));
-        }
-        else {
-            final List<JsonNode> organizations = StreamSupport.stream(new OrganizationSpliterator(buildOrganizationURI(), getZendeskRestClient(), task), false)
-                    .collect(Collectors.toList());
-            final Set<String> knownUserIds = ConcurrentHashMap.newKeySet();
-            organizations.parallelStream().forEach(
-                    organization -> {
-                        Stream<JsonNode> stream = StreamSupport.stream(new UserSpliterator(buildOrganizationWithUserURI(organization.get("url").asText()),
-                                getZendeskRestClient(), task, Exec.isPreview()), true);
-
-                        if (task.getDedup()) {
-                            stream = stream.filter(item -> knownUserIds.add(item.get("id").asText()));
-                        }
-
-                        stream.forEach(s ->
-                        {
-                            Stream<JsonNode> userEventStream = StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()),
-                                    getZendeskRestClient(), task, Exec.isPreview()), true);
-                            userEventStream.forEach(item -> {
-                                recordImporter.addRecord(item);
-                            });
-                        });
-                    }
-            );
-        }
-
         final TaskReport taskReport = Exec.newTaskReport();
+
+        if (Exec.isPreview()) {
+            JsonNode jsonNode = mockJsonNode();
+            recordImporter.addRecord(jsonNode.get(0));
+            return taskReport;
+        }
+
+        final List<JsonNode> organizations = StreamSupport.stream(new OrganizationSpliterator(buildOrganizationURI(), getZendeskRestClient(), task), false)
+                .collect(Collectors.toList());
+        final Set<String> knownUserIds = ConcurrentHashMap.newKeySet();
+        organizations.parallelStream().forEach(
+                organization -> {
+                    Stream<JsonNode> stream = StreamSupport.stream(new UserSpliterator(buildOrganizationWithUserURI(organization.get("url").asText()),
+                            getZendeskRestClient(), task, Exec.isPreview()), true);
+
+                    if (task.getDedup()) {
+                        stream = stream.filter(item -> knownUserIds.add(item.get("id").asText()));
+                    }
+
+                    stream.forEach(s ->
+                    {
+                        Stream<JsonNode> userEventStream = StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()),
+                                getZendeskRestClient(), task, Exec.isPreview()), true);
+                        userEventStream.forEach(item -> {
+                            recordImporter.addRecord(item);
+                        });
+                    });
+                }
+        );
         return taskReport;
     }
 

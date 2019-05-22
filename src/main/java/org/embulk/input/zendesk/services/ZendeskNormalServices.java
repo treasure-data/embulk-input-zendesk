@@ -70,27 +70,17 @@ public abstract class ZendeskNormalServices implements ZendeskService
         if (path.isEmpty()) {
             path = buildURI(page, startTime);
         }
-        try {
-            final String response = getZendeskRestClient().doGet(path, task, isPreview);
-            return ZendeskUtils.parseJsonObject(response);
-        }
-        catch (final Exception e) {
-            throw Throwables.propagate(e);
-        }
-    }
 
-    protected URIBuilder getURIBuilderFromHost()
-    {
-        return ZendeskUtils.getURIBuilder(task.getLoginUrl());
+        final String response = getZendeskRestClient().doGet(path, task, isPreview);
+        return ZendeskUtils.parseJsonObject(response);
     }
 
     private void importDataForIncremental(final ZendeskInputPlugin.PluginTask task, final RecordImporter recordImporter, final TaskReport taskReport)
     {
         long startTime = 0;
-        if (!Exec.isPreview() && isSupportIncremental()) {
-            if (task.getStartTime().isPresent()) {
-                startTime = ZendeskDateUtils.getStartTime(task.getStartTime().get());
-            }
+
+        if (task.getStartTime().isPresent()) {
+            startTime = ZendeskDateUtils.getStartTime(task.getStartTime().get());
         }
 
         // For incremental target, we will run in one task but split in multiple threads inside for data deduplication.
@@ -132,14 +122,14 @@ public abstract class ZendeskNormalServices implements ZendeskService
                         }
                     }
 
-                    pool.submit(() -> fetchData(recordJsonNode, task, recordImporter));
+                    pool.submit(() -> fetchRecord(recordJsonNode, task, recordImporter));
                     recordCount++;
                     if (Exec.isPreview()) {
                         return;
                     }
                 }
 
-                ZendeskNormalServices.logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
+                logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
 
                 if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL) {
                     break;
@@ -159,7 +149,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
                     pool.awaitTermination(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
                 }
                 catch (final InterruptedException e) {
-                    ZendeskNormalServices.logger.warn("Error when wait pool to finish");
+                    logger.warn("Error when wait pool to finish");
                     throw Throwables.propagate(e);
                 }
             }
@@ -187,12 +177,12 @@ public abstract class ZendeskNormalServices implements ZendeskService
         }
     }
 
-    private void fetchData(final JsonNode jsonNode, final ZendeskInputPlugin.PluginTask task, final RecordImporter recordImporter)
+    private void fetchRecord(final JsonNode jsonNode, final ZendeskInputPlugin.PluginTask task, final RecordImporter recordImporter)
     {
         task.getIncludes().forEach(include -> {
             final String relatedObjectName = include.trim();
 
-            final URIBuilder uriBuilder = getURIBuilderFromHost()
+            final URIBuilder uriBuilder = ZendeskUtils.getURIBuilder(task.getLoginUrl())
                     .setPath(ZendeskConstants.Url.API
                             + "/" + task.getTarget().toString()
                             + "/" + jsonNode.get(ZendeskConstants.Field.ID).asText()
@@ -241,7 +231,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
         final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
 
         while (iterator.hasNext()) {
-            fetchData(iterator.next(), task, recordImporter);
+            fetchRecord(iterator.next(), task, recordImporter);
 
             if (Exec.isPreview()) {
                 break;

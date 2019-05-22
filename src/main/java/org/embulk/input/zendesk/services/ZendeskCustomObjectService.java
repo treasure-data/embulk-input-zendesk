@@ -11,7 +11,7 @@ import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.models.ZendeskException;
-import org.embulk.input.zendesk.stream.paginator.CustomObjectSpliterator;
+import org.embulk.input.zendesk.stream.paginator.sunshine.CustomObjectSpliterator;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.Exec;
@@ -34,7 +34,7 @@ public class ZendeskCustomObjectService implements ZendeskService
     }
 
     @VisibleForTesting
-    protected ZendeskRestClient getZendeskRestClient()
+    public ZendeskRestClient getZendeskRestClient()
     {
         if (zendeskRestClient == null) {
             zendeskRestClient = new ZendeskRestClient();
@@ -53,7 +53,7 @@ public class ZendeskCustomObjectService implements ZendeskService
         final List<String> paths = getListPathByTarget();
 
         paths.parallelStream().forEach(path -> StreamSupport.stream(new CustomObjectSpliterator(path, getZendeskRestClient(), task, Exec.isPreview()), Exec.isPreview())
-                .forEach(jsonNode -> recordImporter.addRecord(jsonNode)));
+                .forEach(recordImporter::addRecord));
 
         return Exec.newTaskReport();
     }

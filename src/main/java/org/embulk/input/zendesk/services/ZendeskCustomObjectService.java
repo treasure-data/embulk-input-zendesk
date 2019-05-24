@@ -33,15 +33,6 @@ public class ZendeskCustomObjectService implements ZendeskService
         this.task = task;
     }
 
-    @VisibleForTesting
-    public ZendeskRestClient getZendeskRestClient()
-    {
-        if (zendeskRestClient == null) {
-            zendeskRestClient = new ZendeskRestClient();
-        }
-        return zendeskRestClient;
-    }
-
     public boolean isSupportIncremental()
     {
         return false;
@@ -85,6 +76,15 @@ public class ZendeskCustomObjectService implements ZendeskService
         }
 
         return response.map(ZendeskUtils::parseJsonObject).orElse(new ObjectMapper().createObjectNode());
+    }
+
+    @VisibleForTesting
+    protected ZendeskRestClient getZendeskRestClient()
+    {
+        if (zendeskRestClient == null) {
+            zendeskRestClient = new ZendeskRestClient();
+        }
+        return zendeskRestClient;
     }
 
     private List<String> getListPathByTarget()

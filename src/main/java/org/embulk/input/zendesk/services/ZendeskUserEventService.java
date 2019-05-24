@@ -38,15 +38,6 @@ public class ZendeskUserEventService implements ZendeskService
         this.task = task;
     }
 
-    @VisibleForTesting
-    protected ZendeskRestClient getZendeskRestClient()
-    {
-        if (zendeskRestClient == null) {
-            zendeskRestClient = new ZendeskRestClient();
-        }
-        return zendeskRestClient;
-    }
-
     public boolean isSupportIncremental()
     {
         return false;
@@ -90,6 +81,15 @@ public class ZendeskUserEventService implements ZendeskService
     public JsonNode getData(final String path, final int page, final boolean isPreview, final long startTime)
     {
         return new ObjectMapper().createObjectNode().set(task.getTarget().getJsonName(), mockJsonNode());
+    }
+
+    @VisibleForTesting
+    protected ZendeskRestClient getZendeskRestClient()
+    {
+        if (zendeskRestClient == null) {
+            zendeskRestClient = new ZendeskRestClient();
+        }
+        return zendeskRestClient;
     }
 
     private String buildOrganizationURI()
@@ -152,7 +152,7 @@ public class ZendeskUserEventService implements ZendeskService
             return new ObjectMapper().readTree(mockData);
         }
         catch (IOException ex) {
-            throw new RuntimeException("Error when mock data for guess or preview " + ex.getMessage());
+            throw new RuntimeException("Can not create sample data " + ex.getMessage());
         }
     }
 }

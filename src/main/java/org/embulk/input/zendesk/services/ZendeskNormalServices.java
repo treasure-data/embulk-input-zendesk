@@ -40,17 +40,6 @@ public abstract class ZendeskNormalServices implements ZendeskService
         this.task = task;
     }
 
-    protected abstract String buildURI(int page, long startTime);
-
-    @VisibleForTesting
-    protected ZendeskRestClient getZendeskRestClient()
-    {
-        if (zendeskRestClient == null) {
-            zendeskRestClient = new ZendeskRestClient();
-        }
-        return zendeskRestClient;
-    }
-
     public TaskReport execute(final int taskIndex, final RecordImporter recordImporter)
     {
         TaskReport taskReport = Exec.newTaskReport();
@@ -75,6 +64,17 @@ public abstract class ZendeskNormalServices implements ZendeskService
         return ZendeskUtils.parseJsonObject(response);
     }
 
+    protected abstract String buildURI(int page, long startTime);
+
+    @VisibleForTesting
+    protected ZendeskRestClient getZendeskRestClient()
+    {
+        if (zendeskRestClient == null) {
+            zendeskRestClient = new ZendeskRestClient();
+        }
+        return zendeskRestClient;
+    }
+
     private void importDataForIncremental(final ZendeskInputPlugin.PluginTask task, final RecordImporter recordImporter, final TaskReport taskReport)
     {
         long startTime = 0;
@@ -92,14 +92,12 @@ public abstract class ZendeskNormalServices implements ZendeskService
                     10, 100, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>()
             );
 
-            long resultEndTime = 0;
             while (true) {
                 int recordCount = 0;
 
                 // Page argument isn't used in incremental API so we just set it to 0
                 final JsonNode result = getData("", 0, false, startTime);
                 final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
-                resultEndTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
 
                 int numberOfRecords = 0;
                 if (result.has(ZendeskConstants.Field.COUNT)) {
@@ -131,15 +129,15 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
                 logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
 
+                startTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
+
                 if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL) {
                     break;
                 }
-
-                startTime = resultEndTime;
             }
 
             if (!Exec.isPreview()) {
-                storeStartTimeForConfigDiff(taskReport, resultEndTime);
+                storeStartTimeForConfigDiff(taskReport, startTime);
             }
         }
         finally {

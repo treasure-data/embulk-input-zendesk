@@ -230,6 +230,7 @@ public class ZendeskRestClient
     {
         switch (task.getAuthenticationMethod()) {
             case BASIC:
+                logger.info("asdasda " + ZendeskUtils.convertBase64(String.format("%s:%s", task.getUsername().get(), task.getPassword().get())));
                 return "Basic " + ZendeskUtils.convertBase64(String.format("%s:%s", task.getUsername().get(), task.getPassword().get()));
             case TOKEN:
                 return "Basic " + ZendeskUtils.convertBase64(String.format("%s/token:%s", task.getUsername().get(), task.getToken().get()));

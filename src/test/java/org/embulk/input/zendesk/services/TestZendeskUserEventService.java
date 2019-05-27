@@ -45,7 +45,7 @@ public class TestZendeskUserEventService
     }
 
     @Test
-    public void testGuess()
+    public void testGetData()
     {
         setup();
 
@@ -56,11 +56,11 @@ public class TestZendeskUserEventService
     }
 
     @Test
-    public void testPreview()
+    public void testAddRecordToImporterInPreviewMode()
     {
         setup();
         ZendeskTestHelper.setPreviewMode(runtime, true);
-        zendeskUserEventService.execute(0, recordImporter);
+        zendeskUserEventService.addRecordToImporter(0, recordImporter);
         verify(recordImporter, times(1)).addRecord(any());
     }
 
@@ -83,14 +83,14 @@ public class TestZendeskUserEventService
         String expectedURIForUserEvent = "https://abc.zendesk.com/api/sunshine/events?identifier=support%3Auser_id%3A1194092277&start_time=2019-01-20T07%3A14%3A50Z&end_time=2019-06-20T07%3A14%3A53Z";
         List<String> expectedURI = Arrays.asList(expectedURIForOrganization, expectedURIForUser, expectedURIForUserEvent);
 
-        zendeskUserEventService.execute(0, recordImporter);
+        zendeskUserEventService.addRecordToImporter(0, recordImporter);
         ArgumentCaptor<String> uri = ArgumentCaptor.forClass(String.class);
         verify(zendeskRestClient, times(3)).doGet(uri.capture(), any(), anyBoolean());
         assertEquals(expectedURI, uri.getAllValues());
     }
 
     @Test
-    public void testRun()
+    public void testAddRecordToImporterInNonPreviewMode()
     {
         ZendeskTestHelper.setPreviewMode(runtime, false);
         PluginTask task = setup();
@@ -109,13 +109,13 @@ public class TestZendeskUserEventService
         when(zendeskRestClient.doGet(eq("https://abc.zendesk.com/api/sunshine/events?identifier=support%3Auser_id%3A1194092277&start_time=2019-01-20T07%3A14%3A50Z&end_time=2019-06-20T07%3A14%3A53Z"), eq(task), eq(false)))
                 .thenReturn(dataJsonUserEvent.toString());
 
-        zendeskUserEventService.execute(0, recordImporter);
+        zendeskUserEventService.addRecordToImporter(0, recordImporter);
         // non dedup
         verify(recordImporter, times(2)).addRecord(any());
     }
 
     @Test
-    public void testRunWithDuplicateUser()
+    public void testAddRecordToImporterWithDuplicateUser()
     {
         ZendeskTestHelper.setPreviewMode(runtime, false);
         PluginTask task = ZendeskTestHelper.getConfigSource("user_events.yml")
@@ -136,7 +136,7 @@ public class TestZendeskUserEventService
         when(zendeskRestClient.doGet(eq("https://abc.zendesk.com/api/sunshine/events?identifier=support%3Auser_id%3A1194092277&start_time=2019-01-20T07%3A14%3A50Z&end_time=2019-06-20T07%3A14%3A53Z"), eq(task), eq(false)))
                 .thenReturn(dataJsonUserEvent.toString());
 
-        zendeskUserEventService.execute(0, recordImporter);
+        zendeskUserEventService.addRecordToImporter(0, recordImporter);
 
         // expected to call fetchUserEvent only one time
         verify(recordImporter, times(1)).addRecord(any());

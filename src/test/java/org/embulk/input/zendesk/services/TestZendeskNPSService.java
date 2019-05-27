@@ -53,12 +53,12 @@ public class TestZendeskNPSService
     }
 
     @Test
-    public void testRunIncremental()
+    public void testAddRecordToImporterIncremental()
     {
         setup();
         loadData();
 
-        TaskReport taskReport = zendeskNPSService.execute(0, recordImporter);
+        TaskReport taskReport = zendeskNPSService.addRecordToImporter(0, recordImporter);
         verify(recordImporter, times(1)).addRecord(any());
         Assert.assertEquals(1555418871, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }

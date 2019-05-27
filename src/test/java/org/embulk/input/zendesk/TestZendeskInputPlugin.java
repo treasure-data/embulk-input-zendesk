@@ -150,7 +150,7 @@ public class TestZendeskInputPlugin
         taskReport.set(ZendeskConstants.Field.START_TIME, 1557026576);
 
         when(zendeskSupportAPIService.isSupportIncremental()).thenReturn(true);
-        when(zendeskSupportAPIService.execute(anyInt(), any())).thenReturn(taskReport);
+        when(zendeskSupportAPIService.addRecordToImporter(anyInt(), any())).thenReturn(taskReport);
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
         String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);

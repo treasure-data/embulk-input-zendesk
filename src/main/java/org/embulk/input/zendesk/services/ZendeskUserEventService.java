@@ -44,7 +44,7 @@ public class ZendeskUserEventService implements ZendeskService
     }
 
     @Override
-    public TaskReport execute(final int taskIndex, final RecordImporter recordImporter)
+    public TaskReport addRecordToImporter(final int taskIndex, final RecordImporter recordImporter)
     {
         final TaskReport taskReport = Exec.newTaskReport();
 

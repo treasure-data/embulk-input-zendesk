@@ -14,7 +14,7 @@ import static org.junit.Assert.assertTrue;
 public class TestZendeskDateUtils
 {
     @Test
-    public void isoToEpochSecondShouldReturnCorrectValue()
+    public void testIsoToEpochSecondShouldReturnCorrectValue()
     {
         long expectedValue = 1550645445;
 
@@ -35,7 +35,7 @@ public class TestZendeskDateUtils
     }
 
     @Test
-    public void isoToEpochSecondShouldThrowException()
+    public void testIsoToEpochSecondShouldThrowException()
     {
         assertThrows(DataException.class, () -> ZendeskDateUtils.isoToEpochSecond("2019-02asdasdasd-20T06:50:45Z"));
         assertThrows(DataException.class, () -> ZendeskDateUtils.isoToEpochSecond("2019-002-20T06:50:45Z"));

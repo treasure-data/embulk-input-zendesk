@@ -39,7 +39,7 @@ public class ZendeskCustomObjectService implements ZendeskService
     }
 
     @Override
-    public TaskReport execute(final int taskIndex, final RecordImporter recordImporter)
+    public TaskReport addRecordToImporter(final int taskIndex, final RecordImporter recordImporter)
     {
         final List<String> paths = getListPathByTarget();
 
@@ -62,7 +62,7 @@ public class ZendeskCustomObjectService implements ZendeskService
             try {
                 response = Optional.ofNullable(getZendeskRestClient().doGet(temp, task, true));
 
-                // in guessing, break when we have data
+                // Break when we have data to preview
                 if (response.isPresent()) {
                     break;
                 }

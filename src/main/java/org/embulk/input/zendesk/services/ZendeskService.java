@@ -8,7 +8,7 @@ public interface ZendeskService
 {
     boolean isSupportIncremental();
 
-    TaskReport execute(int taskIndex, RecordImporter recordImporter);
+    TaskReport addRecordToImporter(int taskIndex, RecordImporter recordImporter);
 
     JsonNode getData(String path, int page, boolean isPreview, long startTime);
 }

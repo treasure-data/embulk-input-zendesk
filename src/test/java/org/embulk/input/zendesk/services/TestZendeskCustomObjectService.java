@@ -58,7 +58,7 @@ public class TestZendeskCustomObjectService
                 "https://abc.zendesk.com/api/sunshine/objects/records?type=user&per_page=1000"
         );
 
-        zendeskCustomObjectService.execute(0, recordImporter);
+        zendeskCustomObjectService.addRecordToImporter(0, recordImporter);
         final ArgumentCaptor<String> actualString = ArgumentCaptor.forClass(String.class);
         verify(zendeskRestClient, times(2)).doGet(actualString.capture(), any(), anyBoolean());
         assertTrue(actualString.getAllValues().contains(expectedStrings.get(0)));
@@ -70,36 +70,36 @@ public class TestZendeskCustomObjectService
     {
         setup("relationship_records.yml");
         String expectedStrings = "https://abc.zendesk.com/api/sunshine/relationships/records?type=ticket_to_account&per_page=1000";
-        zendeskCustomObjectService.execute(0, recordImporter);
+        zendeskCustomObjectService.addRecordToImporter(0, recordImporter);
         final ArgumentCaptor<String> actualString = ArgumentCaptor.forClass(String.class);
         verify(zendeskRestClient).doGet(actualString.capture(), any(), anyBoolean());
         assertEquals(expectedStrings, actualString.getValue());
     }
 
     @Test
-    public void testRunObjectRecord()
+    public void testAddRecordToImporterObjectRecord()
     {
         ZendeskTestHelper.setPreviewMode(runtime, false);
         setup("object_records.yml");
         loadData("data/object_records.json");
-        zendeskCustomObjectService.execute(0, recordImporter);
+        zendeskCustomObjectService.addRecordToImporter(0, recordImporter);
         // 2 types - each type 2 records
         verify(recordImporter, times(4)).addRecord(any());
     }
 
     @Test
-    public void testRunRelationShipRecord()
+    public void testAddRecordToImporterRelationShipRecord()
     {
         ZendeskTestHelper.setPreviewMode(runtime, false);
         setup("relationship_records.yml");
         loadData("data/relationship_records.json");
-        zendeskCustomObjectService.execute(0, recordImporter);
+        zendeskCustomObjectService.addRecordToImporter(0, recordImporter);
         // 7 records
         verify(recordImporter, times(7)).addRecord(any());
     }
 
     @Test
-    public void testGuess()
+    public void testGetData()
     {
         setup("object_records.yml");
         loadData("data/object_records.json");
@@ -117,12 +117,12 @@ public class TestZendeskCustomObjectService
     }
 
     @Test
-    public void testPreviewObjectRecord()
+    public void testAddRecordToImporterInPreviewObjectRecord()
     {
         ZendeskTestHelper.setPreviewMode(runtime, true);
         setup("object_records.yml");
         loadData("data/object_records.json");
-        TaskReport taskReport = zendeskCustomObjectService.execute(0, recordImporter);
+        TaskReport taskReport = zendeskCustomObjectService.addRecordToImporter(0, recordImporter);
 
         // expect to be break and don't import all records
         verify(recordImporter, atMost(3)).addRecord(any());
@@ -130,12 +130,12 @@ public class TestZendeskCustomObjectService
     }
 
     @Test
-    public void testPreviewRelationshipRecord()
+    public void testAddRecordToImporterInPreviewRelationshipRecord()
     {
         ZendeskTestHelper.setPreviewMode(runtime, true);
         setup("relationship_records.yml");
         loadData("data/relationship_records.json");
-        TaskReport taskReport = zendeskCustomObjectService.execute(0, recordImporter);
+        TaskReport taskReport = zendeskCustomObjectService.addRecordToImporter(0, recordImporter);
         // 1 type contain data and break
         verify(recordImporter, times(1)).addRecord(any());
         Assert.assertTrue(taskReport.isEmpty());

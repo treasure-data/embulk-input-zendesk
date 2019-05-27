@@ -11,6 +11,7 @@ import org.embulk.config.TaskReport;
 import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
+import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
@@ -40,7 +41,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
         this.task = task;
     }
 
-    public TaskReport execute(final int taskIndex, final RecordImporter recordImporter)
+    public TaskReport addRecordToImporter(final int taskIndex, final RecordImporter recordImporter)
     {
         TaskReport taskReport = Exec.newTaskReport();
 
@@ -104,8 +105,14 @@ public abstract class ZendeskNormalServices implements ZendeskService
                     numberOfRecords = result.get(ZendeskConstants.Field.COUNT).asInt();
                 }
 
+                boolean isTheSameTime = true;
+
                 while (iterator.hasNext()) {
                     final JsonNode recordJsonNode = iterator.next();
+
+                    if (isTheSameTime) {
+                        isTheSameTime =
+                    }
 
                     if (isUpdatedBySystem(recordJsonNode, startTime)) {
                         continue;
@@ -129,7 +136,11 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
                 logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
 
-                startTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
+                // https://developer.zendesk.com/rest_api/docs/support/incremental_export#pagination
+                // When there are more than 1000 records share the same time stamp, the count > 1000
+                startTime = numberOfRecords > ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL
+                        ? result.get(ZendeskConstants.Field.END_TIME).asLong() + 1
+                        : result.get(ZendeskConstants.Field.END_TIME).asLong();
 
                 if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL) {
                     break;
@@ -235,5 +246,9 @@ public abstract class ZendeskNormalServices implements ZendeskService
                 break;
             }
         }
+    }
+
+    private boolean isTheSameTime(Target target, JsonNode record) {
+
     }
 }

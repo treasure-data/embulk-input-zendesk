@@ -10,24 +10,17 @@ import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
 
+import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
-import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
-import org.embulk.input.zendesk.utils.ZendeskPluginTestRuntime;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 
 import org.embulk.input.zendesk.utils.ZendeskUtils;
-import org.embulk.spi.InputPlugin;
-import org.embulk.test.TestingEmbulk;
 
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
-import org.junit.rules.ExpectedException;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TestRule;
 
 import org.mockito.ArgumentCaptor;
 
@@ -48,15 +41,9 @@ import java.util.Optional;
 
 public class TestZendeskRestClient
 {
-    private final ExpectedException thrown = ExpectedException.none();
-    private final TestingEmbulk embulk = TestingEmbulk.builder()
-            .registerPlugin(InputPlugin.class, "zendesk", ZendeskInputPlugin.class)
-            .build();
-    public ZendeskPluginTestRuntime runtime = new ZendeskPluginTestRuntime();
-
-    @Rule
     @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
-    public TestRule chain = RuleChain.outerRule(embulk).around(runtime).around(thrown);
+    @Rule
+    public EmbulkTestRuntime embulkTestRuntime = new EmbulkTestRuntime();
 
     private ZendeskRestClient zendeskRestClient;
     private PluginTask task = ZendeskTestHelper.getConfigSource("incremental.yml").loadConfig(PluginTask.class);

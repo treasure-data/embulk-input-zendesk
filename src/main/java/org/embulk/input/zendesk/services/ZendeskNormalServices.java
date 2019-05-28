@@ -16,6 +16,7 @@ import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
+import org.embulk.spi.DataException;
 import org.embulk.spi.Exec;
 import org.slf4j.Logger;
 
@@ -105,14 +106,12 @@ public abstract class ZendeskNormalServices implements ZendeskService
                     numberOfRecords = result.get(ZendeskConstants.Field.COUNT).asInt();
                 }
 
-                boolean isTheSameTime = true;
-
+                // Use to indicate whether all the records share the same time, next start_time should plug one to prevent infinite loop
+                // https://develop.zendesk.com/hc/en-us/community/posts/360001646028-Incremental-Ticket-Export-more-than-1000-updates-per-second
+                boolean isAllRecordHaveTheSameTime = true;
+                long previousRecordTime = 0;
                 while (iterator.hasNext()) {
                     final JsonNode recordJsonNode = iterator.next();
-
-                    if (isTheSameTime) {
-                        isTheSameTime =
-                    }
 
                     if (isUpdatedBySystem(recordJsonNode, startTime)) {
                         continue;
@@ -127,6 +126,15 @@ public abstract class ZendeskNormalServices implements ZendeskService
                         }
                     }
 
+                    if (isAllRecordHaveTheSameTime) {
+                        if (previousRecordTime > 0) {
+                            isAllRecordHaveTheSameTime = isTheShareTheSameTime(recordJsonNode, previousRecordTime);
+                        }
+                        else {
+                            previousRecordTime = getTime(recordJsonNode);
+                        }
+                    }
+
                     pool.submit(() -> fetchRecord(recordJsonNode, task, recordImporter));
                     recordCount++;
                     if (Exec.isPreview()) {
@@ -136,14 +144,16 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
                 logger.info("Fetched '{}' records from start_time '{}'", recordCount, startTime);
 
-                // https://developer.zendesk.com/rest_api/docs/support/incremental_export#pagination
-                // When there are more than 1000 records share the same time stamp, the count > 1000
-                startTime = numberOfRecords > ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL
-                        ? result.get(ZendeskConstants.Field.END_TIME).asLong() + 1
-                        : result.get(ZendeskConstants.Field.END_TIME).asLong();
+                startTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
 
                 if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL) {
                     break;
+                }
+
+                // All records share the same time and next_page is available. Plus one to avoid infinite loop
+                // Do not need to plus one when it is the last page because we will add later when storing config_diff
+                if (isAllRecordHaveTheSameTime) {
+                    startTime = startTime + 1;
                 }
             }
 
@@ -168,20 +178,15 @@ public abstract class ZendeskNormalServices implements ZendeskService
     private void storeStartTimeForConfigDiff(final TaskReport taskReport, final long resultEndTime)
     {
         if (task.getIncremental()) {
-            if (task.getEndTime().isPresent()) {
-                taskReport.set(ZendeskConstants.Field.START_TIME, ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) + 1);
+            // resultEndTime = 0 mean no records, we should store now time for next run
+            if (resultEndTime == 0) {
+                taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
             }
             else {
-                // resultEndTime = 0 mean no records, we should store now time for next run
-                if (resultEndTime == 0) {
-                    taskReport.set(ZendeskConstants.Field.START_TIME, Instant.now().getEpochSecond());
-                }
-                else {
-                    // NOTE: start_time compared as "=>", not ">".
-                    // If we will use end_time for next start_time, we got the same records that are fetched
-                    // end_time + 1 is workaround for that
-                    taskReport.set(ZendeskConstants.Field.START_TIME, resultEndTime + 1);
-                }
+                // NOTE: start_time compared as "=>", not ">".
+                // If we will use end_time for next start_time, we got the same records that are fetched
+                // end_time + 1 is workaround for that
+                taskReport.set(ZendeskConstants.Field.START_TIME, resultEndTime + 1);
             }
         }
     }
@@ -248,7 +253,36 @@ public abstract class ZendeskNormalServices implements ZendeskService
         }
     }
 
-    private boolean isTheSameTime(Target target, JsonNode record) {
+    private boolean isTheShareTheSameTime(JsonNode record, long previousRecordTime)
+    {
+        if (record.has(ZendeskConstants.Field.UPDATED_AT)) {
+            return ZendeskDateUtils.isoToEpochSecond(record.get(ZendeskConstants.Field.UPDATED_AT).textValue()) == previousRecordTime;
+        }
 
+        if (task.getTarget().equals(Target.TICKET_EVENTS) && record.has("timestamp")) {
+            return record.get("timestamp").asLong() == previousRecordTime;
+        }
+
+        if (task.getTarget().equals(Target.SCORES) && record.has("rated_at")) {
+            return ZendeskDateUtils.isoToEpochSecond(record.get("rated_at").textValue()) == previousRecordTime;
+        }
+
+        return false;
+    }
+
+    private long getTime(JsonNode record)
+    {
+        if (record.has(ZendeskConstants.Field.UPDATED_AT)) {
+            return ZendeskDateUtils.isoToEpochSecond(record.get(ZendeskConstants.Field.UPDATED_AT).textValue());
+        }
+
+        if (task.getTarget().equals(Target.TICKET_EVENTS) && record.has("timestamp")) {
+            return record.get("timestamp").asLong();
+        }
+
+        if (task.getTarget().equals(Target.SCORES) && record.has("rated_at")) {
+            return ZendeskDateUtils.isoToEpochSecond(record.get("rated_at").textValue());
+        }
+        throw new DataException("Expected to have time for record " + record);
     }
 }

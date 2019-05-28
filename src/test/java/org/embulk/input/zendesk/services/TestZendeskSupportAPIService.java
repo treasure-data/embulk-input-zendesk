@@ -219,6 +219,83 @@ public class TestZendeskSupportAPIService
         Assert.assertTrue(taskReport.isEmpty());
     }
 
+    @Test
+    public void testAddRecordToImporterIncrementalWithNextPageAndAllRecordsShareTheSameTime()
+    {
+        // api_end_time of ticket_share_same_time_with_next_page.json + 1
+        String expectedURL = "https://abc.zendesk.com/api/v2/incremental/tickets.json?start_time=1551419520";
+        setup("incremental.yml");
+        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/ticket_share_same_time_with_next_page.json");
+        JsonNode dataJsonNext = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
+        when(zendeskRestClient.doGet(any(), any(), anyBoolean()))
+                .thenReturn(dataJson.toString())
+                .thenReturn(dataJsonNext.toString());
+
+        TaskReport taskReport = zendeskSupportAPIService.addRecordToImporter(0, recordImporter);
+        final ArgumentCaptor<String> url = ArgumentCaptor.forClass(String.class);
+        verify(zendeskRestClient, times(2)).doGet(url.capture(), any(), anyBoolean());
+        assertEquals(expectedURL, url.getValue());
+
+        verify(recordImporter, times(4)).addRecord(any());
+        // api_end_time of tickets.json + 1
+        Assert.assertEquals(1550647054, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void testAddRecordToImporterIncrementalAndAllRecordsShareTheSameTime()
+    {
+        setup("incremental.yml");
+        loadData("data/ticket_share_same_time_without_next_page.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.addRecordToImporter(0, recordImporter);
+        verify(recordImporter, times(4)).addRecord(any());
+        // api_end_time of ticket_share_same_time_without_next_page.json + 1
+        Assert.assertEquals(1551419520, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void testTicketEventsAddRecordToImporterIncrementalWithNextPageAndAllRecordsShareTheSameTime()
+    {
+        // api_end_time of ticket_events_share_same_time_with_next_page.json + 1
+        String expectedURL = "https://abc.zendesk.com/api/v2/incremental/ticket_events.json?start_time=1550645444";
+        setup("incremental.yml");
+        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource("incremental.yml")
+                .set("target", "ticket_events")
+                .loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+
+        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/ticket_events_share_same_time_with_next_page.json");
+        JsonNode dataJsonNext = ZendeskTestHelper.getJsonFromFile("data/ticket_events_updated_by_system_records.json");
+        when(zendeskRestClient.doGet(any(), any(), anyBoolean()))
+                .thenReturn(dataJson.toString())
+                .thenReturn(dataJsonNext.toString());
+
+        TaskReport taskReport = zendeskSupportAPIService.addRecordToImporter(0, recordImporter);
+        final ArgumentCaptor<String> url = ArgumentCaptor.forClass(String.class);
+        verify(zendeskRestClient, times(2)).doGet(url.capture(), any(), anyBoolean());
+        assertEquals(expectedURL, url.getValue());
+
+        verify(recordImporter, times(4)).addRecord(any());
+        // api_end_time of ticket_events_updated_by_system_records.json + 1
+        Assert.assertEquals(1550645523, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void testTicketEventsAddRecordToImporterIncrementaAndAllRecordsShareTheSameTime()
+    {
+        setup("incremental.yml");
+        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource("incremental.yml")
+                .set("target", "ticket_events")
+                .loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/ticket_events_share_same_time_without_next_page.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.addRecordToImporter(0, recordImporter);
+        verify(recordImporter, times(4)).addRecord(any());
+        // api_end_time of ticket_events_share_same_time_without_next_page.json + 1
+        Assert.assertEquals(1550645444, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
     private void loadData(String fileName)
     {
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile(fileName);

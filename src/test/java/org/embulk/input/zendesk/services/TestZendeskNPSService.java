@@ -13,6 +13,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -56,16 +57,51 @@ public class TestZendeskNPSService
     public void testAddRecordToImporterIncremental()
     {
         setup();
-        loadData();
+        loadData("data/scores.json");
 
         TaskReport taskReport = zendeskNPSService.addRecordToImporter(0, recordImporter);
         verify(recordImporter, times(1)).addRecord(any());
         Assert.assertEquals(1555418871, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }
 
-    private void loadData()
+    @Test
+    public void testAddRecordToImporterIncrementalWithNextPageAndAllRecordsShareTheSameTime()
     {
-        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/scores.json");
+        // api_end_time of ticket_share_same_time_with_next_page.json + 1
+        String expectedURL = "https://abc.zendesk.com/api/v2/nps/incremental/responses.json?start_time=1555418821";
+
+        setup();
+        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/scores_share_same_time_with_next_page.json");
+        JsonNode dataJsonNext = ZendeskTestHelper.getJsonFromFile("data/scores.json");
+        when(zendeskRestClient.doGet(any(), any(), anyBoolean()))
+                .thenReturn(dataJson.toString())
+                .thenReturn(dataJsonNext.toString());
+
+        TaskReport taskReport = zendeskNPSService.addRecordToImporter(0, recordImporter);
+        final ArgumentCaptor<String> url = ArgumentCaptor.forClass(String.class);
+        verify(zendeskRestClient, times(2)).doGet(url.capture(), any(), anyBoolean());
+        assertEquals(expectedURL, url.getValue());
+
+        verify(recordImporter, times(3)).addRecord(any());
+        // api_end_time of scores.json + 1
+        Assert.assertEquals(1555418871, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void testAddRecordToImporterIncrementaAndAllRecordsShareTheSameTime()
+    {
+        setup();
+        loadData("data/scores_share_same_time_without_next_page.json");
+
+        TaskReport taskReport = zendeskNPSService.addRecordToImporter(0, recordImporter);
+        verify(recordImporter, times(2)).addRecord(any());
+        // api_end_time of scores_share_same_time_without_next_page.json + 1
+        Assert.assertEquals(1555418821, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    private void loadData(String fileName)
+    {
+        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile(fileName);
         when(zendeskRestClient.doGet(any(), any(), anyBoolean())).thenReturn(dataJson.toString());
     }
 

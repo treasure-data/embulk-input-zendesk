@@ -65,7 +65,7 @@
       ],
       "id": 614323587394,
       "ticket_id": 1,
-      "timestamp": 1550645445,
+      "timestamp": 1550645443,
       "created_at": "2019-02-20T06:50:45Z",
       "updater_id": 374737473854,
       "via": "Sample Ticket",
@@ -98,7 +98,7 @@
       ],
       "id": 614323589894,
       "ticket_id": 1,
-      "timestamp": 1550645445,
+      "timestamp": 1550645443,
       "created_at": "2019-02-20T06:50:45Z",
       "updater_id": 374673563333,
       "via": "Sample Ticket",
@@ -179,7 +179,7 @@
       ],
       "id": 613784741453,
       "ticket_id": 2,
-      "timestamp": 1550645510,
+      "timestamp": 1550645443,
       "created_at": "2019-02-20T06:51:50Z",
       "updater_id": 374673563333,
       "via": "Web form",
@@ -260,7 +260,7 @@
       ],
       "id": 613784845093,
       "ticket_id": 3,
-      "timestamp": 1550645522,
+      "timestamp": 1550645443,
       "created_at": "2019-02-20T06:52:02Z",
       "updater_id": 374673563333,
       "via": "Web form",
@@ -273,7 +273,7 @@
       "event_type": "Audit"
     }
   ],
-  "count": 100,
-  "next_page": "https://abc.zendesk.com/api/v2/incremental/ticket_events.json?sort_by=updated_at&start_time=1550645522",
-  "end_time": 1550645522
+  "count": 1000,
+  "next_page": "https://abc.zendesk.com/api/v2/incremental/ticket_events.json?sort_by=updated_at&start_time=1550645443",
+  "end_time": 1550645443
 }

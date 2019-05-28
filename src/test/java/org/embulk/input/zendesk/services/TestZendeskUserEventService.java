@@ -49,7 +49,7 @@ public class TestZendeskUserEventService
     {
         setup();
 
-        JsonNode jsonNode = zendeskUserEventService.getData("https://abc.zendesk.com/api/sunshine/objects/records?type=user&per_page=1000", 0, true, 0);
+        JsonNode jsonNode = zendeskUserEventService.getDataFromPath("https://abc.zendesk.com/api/sunshine/objects/records?type=user&per_page=1000", 0, true, 0);
         assertFalse(jsonNode.isNull());
         assertTrue(jsonNode.has("data"));
         assertTrue(jsonNode.get("data").isArray());

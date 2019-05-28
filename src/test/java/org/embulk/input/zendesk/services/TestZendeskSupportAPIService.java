@@ -128,7 +128,7 @@ public class TestZendeskSupportAPIService
         ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
 
-        zendeskSupportAPIService.getData("", 0, false, time);
+        zendeskSupportAPIService.getDataFromPath("", 0, false, time);
         final ArgumentCaptor<String> url = ArgumentCaptor.forClass(String.class);
         verify(zendeskRestClient).doGet(url.capture(), any(), anyBoolean());
         assertEquals(expectURL, url.getValue());
@@ -317,7 +317,7 @@ public class TestZendeskSupportAPIService
 
     private void setupTestAndVerifyURL(String expectURL, int page, boolean isPreview)
     {
-        zendeskSupportAPIService.getData("", page, isPreview, 0);
+        zendeskSupportAPIService.getDataFromPath("", page, isPreview, 0);
         final ArgumentCaptor<String> url = ArgumentCaptor.forClass(String.class);
         verify(zendeskRestClient).doGet(url.capture(), any(), anyBoolean());
         assertEquals(expectURL, url.getValue());

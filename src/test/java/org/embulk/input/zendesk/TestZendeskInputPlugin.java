@@ -323,7 +323,7 @@ public class TestZendeskInputPlugin
     private void loadData(String fileName)
     {
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile(fileName);
-        when(zendeskSupportAPIService.getData(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
+        when(zendeskSupportAPIService.getDataFromPath(anyString(), anyInt(), anyBoolean(), anyLong())).thenReturn(dataJson);
     }
 
     private void setupTestGuessGenerateColumn(ConfigSource src, String fileName, String expectedSource)

@@ -10,5 +10,5 @@ public interface ZendeskService
 
     TaskReport addRecordToImporter(int taskIndex, RecordImporter recordImporter);
 
-    JsonNode getData(String path, int page, boolean isPreview, long startTime);
+    JsonNode getDataFromPath(String path, int page, boolean isPreview, long startTime);
 }

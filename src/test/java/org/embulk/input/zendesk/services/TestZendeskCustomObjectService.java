@@ -103,14 +103,14 @@ public class TestZendeskCustomObjectService
     {
         setup("object_records.yml");
         loadData("data/object_records.json");
-        JsonNode jsonNode = zendeskCustomObjectService.getData("https://abc.zendesk.com/api/sunshine/objects/records?type=user&per_page=1000", 0, true, 0);
+        JsonNode jsonNode = zendeskCustomObjectService.getDataFromPath("https://abc.zendesk.com/api/sunshine/objects/records?type=user&per_page=1000", 0, true, 0);
         assertFalse(jsonNode.isNull());
         assertTrue(jsonNode.has("data"));
         assertTrue(jsonNode.get("data").isArray());
 
         setup("relationship_records.yml");
         loadData("data/relationship_records.json");
-        jsonNode = zendeskCustomObjectService.getData("https://abc.zendesk.com/api/sunshine/relationships/records?type=user&per_page=1000", 0, true, 0);
+        jsonNode = zendeskCustomObjectService.getDataFromPath("https://abc.zendesk.com/api/sunshine/relationships/records?type=user&per_page=1000", 0, true, 0);
         assertFalse(jsonNode.isNull());
         assertTrue(jsonNode.has("data"));
         assertTrue(jsonNode.get("data").isArray());

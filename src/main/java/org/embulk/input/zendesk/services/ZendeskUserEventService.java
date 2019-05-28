@@ -78,7 +78,7 @@ public class ZendeskUserEventService implements ZendeskService
     }
 
     @Override
-    public JsonNode getData(final String path, final int page, final boolean isPreview, final long startTime)
+    public JsonNode getDataFromPath(final String path, final int page, final boolean isPreview, final long startTime)
     {
         return new ObjectMapper().createObjectNode().set(task.getTarget().getJsonName(), mockJsonNode());
     }

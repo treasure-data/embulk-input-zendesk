@@ -56,7 +56,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
         return taskReport;
     }
 
-    public JsonNode getData(String path, final int page, final boolean isPreview, final long startTime)
+    public JsonNode getDataFromPath(String path, final int page, final boolean isPreview, final long startTime)
     {
         if (path.isEmpty()) {
             path = buildURI(page, startTime);
@@ -98,7 +98,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
                 int recordCount = 0;
 
                 // Page argument isn't used in incremental API so we just set it to 0
-                final JsonNode result = getData("", 0, false, startTime);
+                final JsonNode result = getDataFromPath("", 0, false, startTime);
                 final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
 
                 int numberOfRecords = 0;
@@ -135,7 +135,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
                         }
                     }
 
-                    pool.submit(() -> fetchRecord(recordJsonNode, task, recordImporter));
+                    pool.submit(() -> fetchSubResourceAndAddToImporter(recordJsonNode, task, recordImporter));
                     recordCount++;
                     if (Exec.isPreview()) {
                         return;
@@ -191,7 +191,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
         }
     }
 
-    private void fetchRecord(final JsonNode jsonNode, final ZendeskInputPlugin.PluginTask task, final RecordImporter recordImporter)
+    private void fetchSubResourceAndAddToImporter(final JsonNode jsonNode, final ZendeskInputPlugin.PluginTask task, final RecordImporter recordImporter)
     {
         task.getIncludes().forEach(include -> {
             final String relatedObjectName = include.trim();
@@ -202,7 +202,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
                             + "/" + jsonNode.get(ZendeskConstants.Field.ID).asText()
                             + "/" + relatedObjectName + ".json");
             try {
-                final JsonNode result = getData(uriBuilder.toString(), 0, false, 0);
+                final JsonNode result = getDataFromPath(uriBuilder.toString(), 0, false, 0);
                 if (result != null && result.has(relatedObjectName)) {
                     ((ObjectNode) jsonNode).set(include, result.get(relatedObjectName));
                 }
@@ -241,11 +241,11 @@ public abstract class ZendeskNormalServices implements ZendeskService
     private void importDataForNonIncremental(final ZendeskInputPlugin.PluginTask task, final int taskIndex, RecordImporter recordImporter)
     {
         // Page start from 1 => page = taskIndex + 1
-        final JsonNode result = getData("", taskIndex + 1, false, 0);
+        final JsonNode result = getDataFromPath("", taskIndex + 1, false, 0);
         final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
 
         while (iterator.hasNext()) {
-            fetchRecord(iterator.next(), task, recordImporter);
+            fetchSubResourceAndAddToImporter(iterator.next(), task, recordImporter);
 
             if (Exec.isPreview()) {
                 break;

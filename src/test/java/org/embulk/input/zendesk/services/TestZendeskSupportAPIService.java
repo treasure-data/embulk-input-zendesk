@@ -222,8 +222,7 @@ public class TestZendeskSupportAPIService
     @Test
     public void testAddRecordToImporterIncrementalWithNextPageAndAllRecordsShareTheSameTime()
     {
-        // api_end_time of ticket_share_same_time_with_next_page.json + 1
-        String expectedURL = "https://abc.zendesk.com/api/v2/incremental/tickets.json?start_time=1551419520";
+        String expectedURL = "https://abc.zendesk.com/api/v2/incremental/tickets.json?start_time=1551419519";
         setup("incremental.yml");
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/ticket_share_same_time_with_next_page.json");
         JsonNode dataJsonNext = ZendeskTestHelper.getJsonFromFile("data/tickets.json");
@@ -256,8 +255,8 @@ public class TestZendeskSupportAPIService
     @Test
     public void testTicketEventsAddRecordToImporterIncrementalWithNextPageAndAllRecordsShareTheSameTime()
     {
-        // api_end_time of ticket_events_share_same_time_with_next_page.json + 1
-        String expectedURL = "https://abc.zendesk.com/api/v2/incremental/ticket_events.json?start_time=1550645444";
+        // api_end_time of ticket_events_share_same_time_with_next_page.json
+        String expectedURL = "https://abc.zendesk.com/api/v2/incremental/ticket_events.json?start_time=1550645443";
         setup("incremental.yml");
         ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource("incremental.yml")
                 .set("target", "ticket_events")

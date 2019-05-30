@@ -67,8 +67,8 @@ public class TestZendeskNPSService
     @Test
     public void testAddRecordToImporterIncrementalWithNextPageAndAllRecordsShareTheSameTime()
     {
-        // api_end_time of ticket_share_same_time_with_next_page.json + 1
-        String expectedURL = "https://abc.zendesk.com/api/v2/nps/incremental/responses.json?start_time=1555418821";
+        // api_end_time of ticket_share_same_time_with_next_page.json
+        String expectedURL = "https://abc.zendesk.com/api/v2/nps/incremental/responses.json?start_time=1555418820";
 
         setup();
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/scores_share_same_time_with_next_page.json");

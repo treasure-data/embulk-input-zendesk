@@ -22,7 +22,7 @@ Required Embulk version >= 0.9.6.
 
 - **login_url**: Login URL for Zendesk (string, required)
 - **auth_method**: `basic`, `token`, or `oauth`. For more detail on [zendesk document](https://developer.zendesk.com/rest_api/docs/core/introduction#security-and-authentication). (string, required)
-- **target**: Which export Zendesk resource. Currently supported are `tickets`, `ticket_events`, `users`, `organizations`, `ticket_fields`, `ticket_forms` or `ticket_metrics`. (string, required)
+- **target**: Which export Zendesk resource. Currently supported are `tickets`, `ticket_events`, `users`, `organizations`, `ticket_fields`, `ticket_forms`, `ticket_metrics`, `scores`, `recipients`, `object_records`, `relationship_records` or `user_events`. (string, required)
 - **includes**: Will fetch sub resources. For example, ticket has ticket_audits, ticket_comments. See below example config. (array, default: `[]`)
 - **username**: The user name a.k.a. email. Required if `auth_method` is `basic` or `token`. (string, default: `null`)
 - **password**: Password. required if `auth_method` is `basic`. (string, default: `null`)
@@ -36,7 +36,12 @@ Required Embulk version >= 0.9.6.
 - **app_marketplace_integration_name**: Invisible to user, only requires to be a part of the Zendesk Apps Marketplace. This should be used to name of the integration.
 - **app_marketplace_org_id**: Invisible to user, only requires to be a part of the Zendesk Apps Marketplace. This should be the Organization ID for your organization from the new developer portal.
 - **app_marketplace_app_id**: Invisible to user, only requires to be a part of the Zendesk Apps Marketplace. This is the “App ID” that will be assigned to you when you submit your app.
-  
+- **object_types**: List custom object types, required if `target` is `object_records`.
+- **relationship_types**: List custom relationship types, required if `target` is `relationship_records`.
+- **profile_source**: Profile source of user event, required if `target` is `user_events`.
+- **user_event_source**: Source of user event, required if `target` is `user_events`.
+- **user_event_type**: Type of user event, required if `target` is `user_events`.   
+
 ## Example
 
 ```yaml
@@ -59,3 +64,28 @@ in:
 ```
 $ ./gradlew package
 ```
+
+
+@Config("object_types")
+        @ConfigDefault("[]")
+        List<String> getObjectTypes();
+
+        @Config("relationship_types")
+        @ConfigDefault("[]")
+        List<String> getRelationshipTypes();
+
+        @Config("profile_source")
+        @ConfigDefault("null")
+        Optional<String> getProfileSource();
+
+        @Config("end_time")
+        @ConfigDefault("null")
+        Optional<String> getEndTime();
+
+        @Config("user_event_type")
+        @ConfigDefault("null")
+        Optional<String> getUserEventType();
+
+        @Config("user_event_source")
+        @ConfigDefault("null")
+        Optional<String> getUserEventSource();

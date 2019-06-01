@@ -47,16 +47,6 @@ public class TestZendeskSupportAPIService
     }
 
     @Test
-    public void testBuildPathWithNonIncrementalFor()
-    {
-        String expectURL = "https://abc.zendesk.com/api/v2/ticket_fields.json?sort_by=id&per_page=100&page=0";
-        setup("non-incremental.yml");
-        loadData("data/ticket_fields.json");
-        String url = zendeskSupportAPIService.buildURI(0, 0);
-        assertEquals(expectURL, url);
-    }
-
-    @Test
     public void testBuildPathWithIncrementalWithTicketMetrics()
     {
         String expectURL = "https://abc.zendesk.com/api/v2/incremental/tickets.json?start_time=0&include=metric_sets";

@@ -16,8 +16,8 @@ import java.util.function.Function;
 
 public class RecordImporter
 {
-    Schema schema;
-    PageBuilder pageBuilder;
+    private Schema schema;
+    private PageBuilder pageBuilder;
 
     private static final Logger logger = Exec.getLogger(RecordImporter.class);
 

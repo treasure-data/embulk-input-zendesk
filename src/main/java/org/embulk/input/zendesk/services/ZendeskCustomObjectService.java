@@ -3,6 +3,7 @@ package org.embulk.input.zendesk.services;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Preconditions;
 import org.apache.http.HttpStatus;
 import org.embulk.config.ConfigException;
 import org.embulk.config.TaskReport;
@@ -52,8 +53,9 @@ public class ZendeskCustomObjectService implements ZendeskService
     @Override
     public JsonNode getDataFromPath(final String path, final int page, final boolean isPreview, final long startTime)
     {
-        Optional<String> response = Optional.empty();
+        Preconditions.checkArgument(isPreview, "IsPreview should be true to use this method");
 
+        Optional<String> response = Optional.empty();
         final List<String> paths = path.isEmpty()
                 ? getListPathByTarget()
                 : Collections.singletonList(path);
@@ -62,7 +64,6 @@ public class ZendeskCustomObjectService implements ZendeskService
             try {
                 response = Optional.ofNullable(getZendeskRestClient().doGet(temp, task, true));
 
-                // Break when we have data to preview
                 if (response.isPresent()) {
                     break;
                 }

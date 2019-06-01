@@ -44,7 +44,7 @@ public class ZendeskCustomObjectService implements ZendeskService
     {
         final List<String> paths = getListPathByTarget();
 
-        paths.parallelStream().forEach(path -> StreamSupport.stream(new CustomObjectSpliterator(path, getZendeskRestClient(), task, Exec.isPreview()), Exec.isPreview())
+        paths.parallelStream().forEach(path -> StreamSupport.stream(new CustomObjectSpliterator(path, getZendeskRestClient(), task, Exec.isPreview()), !Exec.isPreview())
                 .forEach(recordImporter::addRecord));
 
         return Exec.newTaskReport();

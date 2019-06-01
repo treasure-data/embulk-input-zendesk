@@ -172,11 +172,12 @@ public class ZendeskInputPlugin implements InputPlugin
 
         // For non-incremental target, we will split records based on number of pages. 100 records per page
         // In preview, run with taskCount = 1
-        if (!Exec.isPreview() && !getZendeskService(task).isSupportIncremental()) {
+        if (!Exec.isPreview() && !getZendeskService(task).isSupportIncremental() && getZendeskService(task) instanceof ZendeskSupportAPIService) {
             final JsonNode result = getZendeskService(task).getDataFromPath("", 0, false, 0);
             if (result.has(ZendeskConstants.Field.COUNT) && !result.get(ZendeskConstants.Field.COUNT).isNull()
                     && result.get(ZendeskConstants.Field.COUNT).isInt()) {
                 taskCount = ZendeskUtils.numberToSplitWithHintingInTask(result.get(ZendeskConstants.Field.COUNT).asInt());
+                logger.info("Total page " + taskCount);
             }
         }
         return resume(task.dump(), schema, taskCount, control);

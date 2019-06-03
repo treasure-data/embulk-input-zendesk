@@ -1,3 +1,6 @@
+## 0.3.5 - 2019-06-03
+* [enhancement] Add new targets #58 [#58](https://github.com/treasure-data/embulk-input-zendesk/pull/58)
+
 ## 0.3.4 - 2019-04-11
 * [enhancement] Add new time format #56 [#56](https://github.com/treasure-data/embulk-input-zendesk/pull/56)
 

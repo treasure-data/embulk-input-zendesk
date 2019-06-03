@@ -1,0 +1,29 @@
+type: zendesk
+login_url: https://abc.zendesk.com
+auth_method: oauth
+username: dummy
+password: dummy
+token: dummy
+access_token: dummy
+target: user_events
+app_marketplace_integration_name: abc
+app_marketplace_app_id: abc
+app_marketplace_org_id: abc
+incremental: true
+retry_initial_wait_sec: 1
+dedup: false
+max_retry_wait_sec: 30
+retry_limit: 2
+profile_source: support
+start_time: '2019-01-20T07:14:50Z'
+end_time: '2019-06-20T07:14:53Z'
+columns:
+  - {name: id, type: string}
+  - {name: type, type: string}
+  - {name: source, type: string}
+  - {name: description, type: string}
+  - {name: authenticated, type: boolean}
+  - {name: created_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S%z'}
+  - {name: received_at, type: timestamp, format: '%Y-%m-%dT%H:%M:%S%z'}
+  - {name: properties, type: json}
+  - {name: user_id, type: string}

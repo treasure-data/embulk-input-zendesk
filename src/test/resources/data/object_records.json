@@ -1,0 +1,30 @@
+{
+  "data": [
+    {
+      "type": "account",
+      "id": "915a64d3-23d4-11e9-b8c1-9919f66bb73a",
+      "external_id": null,
+      "attributes": {
+        "account_id": 13,
+        "account_name": "ABC"
+      },
+      "created_at": "2019-01-29T14:45:49.017Z",
+      "updated_at": "2019-02-12T18:00:03.000Z"
+    },
+    {
+      "type": "account",
+      "id": "8e7caeee-2ecd-11e9-843d-27ae307b8995",
+      "external_id": null,
+      "attributes": {
+        "account_id": 13,
+        "account_name": "Wish"
+      },
+      "created_at": "2019-02-12T13:53:20.522Z",
+      "updated_at": "2019-02-12T13:53:21.000Z"
+    }
+  ],
+  "links": {
+    "previous": null,
+    "next": null
+  }
+}

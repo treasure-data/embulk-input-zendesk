@@ -4,14 +4,17 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
+import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigLoader;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.ModelManager;
+import org.embulk.spi.ExecSession;
 import org.embulk.test.EmbulkTests;
 import org.junit.Assert;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Field;
 
 import static junit.framework.TestCase.fail;
 
@@ -59,5 +62,18 @@ public final class ZendeskTestHelper
             }
         }
         return configSource;
+    }
+
+    public static void setPreviewMode(final EmbulkTestRuntime runtime, final boolean isPreview)
+    {
+        // A small hack to make the plugin executed in preview mode so
+        try {
+            final Field previewField = ExecSession.class.getDeclaredField("preview");
+            previewField.setAccessible(true);
+            previewField.set(runtime.getExec(), isPreview);
+        }
+        catch (NoSuchFieldException | IllegalAccessException e) {
+            Assert.fail(e.getMessage());
+        }
     }
 }

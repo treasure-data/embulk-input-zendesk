@@ -1,5 +1,10 @@
 package org.embulk.input.zendesk.utils;
 
+import com.google.common.collect.ImmutableList;
+
+import java.util.Arrays;
+import java.util.List;
+
 public class ZendeskConstants
 {
     private ZendeskConstants()
@@ -27,8 +32,12 @@ public class ZendeskConstants
 
     public static class Url
     {
-        public static final String API = "api/v2";
+        public static final String API = "/api/v2";
         public static final String API_INCREMENTAL = API + "/incremental";
+        public static final String API_NPS_INCREMENTAL = API + "/nps/incremental";
+        public static final String API_OBJECT_RECORD = "api/sunshine/objects/records";
+        public static final String API_RELATIONSHIP_RECORD = "api/sunshine/relationships/records";
+        public static final String API_USER_EVENT = "api/sunshine/events";
     }
 
     public static class Misc
@@ -45,6 +54,9 @@ public class ZendeskConstants
 
         // 1 MB
         public static final int GUESS_BUFFER_SIZE = 1024 * 1024;
+        public static final List<String> SUPPORT_DATE_TIME_FORMAT = ImmutableList.copyOf(Arrays.asList(ZendeskConstants.Misc.ISO_INSTANT, ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT,
+                ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.ISO_TIMESTAMP_FORMAT,
+                ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT_NO_SPACE));
     }
 
     public static class Regex

@@ -177,7 +177,6 @@ public class ZendeskInputPlugin implements InputPlugin
             if (result.has(ZendeskConstants.Field.COUNT) && !result.get(ZendeskConstants.Field.COUNT).isNull()
                     && result.get(ZendeskConstants.Field.COUNT).isInt()) {
                 taskCount = ZendeskUtils.numberToSplitWithHintingInTask(result.get(ZendeskConstants.Field.COUNT).asInt());
-                logger.info("Total page " + taskCount);
             }
         }
         return resume(task.dump(), schema, taskCount, control);

@@ -153,7 +153,7 @@ public class TestZendeskNormalService
     }
 
     @Test
-    public void testTicketEventsAddRecordToImporterIncrementaAndAllRecordsShareTheSameTime()
+    public void testTicketEventsAddRecordToImporterIncrementalAndAllRecordsShareTheSameTime()
     {
         setupSupportAPIService("incremental.yml");
         ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource("incremental.yml")
@@ -166,6 +166,78 @@ public class TestZendeskNormalService
         verify(recordImporter, times(4)).addRecord(any());
         // api_end_time of ticket_events_share_same_time_without_next_page.json + 1
         Assert.assertEquals(1550645444, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalContainEndTime()
+    {
+        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        // same updated_at time of last record
+        src.set("end_time", "2019-02-20T07:17:32Z");
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/tickets.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.addRecordToImporter(0, recordImporter);
+        verify(recordImporter, times(3)).addRecord(any());
+        Assert.assertFalse(taskReport.isEmpty());
+        // start_time = end_time + 1
+        Assert.assertEquals(1550647053, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalContainEndTimeFilterOutLastRecord()
+    {
+        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        // earlier than updated_at time of last record
+        src.set("end_time", "2019-02-20T07:17:32Z");
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/tickets.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.addRecordToImporter(0, recordImporter);
+        verify(recordImporter, times(3)).addRecord(any());
+        Assert.assertFalse(taskReport.isEmpty());
+        //
+        Assert.assertEquals(1550647053, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalContainEndTimeFilterOutLastRecordTicketEvents()
+    {
+        ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        src.set("target", Target.TICKET_EVENTS.toString());
+        // earlier than updated_at time of last record
+        // 1550645520
+        src.set("end_time", "2019-02-20T06:52:00Z");
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/ticket_events_updated_by_system_records.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.addRecordToImporter(0, recordImporter);
+        verify(recordImporter, times(3)).addRecord(any());
+        Assert.assertFalse(taskReport.isEmpty());
+        // end_time + 1
+        Assert.assertEquals(1550645521, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
+    }
+
+    @Test
+    public void executeIncrementalContainEndTimeFilterOutLastRecordNPSScore()
+    {
+        ConfigSource src = ZendeskTestHelper.getConfigSource("nps.yml");
+        src.set("target", Target.SCORES.toString());
+        // earlier than updated_at time of last record
+        // 1550645520
+        src.set("end_time", "2019-02-20T06:52:00Z");
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        setupZendeskSupportAPIService(task);
+        loadData("data/scores.json");
+
+        TaskReport taskReport = zendeskSupportAPIService.addRecordToImporter(0, recordImporter);
+        verify(recordImporter, times(1)).addRecord(any());
+        Assert.assertFalse(taskReport.isEmpty());
+        // end_time + 1
+        Assert.assertEquals(1550645521, taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong());
     }
 
     private void setupSupportAPIService(String file)

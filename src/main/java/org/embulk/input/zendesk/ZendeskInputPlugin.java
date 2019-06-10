@@ -234,6 +234,14 @@ public class ZendeskInputPlugin implements InputPlugin
                 configDiff.set(ZendeskConstants.Field.START_TIME,
                         offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
             }
+
+            if (taskReport.has(ZendeskConstants.Field.END_TIME)) {
+                final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
+                        taskReport.get(JsonNode.class, ZendeskConstants.Field.END_TIME).asLong()), ZoneOffset.UTC);
+
+                configDiff.set(ZendeskConstants.Field.END_TIME,
+                        offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
+            }
         }
         return configDiff;
     }
@@ -364,6 +372,7 @@ public class ZendeskInputPlugin implements InputPlugin
         validateIncremental(task);
         validateCustomObject(task);
         validateUserEvent(task);
+        validateTime(task);
     }
 
     private void validateCredentials(PluginTask task)
@@ -439,7 +448,11 @@ public class ZendeskInputPlugin implements InputPlugin
             if (!task.getProfileSource().isPresent()) {
                 throw new ConfigException("Profile Source is required for User Event Target");
             }
-
+        }
+    }
+    private void validateTime(PluginTask task)
+    {
+        if (getZendeskService(task).isSupportIncremental()) {
             // Can't set end_time to 0, so it should be valid
             task.getEndTime().ifPresent(time -> {
                 if (!ZendeskDateUtils.supportedTimeFormat(task.getEndTime().get()).isPresent()) {

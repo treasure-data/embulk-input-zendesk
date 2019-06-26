@@ -100,14 +100,14 @@ public abstract class ZendeskNormalServices implements ZendeskService
                     10, 100, 60, TimeUnit.SECONDS, new LinkedBlockingQueue<>()
             );
 
-            long resultEndTime = 0;
+            long apiEndTime = 0;
             while (true) {
                 int recordCount = 0;
 
                 // Page argument isn't used in incremental API so we just set it to 0
                 final JsonNode result = getDataFromPath("", 0, false, startTime);
                 final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
-                resultEndTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
+                apiEndTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
 
                 int numberOfRecords = 0;
                 if (result.has(ZendeskConstants.Field.COUNT)) {
@@ -123,7 +123,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
                     // Contain some records  that later than end_time. Checked and don't add.
                     // Because the api already sorted by updated_at or timestamp for ticket_events, we just need to break no need to check further.
-                    if (resultEndTime > endTime) {
+                    if (apiEndTime > endTime) {
                         long checkedTime = 0;
                         if (recordJsonNode.has(ZendeskConstants.Field.UPDATED_AT) && !recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).isNull()) {
                             checkedTime = ZendeskDateUtils.isoToEpochSecond(recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).textValue());
@@ -164,13 +164,11 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
                 // https://developer.zendesk.com/rest_api/docs/support/incremental_export#pagination
                 // When there are more than 1000 records share the same time stamp, the count > 1000
-                long apiEndTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
-
                 startTime = startTime == apiEndTime
                         ? apiEndTime + 1
                         : apiEndTime;
 
-                if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL) {
+                if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL || apiEndTime > endTime) {
                     break;
                 }
             }
@@ -201,24 +199,11 @@ public abstract class ZendeskNormalServices implements ZendeskService
             // no record to add
             if (resultEndTime == 0) {
                 nextStartTime = now;
-                if (task.getEndTime().isPresent()) {
-                    long endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
-                    taskReport.set(ZendeskConstants.Field.END_TIME, nextStartTime + endTime - initStartTime);
-                }
             }
             else {
                 if (task.getEndTime().isPresent()) {
                     long endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
-                    if (endTime <= now) {
-                        nextStartTime = endTime + 1;
-                    }
-                    else {
-                        // in the future so just ignore end_time here
-                        nextStartTime = resultEndTime + 1;
-                    }
-
-                    // Should always increase end_time by a decent amount of time to prevent missing records
-                    taskReport.set(ZendeskConstants.Field.END_TIME, nextStartTime + endTime - initStartTime);
+                    nextStartTime = endTime + 1;
                 }
                 else {
                     // NOTE: start_time compared as "=>", not ">".
@@ -226,6 +211,11 @@ public abstract class ZendeskNormalServices implements ZendeskService
                     // end_time + 1 is workaround for that
                     nextStartTime = resultEndTime + 1;
                 }
+            }
+
+            if (task.getEndTime().isPresent()) {
+                long endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
+                taskReport.set(ZendeskConstants.Field.END_TIME, nextStartTime + endTime - initStartTime);
             }
 
             taskReport.set(ZendeskConstants.Field.START_TIME, nextStartTime);

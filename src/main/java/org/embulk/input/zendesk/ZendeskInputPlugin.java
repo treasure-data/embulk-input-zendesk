@@ -167,6 +167,7 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         final PluginTask task = config.loadConfig(PluginTask.class);
         validateInputTask(task);
+
         final Schema schema = task.getColumns().toSchema();
         int taskCount = 1;
 
@@ -199,6 +200,17 @@ public class ZendeskInputPlugin implements InputPlugin
     public TaskReport run(final TaskSource taskSource, final Schema schema, final int taskIndex, final PageOutput output)
     {
         final PluginTask task = taskSource.loadTask(PluginTask.class);
+
+        if (Exec.isPreview()) {
+            checkValidTimeRangeThrowException(task);
+        }
+        else {
+            if (!isValidTimeRange(task)) {
+                logger.info("It is not a valid time range, end time: '"+ task.getEndTime().get() +"'. Skip this run");
+                return buildTaskReportWithTheSameStartTimeAndEndTime(task);
+            }
+        }
+
         try (final PageBuilder pageBuilder = getPageBuilder(schema, output)) {
             final TaskReport taskReport = getZendeskService(task).addRecordToImporter(taskIndex, getRecordImporter(schema, pageBuilder));
             pageBuilder.finish();
@@ -212,6 +224,7 @@ public class ZendeskInputPlugin implements InputPlugin
         config.set("columns", new ObjectMapper().createArrayNode());
         final PluginTask task = config.loadConfig(PluginTask.class);
         validateInputTask(task);
+        checkValidTimeRangeThrowException(task);
         return Exec.newConfigDiff().set("columns", buildColumns(task));
     }
 
@@ -450,6 +463,7 @@ public class ZendeskInputPlugin implements InputPlugin
             }
         }
     }
+
     private void validateTime(PluginTask task)
     {
         if (getZendeskService(task).isSupportIncremental()) {
@@ -465,5 +479,36 @@ public class ZendeskInputPlugin implements InputPlugin
                 throw new ConfigException("End Time should be later or equal than Start Time");
             }
         }
+    }
+
+    private void checkValidTimeRangeThrowException(PluginTask task)
+    {
+        if (!isValidTimeRange(task)) {
+            throw new ConfigException("End_Date must not be after now.");
+        }
+    }
+
+    private boolean isValidTimeRange(PluginTask task)
+    {
+        if (task.getEndTime().isPresent()) {
+            return ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) <= Instant.now().getEpochSecond();
+        }
+
+        return true;
+    }
+
+    private TaskReport buildTaskReportWithTheSameStartTimeAndEndTime(PluginTask task)
+    {
+        final TaskReport taskReport = Exec.newTaskReport();
+
+        if (task.getStartTime().isPresent()) {
+            taskReport.set(ZendeskConstants.Field.START_TIME, ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()));
+        }
+
+        if (task.getEndTime().isPresent()) {
+            taskReport.set(ZendeskConstants.Field.END_TIME, ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()));
+        }
+
+        return taskReport;
     }
 }

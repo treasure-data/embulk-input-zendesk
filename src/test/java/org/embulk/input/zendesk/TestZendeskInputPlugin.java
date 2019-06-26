@@ -14,6 +14,7 @@ import org.embulk.input.zendesk.services.ZendeskService;
 import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
 import org.embulk.input.zendesk.services.ZendeskUserEventService;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
+import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskPluginTestRuntime;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 
@@ -143,19 +144,23 @@ public class TestZendeskInputPlugin
     }
 
     @Test
-    public void testRunIncrementalStoreStartTime()
+    public void testRunIncrementalStoreStartTimeAndEndTime()
     {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml")
+                .set("end_time", "2019-04-12 06:51:50 +0000");
         TaskReport taskReport = Exec.newTaskReport();
         taskReport.set(ZendeskConstants.Field.START_TIME, 1557026576);
+        taskReport.set(ZendeskConstants.Field.END_TIME, 1560309776);
 
         when(zendeskSupportAPIService.isSupportIncremental()).thenReturn(true);
         when(zendeskSupportAPIService.addRecordToImporter(anyInt(), any())).thenReturn(taskReport);
 
         ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
         String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
+        String nextEndTime = configDiff.get(String.class, ZendeskConstants.Field.END_TIME);
         verify(pageBuilder, times(1)).finish();
         assertEquals("2019-05-05 03:22:56 +0000", nextStartTime);
+        assertEquals("2019-06-12 03:22:56 +0000", nextEndTime);
     }
 
     @Test
@@ -281,6 +286,43 @@ public class TestZendeskInputPlugin
         configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond() + 3600), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
         configSource.set("end_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
         assertValidation(configSource, "End Time should be later or equal than Start Time");
+    }
+
+    @Test
+    public void isValidTimeRangeShouldThrowException()
+    {
+        String expectedMessage = "End_Date must not be after now.";
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        when(zendeskSupportAPIService.isSupportIncremental()).thenReturn(true);
+        configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        configSource.set("end_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond() + 1000), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+
+        assertValidation(configSource, expectedMessage);
+
+        ZendeskTestHelper.setPreviewMode(embulk, true);
+        try {
+            zendeskInputPlugin.transaction(configSource, new Control());
+            fail("Should not reach here");
+        }
+        catch (final Exception e) {
+            assertEquals(expectedMessage, e.getMessage());
+        }
+    }
+
+    @Test
+    public void runShouldReturnSameStartTimeAndEndTime()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        ZendeskTestHelper.setPreviewMode(embulk, false);
+        when(zendeskSupportAPIService.isSupportIncremental()).thenReturn(true);
+        configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+        configSource.set("end_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond() + 1000), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
+
+        ConfigDiff configDiff = zendeskInputPlugin.transaction(configSource, new Control());
+        assertEquals(ZendeskDateUtils.convertToDateTimeFormat(configSource.get(String.class, ZendeskConstants.Field.START_TIME), ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT),
+                configDiff.get(String.class, ZendeskConstants.Field.START_TIME));
+        assertEquals(ZendeskDateUtils.convertToDateTimeFormat(configSource.get(String.class, ZendeskConstants.Field.END_TIME), ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT),
+                configDiff.get(String.class, ZendeskConstants.Field.END_TIME));
     }
 
     private void assertValidation(final ConfigSource configSource, final String message)

@@ -46,8 +46,7 @@ public class ZendeskDateUtils
 
     public static String convertToDateTimeFormat(String datetime, String dateTimeFormat)
     {
-        return OffsetDateTime.ofInstant(Instant.ofEpochSecond(ZendeskDateUtils.isoToEpochSecond(datetime)), ZoneOffset.UTC)
-                .format(DateTimeFormatter.ofPattern(dateTimeFormat));
+        return Instant.ofEpochSecond(ZendeskDateUtils.isoToEpochSecond(datetime)).atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern(dateTimeFormat));
     }
 
     // start_time should be start from 0

@@ -310,7 +310,7 @@ public class TestZendeskInputPlugin
     }
 
     @Test
-    public void runShouldReturnSameStartTimeAndEndTime()
+    public void runShouldKeepOldStartTimeAndEndTimeInConfigDiff()
     {
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
         ZendeskTestHelper.setPreviewMode(embulk, false);

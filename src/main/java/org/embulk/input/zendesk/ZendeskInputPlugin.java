@@ -206,8 +206,8 @@ public class ZendeskInputPlugin implements InputPlugin
         }
         else {
             if (!isValidTimeRange(task)) {
-                logger.info("It is not a valid time range, end time: '"+ task.getEndTime().get() +"'. Skip this run");
-                return buildTaskReportWithTheSameStartTimeAndEndTime(task);
+                logger.info("It is not a valid time range, end time: '" + task.getEndTime().get() + "'. Skip this run");
+                return buildTaskReportKeepOldStartAndEndTime(task);
             }
         }
 
@@ -497,7 +497,7 @@ public class ZendeskInputPlugin implements InputPlugin
         return true;
     }
 
-    private TaskReport buildTaskReportWithTheSameStartTimeAndEndTime(PluginTask task)
+    private TaskReport buildTaskReportKeepOldStartAndEndTime(PluginTask task)
     {
         final TaskReport taskReport = Exec.newTaskReport();
 

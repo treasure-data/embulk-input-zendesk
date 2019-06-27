@@ -291,6 +291,7 @@ public class TestZendeskInputPlugin
     @Test
     public void isValidTimeRangeShouldThrowException()
     {
+        ZendeskTestHelper.setPreviewMode(embulk, true);
         String expectedMessage = "End_Date must not be after now.";
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
         when(zendeskSupportAPIService.isSupportIncremental()).thenReturn(true);
@@ -299,7 +300,6 @@ public class TestZendeskInputPlugin
 
         assertValidation(configSource, expectedMessage);
 
-        ZendeskTestHelper.setPreviewMode(embulk, true);
         try {
             zendeskInputPlugin.transaction(configSource, new Control());
             fail("Should not reach here");

@@ -84,8 +84,8 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
         if (task.getStartTime().isPresent()) {
             startTime = ZendeskDateUtils.getStartTime(task.getStartTime().get());
+            initStartTime = startTime;
         }
-        initStartTime = startTime;
 
         if (task.getEndTime().isPresent()) {
             endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
@@ -168,7 +168,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
                         ? apiEndTime + 1
                         : apiEndTime;
 
-                if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL || apiEndTime > endTime) {
+                if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL || startTime > endTime) {
                     break;
                 }
             }

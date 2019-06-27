@@ -201,14 +201,14 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         final PluginTask task = taskSource.loadTask(PluginTask.class);
 
-        if (Exec.isPreview()) {
-            checkValidTimeRangeThrowException(task);
-        }
-        else {
-            if (!isValidTimeRange(task)) {
-                logger.info("The end time, '" + task.getEndTime().get() + "', is greater than the current time. No records will be imported. Data will be imported in next runs");
+        if (!Exec.isPreview() && getZendeskService(task).isSupportIncremental() && !isValidTimeRange(task)) {
+            logger.info("The end time, '" + task.getEndTime().get() + "', is greater than the current time. No records will be imported");
+
+            // we just need to store config_diff when incremental_mode is enable
+            if (task.getIncremental()) {
                 return buildTaskReportKeepOldStartAndEndTime(task);
             }
+            return Exec.newTaskReport();
         }
 
         try (final PageBuilder pageBuilder = getPageBuilder(schema, output)) {
@@ -224,7 +224,6 @@ public class ZendeskInputPlugin implements InputPlugin
         config.set("columns", new ObjectMapper().createArrayNode());
         final PluginTask task = config.loadConfig(PluginTask.class);
         validateInputTask(task);
-        checkValidTimeRangeThrowException(task);
         return Exec.newConfigDiff().set("columns", buildColumns(task));
     }
 
@@ -478,19 +477,16 @@ public class ZendeskInputPlugin implements InputPlugin
                     && ZendeskDateUtils.getStartTime(task.getStartTime().get()) > ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
                 throw new ConfigException("End Time should be later or equal than Start Time");
             }
-        }
-    }
 
-    private void checkValidTimeRangeThrowException(PluginTask task)
-    {
-        if (!isValidTimeRange(task)) {
-            throw new ConfigException("End_Date must not be after now.");
+            if (Exec.isPreview() && !isValidTimeRange(task)) {
+                throw new ConfigException("End_Date must not be after now.");
+            }
         }
     }
 
     private boolean isValidTimeRange(PluginTask task)
     {
-        if (task.getEndTime().isPresent() && task.getIncremental()) {
+        if (task.getEndTime().isPresent()) {
             return ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) <= Instant.now().getEpochSecond();
         }
 

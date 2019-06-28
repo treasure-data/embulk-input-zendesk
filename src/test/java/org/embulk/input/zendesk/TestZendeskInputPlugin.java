@@ -292,7 +292,7 @@ public class TestZendeskInputPlugin
     public void isValidTimeRangeShouldThrowException()
     {
         ZendeskTestHelper.setPreviewMode(embulk, true);
-        String expectedMessage = "End_Date must not be after now.";
+        String expectedMessage = "Invalid End time. End time is greater than current time";
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
         when(zendeskSupportAPIService.isSupportIncremental()).thenReturn(true);
         configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));

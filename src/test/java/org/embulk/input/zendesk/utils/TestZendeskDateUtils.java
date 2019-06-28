@@ -79,7 +79,7 @@ public class TestZendeskDateUtils
         assertEquals(0, actualValue);
 
         actualValue = ZendeskDateUtils.getStartTime("2019-02-30 06:50:45 +0000");
-        assertEquals(ZendeskDateUtils.getStartTime("2019-02-28 06:50:45 +0000"), actualValue);
+        assertEquals(0, actualValue);
 
         actualValue = ZendeskDateUtils.getStartTime("2019-02-20 06:50:45 +0000");
         assertEquals(expectedValue, actualValue);

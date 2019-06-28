@@ -206,7 +206,7 @@ public class ZendeskInputPlugin implements InputPlugin
                 throw new ConfigException("Invalid End time. End time is greater than current time");
             }
             else {
-                logger.info("The end time, '" + task.getEndTime().get() + "', is greater than the current time. No records will be imported");
+                logger.warn("The end time, '" + task.getEndTime().get() + "', is greater than the current time. No records will be imported");
 
                 // we just need to store config_diff when incremental_mode is enable
                 if (task.getIncremental()) {
@@ -490,11 +490,7 @@ public class ZendeskInputPlugin implements InputPlugin
 
     private boolean isValidTimeRange(PluginTask task)
     {
-        if (task.getEndTime().isPresent()) {
-            return ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) <= Instant.now().getEpochSecond();
-        }
-
-        return true;
+        return !task.getEndTime().isPresent() || ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) <= Instant.now().getEpochSecond();
     }
 
     private TaskReport buildTaskReportKeepOldStartAndEndTime(PluginTask task)

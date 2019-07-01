@@ -1,3 +1,7 @@
+## 0.3.6 - 2019-07-02
+* [enhancement] Improve error message #61 [#61](https://github.com/treasure-data/embulk-input-zendesk/pull/61)
+* [enhancement] Support `end_time` field for incremental #60 [#60](https://github.com/treasure-data/embulk-input-zendesk/pull/60)
+
 ## 0.3.5 - 2019-06-03
 * [enhancement] Add new targets #58 [#58](https://github.com/treasure-data/embulk-input-zendesk/pull/58)
 

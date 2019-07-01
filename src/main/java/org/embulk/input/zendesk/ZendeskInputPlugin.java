@@ -205,15 +205,14 @@ public class ZendeskInputPlugin implements InputPlugin
             if (Exec.isPreview()) {
                 throw new ConfigException("Invalid End time. End time is greater than current time");
             }
-            else {
-                logger.warn("The end time, '" + task.getEndTime().get() + "', is greater than the current time. No records will be imported");
 
-                // we just need to store config_diff when incremental_mode is enable
-                if (task.getIncremental()) {
-                    return buildTaskReportKeepOldStartAndEndTime(task);
-                }
-                return Exec.newTaskReport();
+            logger.warn("The end time, '" + task.getEndTime().get() + "', is greater than the current time. No records will be imported");
+
+            // we just need to store config_diff when incremental_mode is enable
+            if (task.getIncremental()) {
+                return buildTaskReportKeepOldStartAndEndTime(task);
             }
+            return Exec.newTaskReport();
         }
 
         try (final PageBuilder pageBuilder = getPageBuilder(schema, output)) {

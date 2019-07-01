@@ -178,7 +178,9 @@ public class ZendeskRestClient
                     throw new ConfigException("This address is not registered in Zendesk. Please check the login_url again");
                 }
             }
-            catch (IOException e) { }
+            catch (IOException e) {
+                // In case we can't parse the message, error should not be show here
+            }
 
             // 404 would be returned e.g. ticket comments are empty (on fetchRelatedObjects method)
             return false;

@@ -1,6 +1,7 @@
 package org.embulk.input.zendesk.clients;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -170,6 +171,17 @@ public class ZendeskRestClient
     private boolean isResponseStatusToRetry(final int status, final String message, final int retryAfter, final boolean isPreview)
     {
         if (status == HttpStatus.SC_NOT_FOUND) {
+            ObjectMapper objectMapper = new ObjectMapper();
+            try {
+                JsonNode jsonNode = objectMapper.readTree(message);
+                if (jsonNode.has("error") && jsonNode.get("error").has("title") && jsonNode.get("error").get("title").asText().startsWith("No help desk at ")) {
+                    throw new ConfigException("This address is not registered in Zendesk. Please check the login_url again");
+                }
+            }
+            catch (IOException e) {
+                // In case we can't parse the message, error should not be show here
+            }
+
             // 404 would be returned e.g. ticket comments are empty (on fetchRelatedObjects method)
             return false;
         }
@@ -203,6 +215,14 @@ public class ZendeskRestClient
 
         // Won't retry for 4xx range errors except above. Almost they should be ConfigError e.g. 403 Forbidden
         if (status / 100 == 4) {
+            if (status == HttpStatus.SC_UNAUTHORIZED) {
+                throw new ConfigException("Cannot authenticate due to invalid login credentials");
+            }
+
+            if (status == HttpStatus.SC_FORBIDDEN) {
+                throw new ConfigException("You do not have access to this resource. Please contact the account owner of this help desk for further help.");
+            }
+
             throw new ConfigException("Status '" + status + "', message '" + message + "'");
         }
 

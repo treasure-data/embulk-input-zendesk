@@ -167,6 +167,7 @@ public class ZendeskInputPlugin implements InputPlugin
     {
         final PluginTask task = config.loadConfig(PluginTask.class);
         validateInputTask(task);
+
         final Schema schema = task.getColumns().toSchema();
         int taskCount = 1;
 
@@ -199,6 +200,21 @@ public class ZendeskInputPlugin implements InputPlugin
     public TaskReport run(final TaskSource taskSource, final Schema schema, final int taskIndex, final PageOutput output)
     {
         final PluginTask task = taskSource.loadTask(PluginTask.class);
+
+        if (getZendeskService(task).isSupportIncremental() && !isValidTimeRange(task)) {
+            if (Exec.isPreview()) {
+                throw new ConfigException("Invalid End time. End time is greater than current time");
+            }
+
+            logger.warn("The end time, '" + task.getEndTime().get() + "', is greater than the current time. No records will be imported");
+
+            // we just need to store config_diff when incremental_mode is enable
+            if (task.getIncremental()) {
+                return buildTaskReportKeepOldStartAndEndTime(task);
+            }
+            return Exec.newTaskReport();
+        }
+
         try (final PageBuilder pageBuilder = getPageBuilder(schema, output)) {
             final TaskReport taskReport = getZendeskService(task).addRecordToImporter(taskIndex, getRecordImporter(schema, pageBuilder));
             pageBuilder.finish();
@@ -212,6 +228,9 @@ public class ZendeskInputPlugin implements InputPlugin
         config.set("columns", new ObjectMapper().createArrayNode());
         final PluginTask task = config.loadConfig(PluginTask.class);
         validateInputTask(task);
+        if (!isValidTimeRange(task)) {
+            throw new ConfigException("Invalid End time. End time is greater than current time");
+        }
         return Exec.newConfigDiff().set("columns", buildColumns(task));
     }
 
@@ -232,6 +251,14 @@ public class ZendeskInputPlugin implements InputPlugin
                         taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong()), ZoneOffset.UTC);
 
                 configDiff.set(ZendeskConstants.Field.START_TIME,
+                        offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
+            }
+
+            if (taskReport.has(ZendeskConstants.Field.END_TIME)) {
+                final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
+                        taskReport.get(JsonNode.class, ZendeskConstants.Field.END_TIME).asLong()), ZoneOffset.UTC);
+
+                configDiff.set(ZendeskConstants.Field.END_TIME,
                         offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
             }
         }
@@ -364,6 +391,7 @@ public class ZendeskInputPlugin implements InputPlugin
         validateIncremental(task);
         validateCustomObject(task);
         validateUserEvent(task);
+        validateTime(task);
     }
 
     private void validateCredentials(PluginTask task)
@@ -439,7 +467,12 @@ public class ZendeskInputPlugin implements InputPlugin
             if (!task.getProfileSource().isPresent()) {
                 throw new ConfigException("Profile Source is required for User Event Target");
             }
+        }
+    }
 
+    private void validateTime(PluginTask task)
+    {
+        if (getZendeskService(task).isSupportIncremental()) {
             // Can't set end_time to 0, so it should be valid
             task.getEndTime().ifPresent(time -> {
                 if (!ZendeskDateUtils.supportedTimeFormat(task.getEndTime().get()).isPresent()) {
@@ -452,5 +485,25 @@ public class ZendeskInputPlugin implements InputPlugin
                 throw new ConfigException("End Time should be later or equal than Start Time");
             }
         }
+    }
+
+    private boolean isValidTimeRange(PluginTask task)
+    {
+        return !task.getEndTime().isPresent() || ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()) <= Instant.now().getEpochSecond();
+    }
+
+    private TaskReport buildTaskReportKeepOldStartAndEndTime(PluginTask task)
+    {
+        final TaskReport taskReport = Exec.newTaskReport();
+
+        if (task.getStartTime().isPresent()) {
+            taskReport.set(ZendeskConstants.Field.START_TIME, ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()));
+        }
+
+        if (task.getEndTime().isPresent()) {
+            taskReport.set(ZendeskConstants.Field.END_TIME, ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get()));
+        }
+
+        return taskReport;
     }
 }

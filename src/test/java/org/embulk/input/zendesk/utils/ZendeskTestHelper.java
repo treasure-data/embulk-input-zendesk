@@ -76,4 +76,17 @@ public final class ZendeskTestHelper
             Assert.fail(e.getMessage());
         }
     }
+
+    public static void setPreviewMode(final ZendeskPluginTestRuntime runtime, final boolean isPreview)
+    {
+        // A small hack to make the plugin executed in preview mode so
+        try {
+            final Field previewField = ExecSession.class.getDeclaredField("preview");
+            previewField.setAccessible(true);
+            previewField.set(runtime.getExec(), isPreview);
+        }
+        catch (NoSuchFieldException | IllegalAccessException e) {
+            Assert.fail(e.getMessage());
+        }
+    }
 }

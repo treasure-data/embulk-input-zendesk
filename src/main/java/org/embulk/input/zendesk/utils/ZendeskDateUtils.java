@@ -9,6 +9,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
+import java.time.format.ResolverStyle;
 import java.util.Optional;
 
 public class ZendeskDateUtils
@@ -21,9 +22,14 @@ public class ZendeskDateUtils
     {
         final Optional<String> pattern = supportedTimeFormat(time);
         if (pattern.isPresent()) {
-            final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern.get()).withZone(ZoneOffset.UTC);
-            final OffsetDateTime offsetDateTime = LocalDateTime.parse(time, formatter).atOffset(ZoneOffset.UTC);
-            return offsetDateTime.toInstant().getEpochSecond();
+            final DateTimeFormatter formatter = DateTimeFormatter.ofPattern(pattern.get()).withZone(ZoneOffset.UTC).withResolverStyle(ResolverStyle.STRICT);
+            try {
+                final OffsetDateTime offsetDateTime = LocalDateTime.parse(time, formatter).atOffset(ZoneOffset.UTC);
+                return offsetDateTime.toInstant().getEpochSecond();
+            }
+            catch (DateTimeParseException e) {
+                throw new DataException(e.getMessage());
+            }
         }
 
         throw new DataException("Fail to parse value '" + time + "' follow formats " + ZendeskConstants.Misc.SUPPORT_DATE_TIME_FORMAT.toString());
@@ -46,8 +52,7 @@ public class ZendeskDateUtils
 
     public static String convertToDateTimeFormat(String datetime, String dateTimeFormat)
     {
-        return OffsetDateTime.ofInstant(Instant.ofEpochSecond(ZendeskDateUtils.isoToEpochSecond(datetime)), ZoneOffset.UTC)
-                .format(DateTimeFormatter.ofPattern(dateTimeFormat));
+        return Instant.ofEpochSecond(ZendeskDateUtils.isoToEpochSecond(datetime)).atOffset(ZoneOffset.UTC).format(DateTimeFormatter.ofPattern(dateTimeFormat));
     }
 
     // start_time should be start from 0

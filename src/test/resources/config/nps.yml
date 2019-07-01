@@ -13,6 +13,8 @@ incremental: true
 retry_initial_wait_sec: 1
 max_retry_wait_sec: 30
 retry_limit: 2
+start_time: '2019-01-20T07:14:50Z'
+end_time: '2019-01-20T07:14:53Z'
 columns:
   - {name: id, type: long}
   - {name: survey_id, type: string}

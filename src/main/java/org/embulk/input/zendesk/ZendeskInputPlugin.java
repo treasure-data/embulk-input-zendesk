@@ -286,7 +286,7 @@ public class ZendeskInputPlugin implements InputPlugin
         final Buffer bufferSample = Buffer.copyOf(sample.toString().getBytes(StandardCharsets.UTF_8));
         final JsonNode columns = Exec.getInjector().getInstance(GuessExecutor.class)
                 .guessParserConfig(bufferSample, Exec.newConfigSource(), createGuessConfig())
-                .getObjectNode().get("columns");
+                .get(JsonNode.class,  "columns");
 
         final Iterator<JsonNode> ite = columns.elements();
 

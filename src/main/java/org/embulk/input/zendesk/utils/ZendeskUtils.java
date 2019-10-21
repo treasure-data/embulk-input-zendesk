@@ -15,10 +15,13 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Base64;
 import java.util.Iterator;
+import org.embulk.spi.Exec;
+import org.slf4j.Logger;
 
 public class ZendeskUtils
 {
     private static final ObjectMapper mapper = new ObjectMapper();
+    private static final Logger logger = Exec.getLogger(ZendeskUtils.class);
 
     static {
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -79,6 +82,7 @@ public class ZendeskUtils
     private static JsonNode parseJsonNode(final String jsonText)
     {
         try {
+            logger.info("Text {}", jsonText);
             return ZendeskUtils.mapper.readTree(jsonText);
         }
         catch (final IOException e) {

@@ -15,7 +15,9 @@ public class ZendeskSupportAPIService extends ZendeskNormalServices
 
     public boolean isSupportIncremental()
     {
-        return !(task.getTarget().equals(Target.TICKET_FORMS) || task.getTarget().equals(Target.TICKET_FIELDS));
+        return !(task.getTarget().equals(Target.TICKET_FORMS)
+                || task.getTarget().equals(Target.TICKET_FIELDS)
+                || task.getTarget().equals(Target.SATISFACTION_RATINGS));
     }
 
     @Override
@@ -30,9 +32,18 @@ public class ZendeskSupportAPIService extends ZendeskNormalServices
             }
         }
         else {
-            uriBuilder.setParameter("sort_by", "id")
-                    .setParameter("per_page", String.valueOf(100))
-                    .setParameter("page", String.valueOf(page));
+            if (Target.SATISFACTION_RATINGS.equals(task.getTarget())){
+                uriBuilder.setParameter(ZendeskConstants.Field.START_TIME, String.valueOf(startTime))
+                        .setParameter("sort_by", "id")
+                        .setParameter("per_page", String.valueOf(100))
+                        .setParameter("page", String.valueOf(page));
+
+            }
+            else{
+                uriBuilder.setParameter("sort_by", "id")
+                        .setParameter("per_page", String.valueOf(100))
+                        .setParameter("page", String.valueOf(page));
+            }
         }
 
         return uriBuilder.toString();
@@ -40,7 +51,7 @@ public class ZendeskSupportAPIService extends ZendeskNormalServices
 
     private String buildPath()
     {
-        return (isSupportIncremental()
+        return (isSupportIncremental() && !(Target.SATISFACTION_RATINGS.equals(task.getTarget()))
                 ? ZendeskConstants.Url.API_INCREMENTAL
                 : ZendeskConstants.Url.API) +
                 "/" +

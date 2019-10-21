@@ -49,7 +49,12 @@ public abstract class ZendeskNormalServices implements ZendeskService
             importDataForIncremental(task, recordImporter, taskReport);
         }
         else {
-            importDataForNonIncremental(task, taskIndex, recordImporter);
+            if(task.getTarget().equals(Target.SATISFACTION_RATINGS)){
+                importDataForNonIncremental(task, taskIndex, recordImporter, true);
+            }
+            else{
+                importDataForNonIncremental(task, taskIndex, recordImporter, false);
+            }
         }
 
         return taskReport;
@@ -101,14 +106,24 @@ public abstract class ZendeskNormalServices implements ZendeskService
             );
 
             long apiEndTime = 0;
+            int afterStartTimeIndex = 11;
             while (true) {
                 int recordCount = 0;
 
                 // Page argument isn't used in incremental API so we just set it to 0
                 final JsonNode result = getDataFromPath("", 0, false, startTime);
                 final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
-                apiEndTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
 
+                if (result.has(ZendeskConstants.Field.END_TIME)){
+                    apiEndTime = result.get(ZendeskConstants.Field.END_TIME).asLong();
+                }
+                else{
+                    if(result.has(ZendeskConstants.Field.NEXT_PAGE)){
+                        String next_page = result.get(ZendeskConstants.Field.NEXT_PAGE).textValue();
+                        apiEndTime = Long.parseLong(next_page.substring(next_page.indexOf(ZendeskConstants.Field.START_TIME)+afterStartTimeIndex));
+                    }
+                }
+                logger.info("Api END Time = '{}'", apiEndTime);
                 int numberOfRecords = 0;
                 if (result.has(ZendeskConstants.Field.COUNT)) {
                     numberOfRecords = result.get(ZendeskConstants.Field.COUNT).asInt();
@@ -269,18 +284,64 @@ public abstract class ZendeskNormalServices implements ZendeskService
         return false;
     }
 
-    private void importDataForNonIncremental(final ZendeskInputPlugin.PluginTask task, final int taskIndex, RecordImporter recordImporter)
+    private void importDataForNonIncremental(final ZendeskInputPlugin.PluginTask task,  final int taskIndex, RecordImporter recordImporter, final boolean getStartDate)
     {
-        // Page start from 1 => page = taskIndex + 1
-        final JsonNode result = getDataFromPath("", taskIndex + 1, false, 0);
-        final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
+        long startTime = 0;
 
-        while (iterator.hasNext()) {
-            fetchSubResourceAndAddToImporter(iterator.next(), task, recordImporter);
+        if (Target.SATISFACTION_RATINGS.equals(task.getTarget())){
+            if (getStartDate && task.getStartTime().isPresent()) {
+                startTime = ZendeskDateUtils.getStartTime(task.getStartTime().get());
+            }
+            logger.info("Start time = {}", startTime);
 
-            if (Exec.isPreview()) {
-                break;
+            int i = 1;
+            final Set<String> knownIds = ConcurrentHashMap.newKeySet();
+            while (true) {
+                final JsonNode result = getDataFromPath("", taskIndex +i, false, startTime);
+                final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
+                while (iterator.hasNext()) {
+                    final JsonNode recordJsonNode = iterator.next();
+
+                    if (task.getDedup()) {
+                        final String recordID = recordJsonNode.get(ZendeskConstants.Field.ID).asText();
+
+                        // add success -> no duplicate
+                        if (!knownIds.add(recordID)) {
+                            continue;
+                        }
+                    }
+                    fetchSubResourceAndAddToImporter(recordJsonNode, task, recordImporter);
+
+                    if (Exec.isPreview()) {
+                        break;
+                    }
+                }
+
+                    i++;
+                if(result.has(ZendeskConstants.Field.NEXT_PAGE)){
+                    String next_page = result.get(ZendeskConstants.Field.NEXT_PAGE).textValue();
+                    if (next_page == null){
+                        logger.info("No next page exists. Exiting...");
+                        return;
+                    }
+                    logger.info("Next page = {}", next_page);
+                }
+                }
+
+        }
+        else{
+
+            // Page start from 1 => page = taskIndex + 1
+            final JsonNode result = getDataFromPath("", taskIndex + 1 , false, 0);
+            final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
+            while (iterator.hasNext()) {
+                fetchSubResourceAndAddToImporter(iterator.next(), task, recordImporter);
+
+                if (Exec.isPreview()) {
+                    break;
+                }
             }
         }
+
     }
 }

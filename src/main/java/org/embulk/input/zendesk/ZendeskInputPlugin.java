@@ -23,6 +23,7 @@ import org.embulk.input.zendesk.services.ZendeskNPSService;
 import org.embulk.input.zendesk.services.ZendeskService;
 import org.embulk.input.zendesk.services.ZendeskSupportAPIService;
 import org.embulk.input.zendesk.services.ZendeskUserEventService;
+import org.embulk.input.zendesk.services.ZendeskNormalServices;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
@@ -173,7 +174,8 @@ public class ZendeskInputPlugin implements InputPlugin
 
         // For non-incremental target, we will split records based on number of pages. 100 records per page
         // In preview, run with taskCount = 1
-        if (!Exec.isPreview() && !getZendeskService(task).isSupportIncremental() && getZendeskService(task) instanceof ZendeskSupportAPIService) {
+        if (!Exec.isPreview() && !getZendeskService(task).isSupportIncremental() && getZendeskService(task) instanceof ZendeskSupportAPIService && !Target.SATISFACTION_RATINGS.equals(task.getTarget())) {
+
             final JsonNode result = getZendeskService(task).getDataFromPath("", 0, false, 0);
             if (result.has(ZendeskConstants.Field.COUNT) && !result.get(ZendeskConstants.Field.COUNT).isNull()
                     && result.get(ZendeskConstants.Field.COUNT).isInt()) {
@@ -360,6 +362,8 @@ public class ZendeskInputPlugin implements InputPlugin
             case TICKET_EVENTS:
             case TICKET_FORMS:
             case TICKET_FIELDS:
+            case TICKET_METRIC_EVENTS:
+            case SATISFACTION_RATINGS:
                 return new ZendeskSupportAPIService(task);
             case RECIPIENTS:
             case SCORES:

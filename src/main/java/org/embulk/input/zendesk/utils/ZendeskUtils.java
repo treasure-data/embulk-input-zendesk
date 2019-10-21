@@ -82,7 +82,7 @@ public class ZendeskUtils
     private static JsonNode parseJsonNode(final String jsonText)
     {
         try {
-            logger.info("Text {}", jsonText);
+            // logger.info("Text {}", jsonText);
             return ZendeskUtils.mapper.readTree(jsonText);
         }
         catch (final IOException e) {

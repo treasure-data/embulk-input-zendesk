@@ -1,3 +1,6 @@
+## 0.3.7 - 2019-08-29
+* [enhancement] Replace ConfigSource#getObjectNodes method in embulk core #63 [#63](https://github.com/treasure-data/embulk-input-zendesk/pull/63)
+
 ## 0.3.6 - 2019-07-02
 * [enhancement] Improve error message #61 [#61](https://github.com/treasure-data/embulk-input-zendesk/pull/61)
 * [enhancement] Support `end_time` field for incremental #60 [#60](https://github.com/treasure-data/embulk-input-zendesk/pull/60)

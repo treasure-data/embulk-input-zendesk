@@ -364,6 +364,7 @@ public class ZendeskInputPlugin implements InputPlugin
             case TICKET_FIELDS:
             case TICKET_METRIC_EVENTS:
             case SATISFACTION_RATINGS:
+            case SLA_POLICIES:
                 return new ZendeskSupportAPIService(task);
             case RECIPIENTS:
             case SCORES:

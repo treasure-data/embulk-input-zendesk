@@ -11,7 +11,12 @@ Embulk input plugin for loading [Zendesk](https://www.zendesk.com/) records.
 
 Required Embulk version >= 0.9.6.
 
-**NOTE** This plugin don't support JSON type columns e.g. custom fields, tags, etc for now. But they will be supported soon.
+**NOTE** This plugin differs from original plugin to following:
+* DOES support JSON type columns
+* Supports satisfaction_ratings API
+* Supports ticket_metric_events API
+* Supports SLA Policies API
+
 
 * **Plugin type**: input
 * **Resume supported**: no

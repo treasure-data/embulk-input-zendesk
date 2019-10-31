@@ -16,6 +16,7 @@ public class ZendeskSupportAPIService extends ZendeskNormalServices
     public boolean isSupportIncremental()
     {
         return !(task.getTarget().equals(Target.TICKET_FORMS)
+                || task.getTarget().equals(Target.SLA_POLICIES)
                 || task.getTarget().equals(Target.TICKET_FIELDS)
                 || task.getTarget().equals(Target.SATISFACTION_RATINGS));
     }
@@ -51,13 +52,19 @@ public class ZendeskSupportAPIService extends ZendeskNormalServices
 
     private String buildPath()
     {
-        return (isSupportIncremental() && !(Target.SATISFACTION_RATINGS.equals(task.getTarget()))
-                ? ZendeskConstants.Url.API_INCREMENTAL
-                : ZendeskConstants.Url.API) +
-                "/" +
-                (Target.TICKET_METRICS.equals(task.getTarget())
-                        ? Target.TICKETS.toString()
-                        : task.getTarget().toString())
-                + ".json";
+        if(Target.SLA_POLICIES.equals(task.getTarget()))
+        {
+            return ZendeskConstants.Url.API+"/slas/policies";
+        }
+        else{
+            return (isSupportIncremental() && !(Target.SATISFACTION_RATINGS.equals(task.getTarget()))
+                    ? ZendeskConstants.Url.API_INCREMENTAL
+                    : ZendeskConstants.Url.API) +
+                    "/" +
+                    (Target.TICKET_METRICS.equals(task.getTarget())
+                            ? Target.TICKETS.toString()
+                            : task.getTarget().toString())
+                    + ".json";
+        }
     }
 }

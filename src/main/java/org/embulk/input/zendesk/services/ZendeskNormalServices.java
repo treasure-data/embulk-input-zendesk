@@ -59,11 +59,15 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
         return taskReport;
     }
-
     public JsonNode getDataFromPath(String path, final int page, final boolean isPreview, final long startTime)
     {
+        return getDataFromPath(path, page,isPreview, startTime, 0);
+    }
+
+    public JsonNode getDataFromPath(String path, final int page, final boolean isPreview, final long startTime, final long endTime)
+    {
         if (path.isEmpty()) {
-            path = buildURI(page, startTime);
+            path = buildURI(page, startTime, endTime);
         }
 
         final String response = getZendeskRestClient().doGet(path, task, isPreview);
@@ -71,6 +75,8 @@ public abstract class ZendeskNormalServices implements ZendeskService
     }
 
     protected abstract String buildURI(int page, long startTime);
+    protected abstract String buildURI(int page, long startTime, long endTime);
+
 
     @VisibleForTesting
     protected ZendeskRestClient getZendeskRestClient()
@@ -127,14 +133,16 @@ public abstract class ZendeskNormalServices implements ZendeskService
                 int numberOfRecords = 0;
                 if (result.has(ZendeskConstants.Field.COUNT)) {
                     numberOfRecords = result.get(ZendeskConstants.Field.COUNT).asInt();
+                    logger.info("Number of Records {}", numberOfRecords);
                 }
 
                 while (iterator.hasNext()) {
                     final JsonNode recordJsonNode = iterator.next();
 
-                    if (isUpdatedBySystem(recordJsonNode, startTime)) {
-                        continue;
-                    }
+//                    if (isUpdatedBySystem(recordJsonNode, startTime)) {
+//                        logger.info("This record is update by system? {} IGNORED!! ", recordJsonNode.get("id"));
+//                        continue;
+//                    }
 
                     // Contain some records  that later than end_time. Checked and don't add.
                     // Because the api already sorted by updated_at or timestamp for ticket_events, we just need to break no need to check further.
@@ -142,6 +150,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
                         long checkedTime = 0;
                         if (recordJsonNode.has(ZendeskConstants.Field.UPDATED_AT) && !recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).isNull()) {
                             checkedTime = ZendeskDateUtils.isoToEpochSecond(recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).textValue());
+//                            logger.info("Checked time {}", checkedTime);
                         }
 
                         // ticket events is updated by system not user's action so it only has timestamp field
@@ -155,11 +164,13 @@ public abstract class ZendeskNormalServices implements ZendeskService
                         }
 
                         if (checkedTime > endTime) {
+                            logger.info("Lets break since checked time > endTime {}", endTime);
                             break;
                         }
                     }
 
                     if (task.getDedup()) {
+//                        logger.info("Do we dedup??");
                         final String recordID = recordJsonNode.get(ZendeskConstants.Field.ID).asText();
 
                         // add success -> no duplicate
@@ -170,6 +181,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
                     pool.submit(() -> fetchSubResourceAndAddToImporter(recordJsonNode, task, recordImporter));
                     recordCount++;
+//                    logger.info("Record count {}", recordCount);
                     if (Exec.isPreview()) {
                         return;
                     }
@@ -184,6 +196,8 @@ public abstract class ZendeskNormalServices implements ZendeskService
                         : apiEndTime;
 
                 if (numberOfRecords < ZendeskConstants.Misc.MAXIMUM_RECORDS_INCREMENTAL || startTime > endTime) {
+                    logger.info("Break because number of Records < MAXIMUM RECORDS {}", numberOfRecords);
+                    logger.info("or start time {}> end Time {}", startTime, endTime);
                     break;
                 }
             }
@@ -239,6 +253,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
     private void fetchSubResourceAndAddToImporter(final JsonNode jsonNode, final ZendeskInputPlugin.PluginTask task, final RecordImporter recordImporter)
     {
+//        logger.info("Fetch Sub Resource {}", jsonNode.get("id"));
         task.getIncludes().forEach(include -> {
             final String relatedObjectName = include.trim();
 
@@ -254,13 +269,14 @@ public abstract class ZendeskNormalServices implements ZendeskService
                 }
             }
             catch (final ConfigException e) {
+                logger.info("Some exception for id {}", jsonNode.get("id"));
                 // Sometimes we get 404 when having invalid endpoint, so ignore when we get 404 InvalidEndpoint
                 if (!(e.getCause() instanceof ZendeskException && ((ZendeskException) e.getCause()).getStatusCode() == HttpStatus.SC_NOT_FOUND)) {
                     throw e;
                 }
             }
         });
-
+//        logger.info("Add record {}", jsonNode.get("id"));
         recordImporter.addRecord(jsonNode);
     }
 
@@ -287,6 +303,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
     private void importDataForNonIncremental(final ZendeskInputPlugin.PluginTask task,  final int taskIndex, RecordImporter recordImporter, final boolean getStartDate)
     {
         long startTime = 0;
+        long endTime = 0;
 
         if (Target.SATISFACTION_RATINGS.equals(task.getTarget())){
             if (getStartDate && task.getStartTime().isPresent()) {
@@ -294,10 +311,16 @@ public abstract class ZendeskNormalServices implements ZendeskService
             }
             logger.info("Start time = {}", startTime);
 
+            if (task.getEndTime().isPresent()) {
+                endTime = ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get());
+            }
+
+            logger.info("End time = {}", endTime);
+
             int i = 1;
             final Set<String> knownIds = ConcurrentHashMap.newKeySet();
             while (true) {
-                final JsonNode result = getDataFromPath("", taskIndex +i, false, startTime);
+                final JsonNode result = getDataFromPath("", taskIndex +i, false, startTime, endTime);
                 final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
                 while (iterator.hasNext()) {
                     final JsonNode recordJsonNode = iterator.next();

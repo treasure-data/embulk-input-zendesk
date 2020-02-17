@@ -15,6 +15,11 @@ public class ZendeskNPSService extends ZendeskNormalServices
     {
         return true;
     }
+    @Override
+    protected String buildURI(final int page, final long startTime, final long endTime)
+    {
+        return buildURI(page, startTime);
+    }
 
     @Override
     protected String buildURI(final int page, final long startTime)

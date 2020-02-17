@@ -235,6 +235,8 @@ public class ZendeskRestClient
         final HttpGet request = new HttpGet(url);
         final ImmutableMap<String, String> headers = buildAuthHeader(task);
         headers.forEach(request::setHeader);
+
+//        headers.values().forEach(logger::info);
         return request;
     }
 

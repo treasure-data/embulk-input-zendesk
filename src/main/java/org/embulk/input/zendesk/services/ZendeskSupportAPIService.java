@@ -22,7 +22,12 @@ public class ZendeskSupportAPIService extends ZendeskNormalServices
     }
 
     @Override
-    protected String buildURI(final int page, long startTime)
+    protected String buildURI(final int page, long startTime){
+        return buildURI(page, startTime);
+    }
+
+    @Override
+    protected String buildURI(final int page, long startTime, long endTime)
     {
         final URIBuilder uriBuilder = ZendeskUtils.getURIBuilder(task.getLoginUrl()).setPath(buildPath());
 
@@ -34,11 +39,18 @@ public class ZendeskSupportAPIService extends ZendeskNormalServices
         }
         else {
             if (Target.SATISFACTION_RATINGS.equals(task.getTarget())){
-                uriBuilder.setParameter(ZendeskConstants.Field.START_TIME, String.valueOf(startTime))
-                        .setParameter("sort_by", "id")
-                        .setParameter("per_page", String.valueOf(100))
-                        .setParameter("page", String.valueOf(page));
-
+                if (endTime>0){
+                    uriBuilder.setParameter(ZendeskConstants.Field.START_TIME, String.valueOf(startTime))
+                            .setParameter(ZendeskConstants.Field.END_TIME, String.valueOf(endTime))
+                            .setParameter("sort_by", "id")
+                            .setParameter("per_page", String.valueOf(100))
+                            .setParameter("page", String.valueOf(page));
+                }else{
+                    uriBuilder.setParameter(ZendeskConstants.Field.START_TIME, String.valueOf(startTime))
+                            .setParameter("sort_by", "id")
+                            .setParameter("per_page", String.valueOf(100))
+                            .setParameter("page", String.valueOf(page));
+                }
             }
             else{
                 uriBuilder.setParameter("sort_by", "id")

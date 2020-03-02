@@ -1,7 +1,6 @@
 package org.embulk.input.zendesk.clients;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.apache.http.Header;
 
 import org.apache.http.HttpResponse;
@@ -41,7 +40,6 @@ import java.util.Optional;
 
 public class TestZendeskRestClient
 {
-    @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     @Rule
     public EmbulkTestRuntime embulkTestRuntime = new EmbulkTestRuntime();
 

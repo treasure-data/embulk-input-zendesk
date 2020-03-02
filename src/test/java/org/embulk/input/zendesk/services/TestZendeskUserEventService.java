@@ -1,7 +1,6 @@
 package org.embulk.input.zendesk.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
@@ -32,7 +31,6 @@ public class TestZendeskUserEventService
     private RecordImporter recordImporter;
 
     @Rule
-    @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
     private ZendeskRestClient zendeskRestClient;
     private ZendeskUserEventService zendeskUserEventService;

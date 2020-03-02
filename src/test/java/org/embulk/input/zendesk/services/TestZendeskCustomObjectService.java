@@ -1,7 +1,6 @@
 package org.embulk.input.zendesk.services;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 
 import org.embulk.config.TaskReport;
@@ -33,7 +32,6 @@ import static org.mockito.Mockito.when;
 public class TestZendeskCustomObjectService
 {
     @Rule
-    @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
 
     private ZendeskRestClient zendeskRestClient;

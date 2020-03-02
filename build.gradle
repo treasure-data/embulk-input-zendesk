@@ -1,41 +1,53 @@
 plugins {
-    id "com.jfrog.bintray" version "1.1"
-    id "com.github.jruby-gradle.base" version "0.1.5"
     id "java"
+    id "maven" // install jar files to the local repo: $ gradle install
+    id "maven-publish"
     id "checkstyle"
     id "jacoco"
-    id "findbugs"
+    id "org.embulk.embulk-plugins" version "0.3.0"
 }
-import com.github.jrubygradle.JRubyExec
+
 repositories {
     mavenCentral()
     jcenter()
 }
-configurations {
-    provided
-}
 
-version = "0.3.7"
+group = "org.embulk"
+version = "0.3.8"
+description = "Import records from Zendesk."
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.9.7"
-    provided("org.embulk:embulk-core:0.9.7")
+    compileOnly "org.embulk:embulk-core:0.9.23"
+
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.6'
     testCompile "junit:junit:4.+"
-    testCompile "org.embulk:embulk-core:0.9.7:tests"
-    testCompile "org.embulk:embulk-test:0.9.7"
+    testCompile "org.embulk:embulk-core:0.9.23:tests"
+    testCompile "org.embulk:embulk-test:0.9.23"
+    testCompile "org.embulk:embulk-deps-buffer:0.9.23"
+    testCompile "org.embulk:embulk-deps-config:0.9.23"
+    testCompile "org.embulk:embulk-deps-guess:0.9.23"
     testCompile "org.mockito:mockito-core:2.+"
 }
 
-task classpath(type: Copy, dependsOn: ["jar"]) {
-    doFirst { file("classpath").deleteDir() }
-    from (configurations.runtime - configurations.provided + files(jar.archivePath))
-    into "classpath"
+embulkPlugin {
+    mainClass = "org.embulk.input.zendesk.ZendeskInputPlugin"
+    category = "input"
+    type = "zendesk"
 }
-clean { delete "classpath" }
+
+publishing {
+    publications {
+        embulkPluginMaven(MavenPublication) {  // Publish it with "publishEmbulkPluginMavenPublicationToMavenRepository".
+            from components.java  // Must be "components.java". The dependency modification works only for it.
+        }
+    }
+    repositories {
+        // TODO: Configure some public Maven repo(s).
+    }
+}
 
 jacocoTestReport {
     group = "Reporting"
@@ -43,13 +55,6 @@ jacocoTestReport {
         xml.enabled false
         csv.enabled false
         html.destination file("${buildDir}/reports/coverage")
-    }
-}
-
-tasks.withType(FindBugs) {
-    reports {
-        xml.enabled = false
-        html.enabled = true
     }
 }
 
@@ -70,51 +75,25 @@ task checkstyle(type: Checkstyle) {
     source = sourceSets.main.allJava + sourceSets.test.allJava
 }
 
-task gem(type: JRubyExec, dependsOn: ["gemspec", "classpath"]) {
-    jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "build"
-    script "${project.name}.gemspec"
-    doLast { ant.move(file: "${project.name}-${project.version}.gem", todir: "pkg") }
-}
+gem {
+    authors = [ "Hieu Duong" ]
+    email = [ "duongminhhieu89@gmail.com" ]
+    summary = "Embulk Input Zendesk input plugin for Embulk"
+    homepage = "https://github.com/treasure-data/embulk-input-zendesk"
+    licenses = []
 
-task gemPush(type: JRubyExec, dependsOn: ["gem"]) {
-    jrubyArgs "-rrubygems/gem_runner", "-eGem::GemRunner.new.run(ARGV)", "push"
-    script "pkg/${project.name}-${project.version}.gem"
-}
-
-task "package"(dependsOn: ["gemspec", "classpath"]) {
-    doLast {
-        println "> Build succeeded."
-        println "> You can run embulk with '-L ${file(".").absolutePath}' argument."
+    generateRubyCode = false
+    into("lib/embulk/input/") {
+        from "lib/embulk/input/zendesk.rb"
+    }
+    into("lib/embulk/guess/") {
+        from "lib/embulk/guess/zendesk.rb"
     }
 }
 
-task gemspec {
-    ext.gemspecFile = file("${project.name}.gemspec")
-    inputs.file "build.gradle"
-    outputs.file gemspecFile
-    doLast { gemspecFile.write($/
-Gem::Specification.new do |spec|
-  spec.name          = "${project.name}"
-  spec.version       = "${project.version}"
-  spec.authors       = ["hieu.duong"]
-  spec.summary       = %[Zendesk input plugin for Embulk]
-  spec.description   = %[Loads records from Zendesk.]
-  spec.email         = ["hieu.duong@treasure-data.com"]
-  spec.licenses      = ["MIT"]
-  spec.homepage      = "https://github.com/treasure-data/embulk-input-zendesk"
-
-  spec.files         = `git ls-files`.split("\n") + Dir["classpath/*.jar"]
-  spec.test_files    = spec.files.grep(%r"^(test|spec)/")
-  spec.require_paths = ["lib"]
-
-  #spec.add_dependency 'YOUR_GEM_DEPENDENCY', ['~> YOUR_GEM_DEPENDENCY_VERSION']
-  spec.add_development_dependency 'bundler', ['~> 1.0']
-  spec.add_development_dependency 'rake', ['~> 12.0']
-end
-/$)
-    }
+gemPush {
+    host = "https://rubygems.org"
 }
-clean { delete "${project.name}.gemspec" }
 
 test {
     testLogging {

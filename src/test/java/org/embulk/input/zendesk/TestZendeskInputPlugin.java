@@ -1,7 +1,6 @@
 package org.embulk.input.zendesk;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -60,7 +59,6 @@ import java.util.stream.IntStream;
 public class TestZendeskInputPlugin
 {
     @Rule
-    @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     public ZendeskPluginTestRuntime embulk = new ZendeskPluginTestRuntime();
 
     private ZendeskService zendeskSupportAPIService;

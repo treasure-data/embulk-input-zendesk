@@ -42,11 +42,11 @@ public class ZendeskPluginTestRuntime extends GuiceBinder
         {
             ConfigSource systemConfig = getSystemConfig();
             new SystemConfigModule(systemConfig).configure(binder);
-            new ExecModule().configure(binder);
+            new ExecModule(systemConfig).configure(binder);
             new ExtensionServiceLoaderModule(systemConfig).configure(binder);
             new BuiltinPluginSourceModule().configure(binder);
             new JRubyScriptingModule(systemConfig).configure(binder);
-            new PluginClassLoaderModule(systemConfig).configure(binder);
+            new PluginClassLoaderModule().configure(binder);
             new TestUtilityModule().configure(binder);
             new TestPluginSourceModule().configure(binder);
         }
@@ -126,7 +126,7 @@ public class ZendeskPluginTestRuntime extends GuiceBinder
     private static ConfigSource getSystemConfig()
     {
         ObjectNode configNode = JsonNodeFactory.instance.objectNode();
-        configNode.set("jruby_load_path", JsonNodeFactory.instance.arrayNode().add("lib"));
+        configNode.set("jruby_load_path", JsonNodeFactory.instance.textNode("lib"));
 
         return new DataSourceImpl(new ModelManager(null, new ObjectMapper()), configNode);
     }

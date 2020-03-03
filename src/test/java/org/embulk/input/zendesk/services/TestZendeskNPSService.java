@@ -1,6 +1,5 @@
 package org.embulk.input.zendesk.services;
 
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
@@ -18,7 +17,6 @@ import static org.mockito.Mockito.when;
 public class TestZendeskNPSService
 {
     @Rule
-    @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
 
     private ZendeskRestClient zendeskRestClient;

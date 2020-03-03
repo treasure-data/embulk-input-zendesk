@@ -1,7 +1,6 @@
 package org.embulk.input.zendesk;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 import org.embulk.spi.Column;
@@ -25,7 +24,6 @@ import static org.mockito.Mockito.verify;
 public class TestRecordImporter
 {
     @Rule
-    @SuppressFBWarnings("URF_UNREAD_PUBLIC_OR_PROTECTED_FIELD")
     public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
 
     public PageBuilder pageBuilder = mock(PageBuilder.class);

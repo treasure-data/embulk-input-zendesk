@@ -180,11 +180,11 @@ public class ZendeskChatService implements ZendeskService
     {
         return ZendeskUtils.getURIBuilder(task.getLoginUrl())
             .setPath(ZendeskConstants.Url.API_CHAT)
-            .setParameter("ids", buildIDSparam(ids))
+            .setParameter("ids", buildIdsParam(ids))
             .toString();
     }
 
-    private String buildIDSparam(final List<String> ids)
+    private String buildIdsParam(final List<String> ids)
     {
         return Joiner.on(",").join(ids);
     }
@@ -219,11 +219,17 @@ public class ZendeskChatService implements ZendeskService
         int total = json.get("count").asInt();
         if (total > 0) {
             return ZendeskDateUtils.convertToDateTimeFormat(
-                json.get("results").get((total - 1) % MAXIMUM_RECORDS_PER_PAGE).get("timestamp").asText(),
-                ZendeskConstants.Misc.ISO_INSTANT);
+                json.get("results")
+                    .get(getLastRecordIndex(total))
+                    .get("timestamp").asText(), ZendeskConstants.Misc.ISO_INSTANT);
         }
 
-        throw new DataException("fail");
+        throw new DataException("");
+    }
+
+    private int getLastRecordIndex(final int total)
+    {
+        return (total - 1) % MAXIMUM_RECORDS_PER_PAGE;
     }
 
     private void storeStartTimeForConfigDiff(final TaskReport taskReport, final long initStartTime, final long resultEndTime)

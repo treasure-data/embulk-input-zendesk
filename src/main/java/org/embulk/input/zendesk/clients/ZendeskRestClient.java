@@ -23,9 +23,9 @@ import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.DataException;
-import org.embulk.spi.Exec;
 import org.embulk.spi.util.RetryExecutor;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
@@ -38,7 +38,7 @@ public class ZendeskRestClient
 {
     private static final int CONNECTION_TIME_OUT = 240000;
 
-    private static final Logger logger = Exec.getLogger(ZendeskRestClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(ZendeskRestClient.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static RateLimiter rateLimiter;
 

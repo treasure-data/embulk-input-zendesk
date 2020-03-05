@@ -18,6 +18,7 @@ import org.embulk.config.TaskSource;
 import org.embulk.exec.GuessExecutor;
 import org.embulk.input.zendesk.models.AuthenticationMethod;
 import org.embulk.input.zendesk.models.Target;
+import org.embulk.input.zendesk.services.ZendeskChatService;
 import org.embulk.input.zendesk.services.ZendeskCustomObjectService;
 import org.embulk.input.zendesk.services.ZendeskNPSService;
 import org.embulk.input.zendesk.services.ZendeskService;
@@ -35,6 +36,7 @@ import org.embulk.spi.Schema;
 import org.embulk.spi.SchemaConfig;
 import org.embulk.spi.type.Types;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
@@ -160,7 +162,7 @@ public class ZendeskInputPlugin implements InputPlugin
 
     private RecordImporter recordImporter;
 
-    private static final Logger logger = Exec.getLogger(ZendeskInputPlugin.class);
+    private static final Logger logger = LoggerFactory.getLogger(ZendeskInputPlugin.class);
 
     @Override
     public ConfigDiff transaction(final ConfigSource config, final Control control)
@@ -369,6 +371,8 @@ public class ZendeskInputPlugin implements InputPlugin
                 return new ZendeskCustomObjectService(task);
             case USER_EVENTS:
                 return new ZendeskUserEventService(task);
+            case CHAT:
+                return new ZendeskChatService(task);
             default:
                 throw new ConfigException("Unsupported " + task.getTarget() + ", supported values: '" + Arrays.toString(Target.values()) + "'");
         }

@@ -88,7 +88,7 @@ public class ZendeskChatService implements ZendeskService
                 break;
             }
 
-            endTime = getNextEndDate(startTime, endTime, totalPages);
+            endTime = getNextEndDate(startTime, endTime);
         }
 
         storeStartTimeForConfigDiff(taskReport, ZendeskDateUtils.isoToEpochSecond(startTime), ZendeskDateUtils.isoToEpochSecond(endTime));
@@ -211,25 +211,21 @@ public class ZendeskChatService implements ZendeskService
         return totalRecords / MAXIMUM_RECORDS_PER_PAGE + 1;
     }
 
-    private String getNextEndDate(final String startTime, final String endTime, final int page)
+    private String getNextEndDate(final String startTime, final String endTime)
     {
-        String searchURI = buildSearchRequest(startTime, endTime, page);
+        String searchURI = buildSearchRequest(startTime, endTime, MAXIMUM_TOTAL_PAGES);
         String response = getZendeskRestClient().doGet(searchURI, task, false);
         JsonNode json = ZendeskUtils.parseJsonObject(response);
         int total = json.get("count").asInt();
-        if (total > 0) {
+
+        if (total == MAXIMUM_RECORDS_PER_PAGE) {
             return ZendeskDateUtils.convertToDateTimeFormat(
                 json.get("results")
-                    .get(getLastRecordIndex(total))
+                    .get(MAXIMUM_RECORDS_PER_PAGE - 1)
                     .get("timestamp").asText(), ZendeskConstants.Misc.ISO_INSTANT);
         }
 
-        throw new DataException("");
-    }
-
-    private int getLastRecordIndex(final int total)
-    {
-        return (total - 1) % MAXIMUM_RECORDS_PER_PAGE;
+        throw new DataException("Expect to get 40 records when fetching last page but get "  + total);
     }
 
     private void storeStartTimeForConfigDiff(final TaskReport taskReport, final long initStartTime, final long resultEndTime)

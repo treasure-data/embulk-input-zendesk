@@ -1,3 +1,6 @@
+## 0.3.8 - 2020-03-10
+* [enhancement] Apply embulk gradle #64 [#64](https://github.com/treasure-data/embulk-input-zendesk/pull/64)
+
 ## 0.3.7 - 2019-08-29
 * [enhancement] Replace ConfigSource#getObjectNodes method in embulk core #63 [#63](https://github.com/treasure-data/embulk-input-zendesk/pull/63)
 

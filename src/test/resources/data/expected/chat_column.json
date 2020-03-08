@@ -1,0 +1,112 @@
+[
+  {
+    "name": "id",
+    "type": "long"
+  },
+  {
+    "name": "visitor",
+    "type": "json"
+  },
+  {
+    "name": "started_by",
+    "type": "string"
+  },
+  {
+    "name": "session",
+    "type": "json"
+  },
+  {
+    "name": "webpath",
+    "type": "json"
+  },
+  {
+    "name": "timestamp",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S%z"
+  },
+  {
+    "name": "count",
+    "type": "json"
+  },
+  {
+    "name": "duration",
+    "type": "long"
+  },
+  {
+    "name": "response_time",
+    "type": "json"
+  },
+  {
+    "name": "agent_names",
+    "type": "json"
+  },
+  {
+    "name": "agent_ids",
+    "type": "json"
+  },
+  {
+    "name": "triggered",
+    "type": "boolean"
+  },
+  {
+    "name": "triggered_response",
+    "type": "string"
+  },
+  {
+    "name": "unread",
+    "type": "boolean"
+  },
+  {
+    "name": "missed",
+    "type": "boolean"
+  },
+  {
+    "name": "tags",
+    "type": "json"
+  },
+  {
+    "name": "type",
+    "type": "string"
+  },
+  {
+    "name": "history",
+    "type": "json"
+  },
+  {
+    "name": "rating",
+    "type": "string"
+  },
+  {
+    "name": "comment",
+    "type": "string"
+  },
+  {
+    "name": "department_id",
+    "type": "string"
+  },
+  {
+    "name": "department_name",
+    "type": "string"
+  },
+  {
+    "name": "referrer_search_engine",
+    "type": "string"
+  },
+  {
+    "name": "referrer_search_terms",
+    "type": "string"
+  },
+  {
+    "name": "end_timestamp",
+    "type": "timestamp",
+    "format": "%Y-%m-%dT%H:%M:%S%z"
+  },
+  {
+    "name": "conversions",
+    "type": "json"
+  },
+  {
+    "name": "zendesk_ticket_id",
+    "type": "string"
+  }
+]

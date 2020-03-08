@@ -13,7 +13,7 @@ public enum Target
     TICKETS("tickets"), USERS("users"), ORGANIZATIONS("organizations"), TICKET_EVENTS("ticket_events"),
     TICKET_METRICS("metric_sets"), TICKET_FIELDS("ticket_fields"), TICKET_FORMS("ticket_forms"),
     RECIPIENTS("recipients"), SCORES("responses"), OBJECT_RECORDS("data"), RELATIONSHIP_RECORDS("data"), USER_EVENTS("data"),
-    CHAT("docs ");
+    CHAT("docs");
 
     String jsonName;
 

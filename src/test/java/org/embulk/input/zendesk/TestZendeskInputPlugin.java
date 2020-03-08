@@ -7,6 +7,7 @@ import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.input.zendesk.models.Target;
+import org.embulk.input.zendesk.services.ZendeskChatService;
 import org.embulk.input.zendesk.services.ZendeskCustomObjectService;
 import org.embulk.input.zendesk.services.ZendeskNPSService;
 import org.embulk.input.zendesk.services.ZendeskService;
@@ -65,6 +66,8 @@ public class TestZendeskInputPlugin
 
     private ZendeskInputPlugin zendeskInputPlugin;
 
+    private ZendeskService zendeskChatService;
+
     private PageBuilder pageBuilder = mock(PageBuilder.class);
 
     private TestPageBuilderReader.MockPageOutput output = new TestPageBuilderReader.MockPageOutput();
@@ -109,6 +112,14 @@ public class TestZendeskInputPlugin
         src.set("target", "user_events");
         src.set("profile_source", "dummy");
         setupTestGuessGenerateColumn(src, "data/user_event.json", "data/expected/user_events_column.json");
+    }
+
+    @Test
+    public void testGuessGenerateColumnsForChat()
+    {
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
+        src.set("target", "chat");
+        setupTestGuessGenerateColumn(src, "data/chat.json", "data/expected/chat_column.json");
     }
 
     @Test
@@ -162,6 +173,28 @@ public class TestZendeskInputPlugin
     }
 
     @Test
+    public void testRunIncrementalStoreStartTimeAndEndTimeForChat()
+    {
+        setupChatService();
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("chat.yml")
+            .set("incremental", true)
+            .set("end_time", "2019-04-12 06:51:50 +0000");
+        TaskReport taskReport = Exec.newTaskReport();
+        taskReport.set(ZendeskConstants.Field.START_TIME, 1557026576);
+        taskReport.set(ZendeskConstants.Field.END_TIME, 1560309776);
+
+        when(zendeskChatService.isSupportIncremental()).thenReturn(true);
+        when(zendeskChatService.addRecordToImporter(anyInt(), any())).thenReturn(taskReport);
+
+        ConfigDiff configDiff = zendeskInputPlugin.transaction(src, new Control());
+        String nextStartTime = configDiff.get(String.class, ZendeskConstants.Field.START_TIME);
+        String nextEndTime = configDiff.get(String.class, ZendeskConstants.Field.END_TIME);
+        verify(pageBuilder, times(1)).finish();
+        assertEquals("2019-05-05 03:22:56 +0000", nextStartTime);
+        assertEquals("2019-06-12 03:22:56 +0000", nextEndTime);
+    }
+
+    @Test
     public void testDispatchPerTargetShouldReturnSupportAPIService()
     {
         // create a new one so it doesn't mock the ZendeskService
@@ -191,6 +224,14 @@ public class TestZendeskInputPlugin
         zendeskInputPlugin = spy(new ZendeskInputPlugin());
         testReturnCustomObjectService(Target.OBJECT_RECORDS);
         testReturnCustomObjectService(Target.RELATIONSHIP_RECORDS);
+    }
+
+    @Test
+    public void testDispatchPerTargetShouldReturnChatService()
+    {
+        // create a new one so it doesn't mock the ZendeskService
+        zendeskInputPlugin = spy(new ZendeskInputPlugin());
+        testReturnChatService(Target.CHAT);
     }
 
     @Test
@@ -366,6 +407,16 @@ public class TestZendeskInputPlugin
         assertTrue(zendeskService instanceof ZendeskCustomObjectService);
     }
 
+    private void testReturnChatService(Target target)
+    {
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
+        src.set("target", target.name().toLowerCase());
+        src.set("columns", Collections.EMPTY_LIST);
+        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
+        assertTrue(zendeskService instanceof ZendeskChatService);
+    }
+
     private void loadData(String fileName)
     {
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile(fileName);
@@ -384,6 +435,12 @@ public class TestZendeskInputPlugin
     {
         zendeskSupportAPIService = mock(ZendeskSupportAPIService.class);
         doReturn(zendeskSupportAPIService).when(zendeskInputPlugin).dispatchPerTarget(any(ZendeskInputPlugin.PluginTask.class));
+    }
+
+    private void setupChatService()
+    {
+        zendeskChatService = mock(ZendeskChatService.class);
+        doReturn(zendeskChatService).when(zendeskInputPlugin).dispatchPerTarget(any(ZendeskInputPlugin.PluginTask.class));
     }
 
     private class Control implements InputPlugin.Control

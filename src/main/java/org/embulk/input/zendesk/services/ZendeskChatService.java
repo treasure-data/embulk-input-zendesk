@@ -68,27 +68,31 @@ public class ZendeskChatService implements ZendeskService
             String searchURI = buildSearchRequest(startTime, endTime, 1);
 
             String response = getZendeskRestClient().doGet(searchURI, task, Exec.isPreview());
+
             JsonNode json = ZendeskUtils.parseJsonObject(response);
 
-            int totalRecords = json.get("count").asInt();
-            int totalPages = totalRecords > MAXIMUM_TOTAL_RECORDS
-                                ? MAXIMUM_TOTAL_PAGES
-                                : slicePages(totalRecords);
+            if (!ZendeskUtils.isNull(json)) {
+                int totalRecords = json.get("count").asInt();
+                int totalPages = totalRecords > MAXIMUM_TOTAL_RECORDS
+                    ? MAXIMUM_TOTAL_PAGES
+                    : slicePages(totalRecords);
 
-            logger.info(String.format("Fetching from '%s' to '%s' with '%d' pages and '%d' records",
-                startTime, endTime, totalPages,  totalRecords));
+                logger.info(String.format("Fetching from '%s' to '%s' with '%d' pages and '%d' records",
+                    startTime, endTime, totalPages,  totalRecords));
 
-            final String lastEndTime = endTime;
+                final String lastEndTime = endTime;
 
-            IntStream.range(1, totalPages)
-                .parallel()
-                .forEach(page -> fetchData(startTime, lastEndTime, page, recordImporter));
+                IntStream.range(1, totalPages)
+                    .parallel()
+                    .forEach(page -> fetchData(startTime, lastEndTime, page, recordImporter));
 
-            if (totalRecords <= MAXIMUM_TOTAL_RECORDS || Exec.isPreview()) {
-                break;
+                if (totalRecords <= MAXIMUM_TOTAL_RECORDS || Exec.isPreview()) {
+                    break;
+                }
+
+                endTime = getNextEndDate(startTime, endTime);
             }
-
-            endTime = getNextEndDate(startTime, endTime);
+            break;
         }
 
         storeStartTimeForConfigDiff(taskReport, ZendeskDateUtils.isoToEpochSecond(startTime), ZendeskDateUtils.isoToEpochSecond(endTime));
@@ -122,7 +126,7 @@ public class ZendeskChatService implements ZendeskService
         if (ids.size() > 0) {
             String fetchIdsURI = buildSearchRequest(ids);
 
-            String response = zendeskRestClient.doGet(fetchIdsURI, task, false);
+            String response = getZendeskRestClient().doGet(fetchIdsURI, task, false);
 
             JsonNode data = ZendeskUtils.parseJsonObject(response);
             if (data.get("count").asInt() > 0) {

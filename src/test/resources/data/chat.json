@@ -1,0 +1,165 @@
+{
+  "docs": [
+    {
+      "id": "id_1",
+      "visitor": {
+        "phone": "090918292929",
+        "notes": "",
+        "email": "email@gmail.com",
+        "name": "name",
+        "id": "id_1"
+      },
+      "started_by": "visitor",
+      "session": {
+        "city": "city",
+        "end_date": "2019-12-29T03:11:06Z",
+        "ip": "112.79.88.219",
+        "region": "",
+        "start_date": "2019-12-29T02:46:49Z",
+        "platform": "Android",
+        "user_agent": "Mozilla/5.0 (Linux; Android 9; Nokia 2.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.93 Mobile Safari/537.36",
+        "country_code": "IN",
+        "country_name": "India",
+        "id": "id_1",
+        "browser": "Chrome"
+      },
+      "webpath": [
+        {
+          "timestamp": "2019-12-29T02:46:49Z",
+          "to": "to",
+          "from": "https://www.google.com/",
+          "title": ""
+        }
+      ],
+      "timestamp": "2019-12-29T02:48:50Z",
+      "count": {
+        "visitor": 30,
+        "total": 67,
+        "agent": 37
+      },
+      "duration": 1286,
+      "response_time": {
+        "max": 172,
+        "avg": 30.746578956905164,
+        "first": 12
+      },
+      "agent_names": [
+        "Sneha"
+      ],
+      "agent_ids": [
+        "4651851"
+      ],
+      "triggered": false,
+      "triggered_response": null,
+      "unread": false,
+      "missed": false,
+      "tags": [
+
+      ],
+      "type": "chat",
+      "history": [
+        {
+          "index": 0,
+          "name": "Praveen",
+          "timestamp": "2019-12-29T02:48:50Z",
+          "department_name": null,
+          "channel": "#s",
+          "department_id": null,
+          "type": "c"
+        }
+      ],
+      "rating": null,
+      "comment": null,
+      "department_id": null,
+      "department_name": null,
+      "referrer_search_engine": "Google",
+      "referrer_search_terms": "",
+      "end_timestamp": "2019-12-29T03:11:06Z",
+      "conversions": [
+
+      ],
+      "zendesk_ticket_id": null
+    },
+    {
+      "id": "id_2",
+      "visitor": {
+        "phone": "090918292929",
+        "notes": "",
+        "email": "email@gmail.com",
+        "name": "name",
+        "id": "id_2"
+      },
+      "started_by": "visitor",
+      "session": {
+        "city": "city",
+        "end_date": "2019-12-29T03:11:06Z",
+        "ip": "112.79.88.219",
+        "region": "",
+        "start_date": "2019-12-29T02:46:49Z",
+        "platform": "Android",
+        "user_agent": "Mozilla/5.0 (Linux; Android 9; Nokia 2.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.93 Mobile Safari/537.36",
+        "country_code": "IN",
+        "country_name": "India",
+        "id": "id_1",
+        "browser": "Chrome"
+      },
+      "webpath": [
+        {
+          "timestamp": "2019-12-29T02:46:49Z",
+          "to": "to",
+          "from": "https://www.google.com/",
+          "title": ""
+        }
+      ],
+      "timestamp": "2019-12-29T02:48:50Z",
+      "count": {
+        "visitor": 30,
+        "total": 67,
+        "agent": 37
+      },
+      "duration": 1286,
+      "response_time": {
+        "max": 172,
+        "avg": 30.746578956905164,
+        "first": 12
+      },
+      "agent_names": [
+        "Sneha"
+      ],
+      "agent_ids": [
+        "4651851"
+      ],
+      "triggered": false,
+      "triggered_response": null,
+      "unread": false,
+      "missed": false,
+      "tags": [
+
+      ],
+      "type": "chat",
+      "history": [
+        {
+          "index": 0,
+          "name": "Praveen",
+          "timestamp": "2019-12-29T02:48:50Z",
+          "department_name": null,
+          "channel": "",
+          "department_id": null,
+          "type": "chat.memberjoin"
+        }
+      ],
+      "rating": null,
+      "comment": null,
+      "department_id": null,
+      "department_name": null,
+      "referrer_search_engine": "Google",
+      "referrer_search_terms": "",
+      "end_timestamp": "2019-12-29T03:11:06Z",
+      "conversions": [
+
+      ],
+      "zendesk_ticket_id": null
+    }
+  ],
+  "count": 2
+}

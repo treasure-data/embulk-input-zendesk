@@ -22,7 +22,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class TestZendeskChatService {
+public class TestZendeskChatService
+{
     @Rule public EmbulkTestRuntime runtime = new EmbulkTestRuntime();
 
     private ZendeskRestClient zendeskRestClient;

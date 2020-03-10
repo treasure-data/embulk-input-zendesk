@@ -173,7 +173,10 @@ public class ZendeskChatService implements ZendeskService
     {
         return new StringBuilder()
             .append("timestamp:[")
-            .append(ZendeskDateUtils.convertToDateTimeFormat(startTime, ZendeskConstants.Misc.ISO_INSTANT))
+            .append(
+                startTime.equals("0")
+                ? "*"
+                : ZendeskDateUtils.convertToDateTimeFormat(startTime, ZendeskConstants.Misc.ISO_INSTANT))
             .append(" TO ")
             .append(ZendeskDateUtils.convertToDateTimeFormat(endTime, ZendeskConstants.Misc.ISO_INSTANT))
             .append("]")

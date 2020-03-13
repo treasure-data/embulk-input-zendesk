@@ -117,7 +117,7 @@ public class TestZendeskInputPlugin
     @Test
     public void testGuessGenerateColumnsForChat()
     {
-        final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("chat.yml");
         src.set("target", "chat");
         setupTestGuessGenerateColumn(src, "data/chat.json", "data/expected/chat_column.json");
     }

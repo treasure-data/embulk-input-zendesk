@@ -13,7 +13,6 @@ import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
-import org.embulk.spi.DataException;
 import org.embulk.spi.Exec;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -92,11 +91,11 @@ public class ZendeskChatService implements ZendeskService
 
                 endTime = getNextEndDate(startTime, endTime);
             }
-            break;
         }
 
-        storeStartTimeForConfigDiff(taskReport, ZendeskDateUtils.isoToEpochSecond(startTime), ZendeskDateUtils.isoToEpochSecond(endTime));
-
+        storeStartTimeForConfigDiff(taskReport,
+            startTime.equals("0") ? 0 : ZendeskDateUtils.isoToEpochSecond(startTime),
+            ZendeskDateUtils.isoToEpochSecond(endTime));
         return taskReport;
     }
 
@@ -223,16 +222,11 @@ public class ZendeskChatService implements ZendeskService
         String searchURI = buildSearchRequest(startTime, endTime, MAXIMUM_TOTAL_PAGES);
         String response = getZendeskRestClient().doGet(searchURI, task, false);
         JsonNode json = ZendeskUtils.parseJsonObject(response);
-        int total = json.get("count").asInt();
 
-        if (total == MAXIMUM_RECORDS_PER_PAGE) {
-            return ZendeskDateUtils.convertToDateTimeFormat(
-                json.get("results")
+        return ZendeskDateUtils.convertToDateTimeFormat(
+                    json.get("results")
                     .get(MAXIMUM_RECORDS_PER_PAGE - 1)
                     .get("timestamp").asText(), ZendeskConstants.Misc.ISO_INSTANT);
-        }
-
-        throw new DataException("Expect to get 40 records when fetching last page but get "  + total);
     }
 
     private void storeStartTimeForConfigDiff(final TaskReport taskReport, final long initStartTime, final long resultEndTime)

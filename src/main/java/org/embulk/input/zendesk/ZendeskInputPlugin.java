@@ -396,7 +396,6 @@ public class ZendeskInputPlugin implements InputPlugin
         validateCustomObject(task);
         validateUserEvent(task);
         validateTime(task);
-        validateHost(task);
     }
 
     private void validateCredentials(PluginTask task)
@@ -489,13 +488,6 @@ public class ZendeskInputPlugin implements InputPlugin
                     && ZendeskDateUtils.getStartTime(task.getStartTime().get()) > ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
                 throw new ConfigException("End Time should be later or equal than Start Time");
             }
-        }
-    }
-
-    private void validateHost(PluginTask task)
-    {
-        if (task.getTarget().equals(Target.CHAT) && !task.getLoginUrl().equals("https://www.zopim.com")) {
-            throw new ConfigException("When using Chat target, the Login URL should be `https://www.zopim.com`");
         }
     }
 

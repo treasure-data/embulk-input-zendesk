@@ -328,14 +328,6 @@ public class TestZendeskInputPlugin
     }
 
     @Test
-    public void validateHostShouldThrowException()
-    {
-        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
-        configSource.set("target", Target.CHAT.name().toLowerCase());
-        assertValidation(configSource, "When using Chat target, the Login URL should be `https://www.zopim.com`");
-    }
-
-    @Test
     public void isValidTimeRangeShouldThrowException()
     {
         ZendeskTestHelper.setPreviewMode(embulk, true);

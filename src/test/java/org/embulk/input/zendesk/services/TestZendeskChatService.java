@@ -83,6 +83,9 @@ public class TestZendeskChatService
         JsonNode dataSearchJson = ZendeskTestHelper.getJsonFromFile("data/chat_search.json");
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/chat.json");
 
-        when(zendeskRestClient.doGet(any(), any(), anyBoolean())).thenReturn(dataSearchJson.toString()).thenReturn(dataJson.toString());
+        when(zendeskRestClient.doGet(any(), any(), anyBoolean()))
+            .thenReturn(dataSearchJson.toString())
+            .thenReturn(dataSearchJson.toString())
+            .thenReturn(dataJson.toString());
     }
 }

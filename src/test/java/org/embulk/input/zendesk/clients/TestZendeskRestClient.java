@@ -155,9 +155,9 @@ public class TestZendeskRestClient
     }
 
     @Test
-    public void do404ThrowWrongHostExceptionChat()
+    public void doCredentialWrongExceptionChat()
     {
-        setup("doGet404");
+        setup("credentialFail401");
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
         configSource.set("auth_method", "oauth");
         configSource.set("access_token", "token");
@@ -178,9 +178,9 @@ public class TestZendeskRestClient
     }
 
     @Test
-    public void do404ThrowWrongHostExceptionNonChat()
+    public void doCredentialWrongExceptionNonChat()
     {
-        setup("doGet404");
+        setup("credentialFail401");
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
         configSource.set("auth_method", "oauth");
         configSource.set("access_token", "token");

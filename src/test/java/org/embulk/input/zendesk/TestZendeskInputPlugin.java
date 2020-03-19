@@ -54,6 +54,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -325,6 +326,49 @@ public class TestZendeskInputPlugin
         configSource.set("start_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond() + 3600), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
         configSource.set("end_time", OffsetDateTime.ofInstant(Instant.ofEpochSecond(Instant.now().getEpochSecond()), ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT));
         assertValidation(configSource, "End Time should be later or equal than Start Time");
+    }
+
+    @Test
+    public void validateWrongHostForChatShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("target", Target.CHAT.name().toLowerCase());
+        configSource.set("login_url", "http://abc");
+
+        assertValidation(configSource, "Invalid login url. Check that you are using https://www.zopim.com to import chat data.");
+    }
+
+    @Test
+    public void validateWrongHostForNonChatShouldThrowException()
+    {
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
+        configSource.set("target", Target.TICKETS.name().toLowerCase());
+        configSource.set("login_url", "http://abc");
+
+        assertValidation(configSource, "Invalid login url. Check that you are using the correct Zendesk url (https://example.zendesk.com/) to import data.");
+    }
+
+    @Test
+    public void validateHostForNonChat()
+    {
+        Pattern pattern = Pattern.compile(ZendeskConstants.Regex.LOGIN_URL);
+        String host = "http://local.zendesk.com";
+        assertTrue(pattern.matcher(host).matches());
+
+        host = "http://local.zendesk.com/";
+        assertTrue(pattern.matcher(host).matches());
+
+        host = "https://local.zendesk.com";
+        assertTrue(pattern.matcher(host).matches());
+
+        host = "http://local.zendesk.com/";
+        assertTrue(pattern.matcher(host).matches());
+
+        host = "http://local-abc.zendesk.com/";
+        assertTrue(pattern.matcher(host).matches());
+
+        host = "http://local_abc.zendesk.com/";
+        assertTrue(pattern.matcher(host).matches());
     }
 
     @Test

@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 import static org.apache.http.HttpHeaders.AUTHORIZATION;
 import static org.apache.http.protocol.HTTP.CONTENT_TYPE;
@@ -44,7 +43,6 @@ public class ZendeskRestClient
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static RateLimiter rateLimiter;
     private Target target;
-    private String host;
 
     static {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -58,7 +56,6 @@ public class ZendeskRestClient
     {
         try {
             target = task.getTarget();
-            host = task.getLoginUrl();
             return retryExecutor().withRetryLimit(task.getRetryLimit()).withInitialRetryWait(task.getRetryInitialWaitSec() * 1000).withMaxRetryWait(task.getMaxRetryWaitSec() * 1000).runInterruptible(new RetryExecutor.Retryable<String>() {
                 @Override
                 public String call()
@@ -166,17 +163,6 @@ public class ZendeskRestClient
                 // In case we can't parse the message, error should not be show here
             }
 
-            if (Target.CHAT.equals(target)) {
-                if (Pattern.compile(ZendeskConstants.Regex.LOGIN_URL).matcher(host).matches()) {
-                    throw new ConfigException("Invalid credentials. Check that you are using your Zopim credentials to import Chat data.");
-                }
-            }
-            else {
-                if (Pattern.compile(ZendeskConstants.Regex.CHAT_LOGIN_URL).matcher(host).matches()) {
-                    throw new ConfigException("Invalid credentials. Check that you are using your Zendesk credentials to import non-Chat data.");
-                }
-            }
-
             // 404 would be returned e.g. ticket comments are empty (on fetchRelatedObjects method)
             return false;
         }
@@ -210,7 +196,12 @@ public class ZendeskRestClient
         // Won't retry for 4xx range errors except above. Almost they should be ConfigError e.g. 403 Forbidden
         if (status / 100 == 4) {
             if (status == HttpStatus.SC_UNAUTHORIZED) {
-                throw new ConfigException("Cannot authenticate due to invalid login credentials");
+                if (target.equals(Target.CHAT)) {
+                    throw new ConfigException("Invalid credentials. Check that you are using your Zopim credentials to import Chat data.");
+                }
+                else {
+                    throw new ConfigException("Invalid credentials. Check that you are using your Zendesk credentials to import non-Chat data.");
+                }
             }
 
             if (status == HttpStatus.SC_FORBIDDEN) {

@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import static org.apache.http.HttpHeaders.AUTHORIZATION;
 import static org.apache.http.protocol.HTTP.CONTENT_TYPE;
@@ -43,6 +44,7 @@ public class ZendeskRestClient
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static RateLimiter rateLimiter;
     private Target target;
+    private String loginURL;
 
     static {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -56,6 +58,8 @@ public class ZendeskRestClient
     {
         try {
             target = task.getTarget();
+            loginURL = task.getLoginUrl();
+
             return retryExecutor().withRetryLimit(task.getRetryLimit()).withInitialRetryWait(task.getRetryInitialWaitSec() * 1000).withMaxRetryWait(task.getMaxRetryWaitSec() * 1000).runInterruptible(new RetryExecutor.Retryable<String>() {
                 @Override
                 public String call()
@@ -161,6 +165,14 @@ public class ZendeskRestClient
             }
             catch (IOException e) {
                 // In case we can't parse the message, error should not be show here
+            }
+
+            if (target.equals(Target.CHAT) && !Pattern.compile(ZendeskConstants.Regex.CHAT_LOGIN_URL).matcher(loginURL).matches()) {
+                throw new ConfigException("Invalid login url. Check that you are using https://www.zopim.com to import chat data.");
+            }
+
+            if (!target.equals(Target.CHAT) && !Pattern.compile(ZendeskConstants.Regex.LOGIN_URL).matcher(loginURL).matches()) {
+                throw new ConfigException("Invalid login url. Check that you are using the correct Zendesk url (https://example.zendesk.com/) to import data.");
             }
 
             // 404 would be returned e.g. ticket comments are empty (on fetchRelatedObjects method)

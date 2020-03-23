@@ -56,11 +56,14 @@ public class ZendeskRestClient
 
     public String doGet(final String url, final PluginTask task, final boolean isPreview)
     {
-        try {
-            target = task.getTarget();
-            loginURL = task.getLoginUrl();
+        target = task.getTarget();
+        loginURL = task.getLoginUrl();
 
-            return retryExecutor().withRetryLimit(task.getRetryLimit()).withInitialRetryWait(task.getRetryInitialWaitSec() * 1000).withMaxRetryWait(task.getMaxRetryWaitSec() * 1000).runInterruptible(new RetryExecutor.Retryable<String>() {
+        try {
+            return retryExecutor().withRetryLimit(task.getRetryLimit())
+                .withInitialRetryWait(task.getRetryInitialWaitSec() * 1000)
+                .withMaxRetryWait(task.getMaxRetryWaitSec() * 1000)
+                .runInterruptible(new RetryExecutor.Retryable<String>() {
                 @Override
                 public String call()
                     throws Exception

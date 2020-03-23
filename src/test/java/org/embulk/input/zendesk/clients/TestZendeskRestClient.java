@@ -155,7 +155,7 @@ public class TestZendeskRestClient
     }
 
     @Test
-    public void do404ThrowWrongHostExceptionChat()
+    public void doThrowWrongHostExceptionForChatWhen404()
     {
         setup("doGet404");
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
@@ -178,7 +178,7 @@ public class TestZendeskRestClient
     }
 
     @Test
-    public void do404ThrowWrongHostExceptionNonChat()
+    public void doThrowWrongHostExceptionForNonChatWhen404()
     {
         setup("doGet404");
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
@@ -200,7 +200,7 @@ public class TestZendeskRestClient
     }
 
     @Test
-    public void doCredentialWrongExceptionChat()
+    public void doThrowCredentialWrongExceptionForChatWhen401()
     {
         setup("credentialFail401");
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
@@ -223,7 +223,7 @@ public class TestZendeskRestClient
     }
 
     @Test
-    public void doCredentialWrongExceptionNonChat()
+    public void doThrowCredentialWrongExceptionForNonChatWhen401()
     {
         setup("credentialFail401");
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");

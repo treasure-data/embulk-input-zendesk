@@ -79,15 +79,10 @@ public class ZendeskChatService implements ZendeskService
                 logger.info(String.format("Fetching from '%s' to '%s' with '%d' pages and '%d' records",
                     startTime, endTime, totalPages,  totalRecords));
 
-                if (totalPages > 1) {
-                    final String lastEndTime = endTime;
-                    // Can't start from 0 because page 0 and 1 return the same data, and according to document, page start from 1
-                    IntStream.range(1, totalPages + 1).parallel().forEach(page -> fetchData(startTime, lastEndTime, page, recordImporter));
-                }
-                else {
-                    // in case totalPages 1, IntStream not work
-                    fetchData(startTime, endTime, 1, recordImporter);
-                }
+                final String lastEndTime = endTime;
+
+                // Can't start from 0 because page 0 and 1 return the same data, and according to document, page start from 1
+                IntStream.range(1, totalPages + 1).parallel().forEach(page -> fetchData(startTime, lastEndTime, page, recordImporter));
 
                 if (totalRecords <= MAXIMUM_TOTAL_RECORDS || Exec.isPreview()) {
                     break;

@@ -1,0 +1,40 @@
+type: zendesk
+login_url: https://www.zopim.com
+auth_method: basic
+username: username
+password: password
+target: chat
+app_marketplace_integration_name: abc
+app_marketplace_app_id: abc
+app_marketplace_org_id: abc
+incremental: true
+start_time: '2018-09-15T05:00:00Z'
+end_time: '2019-09-29T05:00:00Z'
+columns:
+  - {name: id, type: long}
+  - {name: visitor, type: json}
+  - {name: started_by, type: string}
+  - {name: session, type: json}
+  - {name: webpath, type: json}
+  - {name: timestamp, type: timestamp, format: '%Y-%m-%dT%H:%M:%S%z'}
+  - {name: count, type: json}
+  - {name: duration, type: long}
+  - {name: response_time, type: json}
+  - {name: agent_names, type: json}
+  - {name: agent_ids, type: json}
+  - {name: triggered, type: boolean}
+  - {name: triggered_response, type: string}
+  - {name: unread, type: boolean}
+  - {name: missed, type: boolean}
+  - {name: tags, type: json}
+  - {name: type, type: string}
+  - {name: history, type: json}
+  - {name: rating, type: string}
+  - {name: comment, type: string}
+  - {name: department_id, type: string}
+  - {name: department_name, type: string}
+  - {name: referrer_search_engine, type: string}
+  - {name: referrer_search_terms, type: string}
+  - {name: end_timestamp, type: timestamp, format: '%Y-%m-%dT%H:%M:%S%z'}
+  - {name: conversions, type: json}
+  - {name: zendesk_ticket_id, type: string}

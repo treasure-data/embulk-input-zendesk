@@ -155,6 +155,96 @@ public class TestZendeskRestClient
     }
 
     @Test
+    public void doThrowWrongHostExceptionForChatWhen404()
+    {
+        setup("doGet404");
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
+        configSource.set("auth_method", "oauth");
+        configSource.set("access_token", "token");
+        configSource.set("target", "chat");
+        configSource.set("login_url", "http://abc.zendesk.com");
+        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+
+        String expectedMessage = "Invalid login url. Check that you are using https://www.zopim.com to import chat data.";
+        int expectedRetryTime = 1;
+        try {
+            zendeskRestClient.doGet("any", pluginTask, false);
+            fail("Should not reach here");
+        }
+        catch (final Exception e) {
+            assertEquals(expectedMessage, e.getMessage());
+        }
+        verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
+    }
+
+    @Test
+    public void doThrowWrongHostExceptionForNonChatWhen404()
+    {
+        setup("doGet404");
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
+        configSource.set("auth_method", "oauth");
+        configSource.set("access_token", "token");
+        configSource.set("login_url", "https://www.zopim.com/");
+        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+
+        String expectedMessage = "Invalid login url. Check that you are using the correct Zendesk url (https://example.zendesk.com/) to import data.";
+        int expectedRetryTime = 1;
+        try {
+            zendeskRestClient.doGet("any", pluginTask, false);
+            fail("Should not reach here");
+        }
+        catch (final Exception e) {
+            assertEquals(expectedMessage, e.getMessage());
+        }
+        verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
+    }
+
+    @Test
+    public void doThrowCredentialWrongExceptionForChatWhen401()
+    {
+        setup("credentialFail401");
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
+        configSource.set("auth_method", "oauth");
+        configSource.set("access_token", "token");
+        configSource.set("target", "chat");
+        configSource.set("login_url", "http://abc.zendesk.com");
+        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+
+        String expectedMessage = "Invalid credentials. Check that you are using your Zopim credentials to import Chat data.";
+        int expectedRetryTime = 1;
+        try {
+            zendeskRestClient.doGet("any", pluginTask, false);
+            fail("Should not reach here");
+        }
+        catch (final Exception e) {
+            assertEquals(expectedMessage, e.getMessage());
+        }
+        verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
+    }
+
+    @Test
+    public void doThrowCredentialWrongExceptionForNonChatWhen401()
+    {
+        setup("credentialFail401");
+        ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
+        configSource.set("auth_method", "oauth");
+        configSource.set("access_token", "token");
+        configSource.set("login_url", "https://www.zopim.com/");
+        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+
+        String expectedMessage = "Invalid credentials. Check that you are using your Zendesk credentials to import non-Chat data.";
+        int expectedRetryTime = 1;
+        try {
+            zendeskRestClient.doGet("any", pluginTask, false);
+            fail("Should not reach here");
+        }
+        catch (final Exception e) {
+            assertEquals(expectedMessage, e.getMessage());
+        }
+        verify(zendeskRestClient, times(expectedRetryTime)).createHttpClient();
+    }
+
+    @Test
     public void doGetRetry409()
     {
         setupReTrySuccess("doGet409");

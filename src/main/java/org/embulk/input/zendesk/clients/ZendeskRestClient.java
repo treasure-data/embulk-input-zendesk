@@ -19,16 +19,18 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.embulk.config.ConfigException;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
+import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.DataException;
-import org.embulk.spi.Exec;
 import org.embulk.spi.util.RetryExecutor;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
 import static org.apache.http.HttpHeaders.AUTHORIZATION;
 import static org.apache.http.protocol.HTTP.CONTENT_TYPE;
@@ -38,9 +40,11 @@ public class ZendeskRestClient
 {
     private static final int CONNECTION_TIME_OUT = 240000;
 
-    private static final Logger logger = Exec.getLogger(ZendeskRestClient.class);
+    private static final Logger logger = LoggerFactory.getLogger(ZendeskRestClient.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private static RateLimiter rateLimiter;
+    private Target target;
+    private String loginURL;
 
     static {
         objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -52,73 +56,62 @@ public class ZendeskRestClient
 
     public String doGet(final String url, final PluginTask task, final boolean isPreview)
     {
+        target = task.getTarget();
+        loginURL = task.getLoginUrl();
+
         try {
             return retryExecutor().withRetryLimit(task.getRetryLimit())
-                    .withInitialRetryWait(task.getRetryInitialWaitSec() * 1000)
-                    .withMaxRetryWait(task.getMaxRetryWaitSec() * 1000)
-                    .runInterruptible(new RetryExecutor.Retryable<String>()
-                    {
-                        @Override
-                        public String call()
-                                throws Exception
-                        {
-                            return sendGetRequest(url, task);
-                        }
+                .withInitialRetryWait(task.getRetryInitialWaitSec() * 1000)
+                .withMaxRetryWait(task.getMaxRetryWaitSec() * 1000)
+                .runInterruptible(new RetryExecutor.Retryable<String>() {
+                @Override
+                public String call()
+                    throws Exception
+                {
+                    return sendGetRequest(url, task);
+                }
 
-                        @Override
-                        public boolean isRetryableException(final Exception exception)
-                        {
-                            if (exception instanceof ZendeskException) {
-                                final int statusCode = ((ZendeskException) exception).getStatusCode();
-                                return isResponseStatusToRetry(statusCode, exception.getMessage(), ((ZendeskException) exception).getRetryAfter(), isPreview);
-                            }
-                            return false;
-                        }
+                @Override
+                public boolean isRetryableException(final Exception exception)
+                {
+                    if (exception instanceof ZendeskException) {
+                        final int statusCode = ((ZendeskException) exception).getStatusCode();
+                        return isResponseStatusToRetry(statusCode, exception.getMessage(), ((ZendeskException) exception).getRetryAfter(), isPreview);
+                    }
+                    return false;
+                }
 
-                        @Override
-                        public void onRetry(final Exception exception, final int retryCount, final int retryLimit, final int retryWait)
-                        {
-                            if (exception instanceof ZendeskException) {
-                                final int retryAfter = ((ZendeskException) exception).getRetryAfter();
-                                final String message;
-                                if (retryAfter > 0 && retryAfter > (retryWait / 1000)) {
-                                    message = String
-                                            .format("Retrying '%d'/'%d' after '%d' seconds. HTTP status code: '%s'",
-                                                    retryCount, retryLimit,
-                                                    retryAfter,
-                                                    ((ZendeskException) exception).getStatusCode());
-                                    logger.warn(message);
-                                    Uninterruptibles.sleepUninterruptibly(retryAfter - (retryWait / 1000), TimeUnit.SECONDS);
-                                }
-                                else {
-                                    message = String
-                                            .format("Retrying '%d'/'%d' after '%d' seconds. HTTP status code: '%s'",
-                                                    retryCount, retryLimit,
-                                                    retryWait / 1000,
-                                                    ((ZendeskException) exception).getStatusCode());
-                                    logger.warn(message);
-                                }
-                            }
-                            else {
-                                final String message = String
-                                        .format("Retrying '%d'/'%d' after '%d' seconds. Message: '%s'",
-                                                retryCount, retryLimit,
-                                                retryWait / 1000,
-                                                exception.getMessage());
-                                logger.warn(message, exception);
-                            }
+                @Override
+                public void onRetry(final Exception exception, final int retryCount, final int retryLimit, final int retryWait)
+                {
+                    if (exception instanceof ZendeskException) {
+                        final int retryAfter = ((ZendeskException) exception).getRetryAfter();
+                        final String message;
+                        if (retryAfter > 0 && retryAfter > (retryWait / 1000)) {
+                            message = String.format("Retrying '%d'/'%d' after '%d' seconds. HTTP status code: '%s'", retryCount, retryLimit, retryAfter, ((ZendeskException) exception).getStatusCode());
+                            logger.warn(message);
+                            Uninterruptibles.sleepUninterruptibly(retryAfter - (retryWait / 1000), TimeUnit.SECONDS);
                         }
+                        else {
+                            message = String.format("Retrying '%d'/'%d' after '%d' seconds. HTTP status code: '%s'", retryCount, retryLimit, retryWait / 1000, ((ZendeskException) exception).getStatusCode());
+                            logger.warn(message);
+                        }
+                    }
+                    else {
+                        final String message = String.format("Retrying '%d'/'%d' after '%d' seconds. Message: '%s'", retryCount, retryLimit, retryWait / 1000, exception.getMessage());
+                        logger.warn(message, exception);
+                    }
+                }
 
-                        @Override
-                        public void onGiveup(final Exception firstException, final Exception lastException)
-                        {
-                        }
-                    });
+                @Override
+                public void onGiveup(final Exception firstException, final Exception lastException)
+                {
+                }
+            });
         }
         catch (final RetryExecutor.RetryGiveupException | InterruptedException e) {
             if (e instanceof RetryExecutor.RetryGiveupException && e.getCause() != null && e.getCause() instanceof ZendeskException) {
-                throw new ConfigException("Status: '" + ((ZendeskException) (e.getCause())).getStatusCode() + "', error message: '" + e.getCause().getMessage() + "'",
-                        e.getCause());
+                throw new ConfigException("Status: '" + ((ZendeskException) (e.getCause())).getStatusCode() + "', error message: '" + e.getCause().getMessage() + "'", e.getCause());
             }
             throw new ConfigException(e);
         }
@@ -127,15 +120,12 @@ public class ZendeskRestClient
     @VisibleForTesting
     protected HttpClient createHttpClient()
     {
-        final RequestConfig config = RequestConfig.custom()
-                .setConnectTimeout(CONNECTION_TIME_OUT)
-                .setConnectionRequestTimeout(CONNECTION_TIME_OUT)
-                .build();
+        final RequestConfig config = RequestConfig.custom().setConnectTimeout(CONNECTION_TIME_OUT).setConnectionRequestTimeout(CONNECTION_TIME_OUT).build();
         return HttpClientBuilder.create().setDefaultRequestConfig(config).build();
     }
 
     private String sendGetRequest(final String url, final PluginTask task)
-            throws ZendeskException
+        throws ZendeskException
     {
         try {
             final HttpClient client = createHttpClient();
@@ -144,16 +134,14 @@ public class ZendeskRestClient
             if (rateLimiter != null) {
                 rateLimiter.acquire();
             }
-            logger.info(">>> {}{}", request.getURI().getPath(),
-                    request.getURI().getQuery() != null ? "?" + request.getURI().getQuery() : "");
+            logger.info(">>> {}{}", request.getURI().getPath(), request.getURI().getQuery() != null ? "?" + request.getURI().getQuery() : "");
             final HttpResponse response = client.execute(request);
             if (rateLimiter == null) {
                 initRateLimiter(response);
             }
             final int statusCode = response.getStatusLine().getStatusCode();
             if (statusCode != HttpStatus.SC_OK) {
-                if (statusCode == ZendeskConstants.HttpStatus.TOO_MANY_REQUEST || statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR
-                        || statusCode == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+                if (statusCode == ZendeskConstants.HttpStatus.TOO_MANY_REQUEST || statusCode == HttpStatus.SC_INTERNAL_SERVER_ERROR || statusCode == HttpStatus.SC_SERVICE_UNAVAILABLE) {
                     final Header retryHeader = response.getFirstHeader("Retry-After");
                     if (retryHeader != null) {
                         throw new ZendeskException(statusCode, EntityUtils.toString(response.getEntity()), Integer.parseInt(retryHeader.getValue()));
@@ -182,6 +170,14 @@ public class ZendeskRestClient
                 // In case we can't parse the message, error should not be show here
             }
 
+            if (target.equals(Target.CHAT) && !Pattern.compile(ZendeskConstants.Regex.CHAT_LOGIN_URL).matcher(loginURL).matches()) {
+                throw new ConfigException("Invalid login url. Check that you are using https://www.zopim.com to import chat data.");
+            }
+
+            if (!target.equals(Target.CHAT) && !Pattern.compile(ZendeskConstants.Regex.LOGIN_URL).matcher(loginURL).matches()) {
+                throw new ConfigException("Invalid login url. Check that you are using the correct Zendesk url (https://example.zendesk.com/) to import data.");
+            }
+
             // 404 would be returned e.g. ticket comments are empty (on fetchRelatedObjects method)
             return false;
         }
@@ -199,8 +195,7 @@ public class ZendeskRestClient
             throw new ConfigException("Status: '" + status + "', error message: '" + message + "'");
         }
 
-        if (status == ZendeskConstants.HttpStatus.TOO_MANY_REQUEST || status == HttpStatus.SC_INTERNAL_SERVER_ERROR
-                || status == HttpStatus.SC_SERVICE_UNAVAILABLE) {
+        if (status == ZendeskConstants.HttpStatus.TOO_MANY_REQUEST || status == HttpStatus.SC_INTERNAL_SERVER_ERROR || status == HttpStatus.SC_SERVICE_UNAVAILABLE) {
             if (!isPreview) {
                 if (retryAfter > 0) {
                     logger.warn("Reached API limitation, wait for at least '{}' '{}'", retryAfter, TimeUnit.SECONDS.name());
@@ -216,7 +211,12 @@ public class ZendeskRestClient
         // Won't retry for 4xx range errors except above. Almost they should be ConfigError e.g. 403 Forbidden
         if (status / 100 == 4) {
             if (status == HttpStatus.SC_UNAUTHORIZED) {
-                throw new ConfigException("Cannot authenticate due to invalid login credentials");
+                if (target.equals(Target.CHAT)) {
+                    throw new ConfigException("Invalid credentials. Check that you are using your Zopim credentials to import Chat data.");
+                }
+                else {
+                    throw new ConfigException("Invalid credentials. Check that you are using your Zendesk credentials to import non-Chat data.");
+                }
             }
 
             if (status == HttpStatus.SC_FORBIDDEN) {
@@ -249,12 +249,12 @@ public class ZendeskRestClient
     private String buildCredential(final PluginTask task)
     {
         switch (task.getAuthenticationMethod()) {
-            case BASIC:
-                return "Basic " + ZendeskUtils.convertBase64(String.format("%s:%s", task.getUsername().get(), task.getPassword().get()));
-            case TOKEN:
-                return "Basic " + ZendeskUtils.convertBase64(String.format("%s/token:%s", task.getUsername().get(), task.getToken().get()));
-            case OAUTH:
-                return "Bearer " + task.getAccessToken().get();
+        case BASIC:
+            return "Basic " + ZendeskUtils.convertBase64(String.format("%s:%s", task.getUsername().get(), task.getPassword().get()));
+        case TOKEN:
+            return "Basic " + ZendeskUtils.convertBase64(String.format("%s/token:%s", task.getUsername().get(), task.getToken().get()));
+        case OAUTH:
+            return "Bearer " + task.getAccessToken().get();
         }
         return "";
     }

@@ -38,6 +38,8 @@ public class ZendeskConstants
         public static final String API_OBJECT_RECORD = "api/sunshine/objects/records";
         public static final String API_RELATIONSHIP_RECORD = "api/sunshine/relationships/records";
         public static final String API_USER_EVENT = "api/sunshine/events";
+        public static final String API_CHAT = API + "/chats";
+        public static final String API_CHAT_SEARCH = API_CHAT + "/search";
     }
 
     public static class Misc
@@ -62,6 +64,8 @@ public class ZendeskConstants
     public static class Regex
     {
         public static final String ID = "_id$";
+        public static final String LOGIN_URL = "^https?://+[a-z0-9_\\\\-]+(.zendesk.com/?)$";
+        public static final String CHAT_LOGIN_URL = "^https://www.zopim.com/?$";
     }
 
     public static class HttpStatus

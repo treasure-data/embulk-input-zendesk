@@ -18,6 +18,7 @@ import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.Exec;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.time.Instant;
 
@@ -30,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 public abstract class ZendeskNormalServices implements ZendeskService
 {
-    private static final Logger logger = Exec.getLogger(ZendeskNormalServices.class);
+    private static final Logger logger = LoggerFactory.getLogger(ZendeskNormalServices.class);
 
     protected ZendeskInputPlugin.PluginTask task;
 

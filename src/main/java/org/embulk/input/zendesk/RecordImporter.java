@@ -5,12 +5,12 @@ import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnVisitor;
-import org.embulk.spi.Exec;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.Schema;
 import org.embulk.spi.json.JsonParser;
 import org.embulk.spi.time.Timestamp;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.function.Function;
 
@@ -19,7 +19,7 @@ public class RecordImporter
     private Schema schema;
     private PageBuilder pageBuilder;
 
-    private static final Logger logger = Exec.getLogger(RecordImporter.class);
+    private static final Logger logger = LoggerFactory.getLogger(RecordImporter.class);
 
     public RecordImporter(Schema schema, PageBuilder pageBuilder)
     {

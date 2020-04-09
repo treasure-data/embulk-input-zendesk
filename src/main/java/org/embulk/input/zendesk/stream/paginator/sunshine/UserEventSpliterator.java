@@ -28,7 +28,6 @@ public class UserEventSpliterator extends SunshineSpliterator
     {
         iterator.forEachRemaining(
             item -> {
-
                     if (!ZendeskUtils.isNull(item)) {
                         JsonNode temp = iterator.next();
                         // Because in the returned json doesn't have user_id, so we try to add to it

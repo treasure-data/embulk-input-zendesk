@@ -5,6 +5,7 @@ import org.embulk.EmbulkTestRuntime;
 import org.embulk.input.zendesk.RecordImporter;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
+import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 import org.junit.Before;
 import org.junit.Rule;
@@ -47,10 +48,10 @@ public class TestZendeskUserEventService
     {
         setup();
 
-        JsonNode jsonNode = zendeskUserEventService.getDataFromPath("https://abc.zendesk.com/api/sunshine/objects/records?type=user&per_page=1000", 0, true, 0);
+        JsonNode jsonNode = zendeskUserEventService.getDataFromPath("https://abc.zendesk.com/api/v2/users/1194092277/events?filter%5Bstart_time%5D=2019-01-20T07%3A14%3A50Z&filter%5Bend_time%5D=2019-06-20T07%3A14%3A53Z", 0, true, 0);
         assertFalse(jsonNode.isNull());
-        assertTrue(jsonNode.has("data"));
-        assertTrue(jsonNode.get("data").isArray());
+        assertTrue(jsonNode.has(Target.USER_EVENTS.getJsonName()));
+        assertTrue(jsonNode.get(Target.USER_EVENTS.getJsonName()).isArray());
     }
 
     @Test
@@ -78,7 +79,7 @@ public class TestZendeskUserEventService
 
         String expectedURIForOrganization = "https://abc.zendesk.com/api/v2/organizations?per_page=100&page=1";
         String expectedURIForUser = "https://abc.zendesk.com/api/v2/organizations/360857467053/users.json?per_page=100&page=1";
-        String expectedURIForUserEvent = "https://abc.zendesk.com/api/sunshine/events?identifier=support%3Auser_id%3A1194092277&start_time=2019-01-20T07%3A14%3A50Z&end_time=2019-06-20T07%3A14%3A53Z";
+        String expectedURIForUserEvent = "https://abc.zendesk.com/api/v2/users/1194092277/events?filter%5Bstart_time%5D=2019-01-20T07%3A14%3A50Z&filter%5Bend_time%5D=2019-06-20T07%3A14%3A53Z";
         List<String> expectedURI = Arrays.asList(expectedURIForOrganization, expectedURIForUser, expectedURIForUserEvent);
 
         zendeskUserEventService.addRecordToImporter(0, recordImporter);
@@ -104,7 +105,7 @@ public class TestZendeskUserEventService
                 .thenReturn(dataJsonUser.toString());
         when(zendeskRestClient.doGet(eq("https://abc.zendesk.com/api/v2/organizations/360857467055/users.json?per_page=100&page=1"), eq(task), eq(false)))
                 .thenReturn(dataJsonUser.toString());
-        when(zendeskRestClient.doGet(eq("https://abc.zendesk.com/api/sunshine/events?identifier=support%3Auser_id%3A1194092277&start_time=2019-01-20T07%3A14%3A50Z&end_time=2019-06-20T07%3A14%3A53Z"), eq(task), eq(false)))
+        when(zendeskRestClient.doGet(eq("https://abc.zendesk.com/api/v2/users/1194092277/events?filter%5Bstart_time%5D=2019-01-20T07%3A14%3A50Z&filter%5Bend_time%5D=2019-06-20T07%3A14%3A53Z"), eq(task), eq(false)))
                 .thenReturn(dataJsonUserEvent.toString());
 
         zendeskUserEventService.addRecordToImporter(0, recordImporter);
@@ -131,7 +132,7 @@ public class TestZendeskUserEventService
                 .thenReturn(dataJsonUser.toString());
         when(zendeskRestClient.doGet(eq("https://abc.zendesk.com/api/v2/organizations/360857467055/users.json?per_page=100&page=1"), eq(task), eq(false)))
                 .thenReturn(dataJsonUser.toString());
-        when(zendeskRestClient.doGet(eq("https://abc.zendesk.com/api/sunshine/events?identifier=support%3Auser_id%3A1194092277&start_time=2019-01-20T07%3A14%3A50Z&end_time=2019-06-20T07%3A14%3A53Z"), eq(task), eq(false)))
+        when(zendeskRestClient.doGet(eq("https://abc.zendesk.com/api/v2/users/1194092277/events?filter%5Bstart_time%5D=2019-01-20T07%3A14%3A50Z&filter%5Bend_time%5D=2019-06-20T07%3A14%3A53Z"), eq(task), eq(false)))
                 .thenReturn(dataJsonUserEvent.toString());
 
         zendeskUserEventService.addRecordToImporter(0, recordImporter);

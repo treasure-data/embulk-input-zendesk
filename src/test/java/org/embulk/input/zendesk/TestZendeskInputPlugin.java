@@ -110,7 +110,6 @@ public class TestZendeskInputPlugin
     {
         final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
         src.set("target", "user_events");
-        src.set("profile_source", "dummy");
         setupTestGuessGenerateColumn(src, "data/user_event.json", "data/expected/user_events_column.json");
     }
 
@@ -309,7 +308,9 @@ public class TestZendeskInputPlugin
     {
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
         configSource.set("target", Target.USER_EVENTS.name().toLowerCase());
-        assertValidation(configSource, "Profile Source is required for User Event Target");
+        configSource.set("user_event_type", "user_event_type");
+        configSource.remove("user_event_source");
+        assertValidation(configSource, "User Profile Source is required when filtering by User Event Type");
     }
 
     @Test

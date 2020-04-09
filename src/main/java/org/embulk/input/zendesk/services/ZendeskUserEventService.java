@@ -69,7 +69,7 @@ public class ZendeskUserEventService implements ZendeskService
                     stream.forEach(s ->
                     {
                         Stream<JsonNode> userEventStream = StreamSupport.stream(new UserEventSpliterator(s.get("id").asText(), buildUserEventURI(s.get("id").asText()),
-                                getZendeskRestClient(), task, Exec.isPreview()), true);
+                                getZendeskRestClient(), task, Exec.isPreview()), false);
                         userEventStream.forEach(recordImporter::addRecord);
                     });
                 }
@@ -110,21 +110,20 @@ public class ZendeskUserEventService implements ZendeskService
     private String buildUserEventURI(final String userID)
     {
         final URIBuilder uriBuilder = ZendeskUtils.getURIBuilder(task.getLoginUrl())
-                .setPath(ZendeskConstants.Url.API_USER_EVENT)
-                .setParameter("identifier", task.getProfileSource().get() + ":user_id:" + userID);
+                .setPath(String.format(ZendeskConstants.Url.API_USER_EVENT, userID));
 
-        task.getUserEventSource().ifPresent(eventSource -> uriBuilder.setParameter("source", eventSource));
-        task.getUserEventType().ifPresent(eventType -> uriBuilder.setParameter("type", eventType));
+        task.getUserEventSource().ifPresent(eventSource -> uriBuilder.setParameter("filter[source]", eventSource));
+        task.getUserEventType().ifPresent(eventType -> uriBuilder.setParameter("filter[type]", eventType));
         task.getStartTime().ifPresent(startTime -> {
             try {
-                uriBuilder.setParameter("start_time", ZendeskDateUtils.convertToDateTimeFormat(startTime, ZendeskConstants.Misc.ISO_INSTANT));
+                uriBuilder.setParameter("filter[start_time]", ZendeskDateUtils.convertToDateTimeFormat(startTime, ZendeskConstants.Misc.ISO_INSTANT));
             }
             catch (DataException e) {
-                uriBuilder.setParameter("start_time", ZendeskDateUtils.convertToDateTimeFormat(Instant.EPOCH.toString(), ZendeskConstants.Misc.ISO_INSTANT));
+                uriBuilder.setParameter("filter[start_time]", ZendeskDateUtils.convertToDateTimeFormat(Instant.EPOCH.toString(), ZendeskConstants.Misc.ISO_INSTANT));
             }
         });
 
-        task.getEndTime().ifPresent(endTime -> uriBuilder.setParameter("end_time", ZendeskDateUtils.convertToDateTimeFormat(endTime, ZendeskConstants.Misc.ISO_INSTANT)));
+        task.getEndTime().ifPresent(endTime -> uriBuilder.setParameter("filter[end_time]", ZendeskDateUtils.convertToDateTimeFormat(endTime, ZendeskConstants.Misc.ISO_INSTANT)));
 
         return uriBuilder.toString();
     }
@@ -138,9 +137,8 @@ public class ZendeskUserEventService implements ZendeskService
                     "      \"type\": \"remove_from_cart\",\n" +
                     "      \"source\": \"shopify\",\n" +
                     "      \"description\": \"\",\n" +
-                    "      \"authenticated\": true,\n" +
-                    "      \"created_at\": \"2019-03-06T02:34:22Z\",\n" +
-                    "      \"received_at\": \"2019-03-06T02:34:22Z\",\n" +
+                    "      \"created_at\": \"2019-03-06T02:34:12.381847424Z\",\n" +
+                    "      \"received_at\": \"2019-03-06T02:34:12.381847424Z\",\n" +
                     "      \"properties\": {\n" +
                     "        \"model\": 221,\n" +
                     "        \"size\": 6\n" +

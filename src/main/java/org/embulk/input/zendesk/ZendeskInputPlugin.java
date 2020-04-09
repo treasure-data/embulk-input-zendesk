@@ -138,10 +138,6 @@ public class ZendeskInputPlugin implements InputPlugin
         @ConfigDefault("[]")
         List<String> getRelationshipTypes();
 
-        @Config("profile_source")
-        @ConfigDefault("null")
-        Optional<String> getProfileSource();
-
         @Config("end_time")
         @ConfigDefault("null")
         Optional<String> getEndTime();
@@ -468,8 +464,8 @@ public class ZendeskInputPlugin implements InputPlugin
     private void validateUserEvent(PluginTask task)
     {
         if (task.getTarget().equals(Target.USER_EVENTS)) {
-            if (!task.getProfileSource().isPresent()) {
-                throw new ConfigException("Profile Source is required for User Event Target");
+            if (task.getUserEventType().isPresent() && !task.getUserEventSource().isPresent()) {
+                throw new ConfigException("User Profile Source is required when filtering by User Event Type");
             }
         }
     }

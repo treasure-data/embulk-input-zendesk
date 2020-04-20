@@ -1,5 +1,5 @@
 ## 0.3.9 - 2020-03-24
-* [enhancement] Update UserEvent to the new API [#66](https://github.com/treasure-data/embulk-input-zendesk/pull/66)
+* [enhancement] Update UserEvent to the new API [#67](https://github.com/treasure-data/embulk-input-zendesk/pull/67)
 
 ## 0.3.8 - 2020-03-24
 * [enhancement] Support `Chat` target [#65](https://github.com/treasure-data/embulk-input-zendesk/pull/65)

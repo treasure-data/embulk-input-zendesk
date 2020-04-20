@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.embulk.input.zendesk.ZendeskInputPlugin;
 import org.embulk.input.zendesk.clients.ZendeskRestClient;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Iterator;
 import java.util.function.Consumer;
@@ -14,8 +12,6 @@ import java.util.function.Consumer;
 public class UserEventSpliterator extends SunshineSpliterator
 {
     private String userID;
-
-    private static final Logger logger = LoggerFactory.getLogger(UserEventSpliterator.class);
 
     public UserEventSpliterator(final String userID, final String path, final ZendeskRestClient zendeskRestClient, final ZendeskInputPlugin.PluginTask task, final boolean isPreview)
     {

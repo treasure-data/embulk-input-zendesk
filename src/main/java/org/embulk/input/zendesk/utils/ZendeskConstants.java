@@ -37,7 +37,7 @@ public class ZendeskConstants
         public static final String API_NPS_INCREMENTAL = API + "/nps/incremental";
         public static final String API_OBJECT_RECORD = "api/sunshine/objects/records";
         public static final String API_RELATIONSHIP_RECORD = "api/sunshine/relationships/records";
-        public static final String API_USER_EVENT = "api/sunshine/events";
+        public static final String API_USER_EVENT = "api/v2/users/%s/events";
         public static final String API_CHAT = API + "/chats";
         public static final String API_CHAT_SEARCH = API_CHAT + "/search";
     }
@@ -49,6 +49,7 @@ public class ZendeskConstants
         public static final String JAVA_TIMESTAMP_FORMAT = "uuuu-MM-dd'T'HH:mm:ss.SSS'Z'";
         public static final String ISO_TIMESTAMP_FORMAT = "uuuu-MM-dd'T'HH:mm:ssXXX";
         public static final String ISO_INSTANT = "uuuu-MM-dd'T'HH:mm:ss'Z'";
+        public static final String JAVA_TIMESTAMP_NANO_OF_SECOND = "uuuu-MM-dd'T'HH:mm:ss.n'Z'";
         public static final String RUBY_TIMESTAMP_FORMAT_INPUT_NO_SPACE = "uuuu-MM-dd HH:mm:ssZ";
         public static final String TOO_RECENT_START_TIME = "Too recent start_time.";
         public static final int RECORDS_SIZE_PER_PAGE = 100;
@@ -58,7 +59,7 @@ public class ZendeskConstants
         public static final int GUESS_BUFFER_SIZE = 1024 * 1024;
         public static final List<String> SUPPORT_DATE_TIME_FORMAT = ImmutableList.copyOf(Arrays.asList(ZendeskConstants.Misc.ISO_INSTANT, ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT,
                 ZendeskConstants.Misc.JAVA_TIMESTAMP_FORMAT, ZendeskConstants.Misc.ISO_TIMESTAMP_FORMAT,
-                ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT_NO_SPACE));
+                ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT_NO_SPACE, ZendeskConstants.Misc.JAVA_TIMESTAMP_NANO_OF_SECOND));
     }
 
     public static class Regex

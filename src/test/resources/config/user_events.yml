@@ -14,7 +14,6 @@ retry_initial_wait_sec: 1
 dedup: false
 max_retry_wait_sec: 30
 retry_limit: 2
-profile_source: support
 start_time: '2019-01-20T07:14:50Z'
 end_time: '2019-06-20T07:14:53Z'
 columns:

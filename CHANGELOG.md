@@ -1,31 +1,34 @@
+## 0.3.9 - 2020-03-24
+* [enhancement] Update UserEvent to the new API [#67](https://github.com/treasure-data/embulk-input-zendesk/pull/67)
+
 ## 0.3.8 - 2020-03-24
-* [enhancement] Support `Chat` target #65 [#65](https://github.com/treasure-data/embulk-input-zendesk/pull/65)
-* [enhancement] Apply Embulk Gradle  #64 [#64](https://github.com/treasure-data/embulk-input-zendesk/pull/64)
+* [enhancement] Support `Chat` target [#65](https://github.com/treasure-data/embulk-input-zendesk/pull/65)
+* [enhancement] Apply Embulk Gradle  [#64](https://github.com/treasure-data/embulk-input-zendesk/pull/64)
 
 ## 0.3.7 - 2019-08-29
-* [enhancement] Replace ConfigSource#getObjectNodes method in embulk core #63 [#63](https://github.com/treasure-data/embulk-input-zendesk/pull/63)
+* [enhancement] Replace ConfigSource#getObjectNodes method in embulk core [#63](https://github.com/treasure-data/embulk-input-zendesk/pull/63)
 
 ## 0.3.6 - 2019-07-02
-* [enhancement] Improve error message #61 [#61](https://github.com/treasure-data/embulk-input-zendesk/pull/61)
-* [enhancement] Support `end_time` field for incremental #60 [#60](https://github.com/treasure-data/embulk-input-zendesk/pull/60)
+* [enhancement] Improve error message [#61](https://github.com/treasure-data/embulk-input-zendesk/pull/61)
+* [enhancement] Support `end_time` field for incremental [#60](https://github.com/treasure-data/embulk-input-zendesk/pull/60)
 
 ## 0.3.5 - 2019-06-03
-* [enhancement] Add new targets #58 [#58](https://github.com/treasure-data/embulk-input-zendesk/pull/58)
+* [enhancement] Add new targets [#58](https://github.com/treasure-data/embulk-input-zendesk/pull/58)
 
 ## 0.3.4 - 2019-04-11
-* [enhancement] Add new time format #56 [#56](https://github.com/treasure-data/embulk-input-zendesk/pull/56)
+* [enhancement] Add new time format [#56](https://github.com/treasure-data/embulk-input-zendesk/pull/56)
 
 ## 0.3.3 - 2019-04-11
-* [fixed] Fix trailing slash #55 [#55](https://github.com/treasure-data/embulk-input-zendesk/pull/55)
+* [fixed] Fix trailing slash [#55](https://github.com/treasure-data/embulk-input-zendesk/pull/55)
 
 ## 0.3.2 - 2019-04-10
-* [fixed] Fix generate config diff based on incremental config #54 [#54](https://github.com/treasure-data/embulk-input-zendesk/pull/54)
+* [fixed] Fix generate config diff based on incremental config [#54](https://github.com/treasure-data/embulk-input-zendesk/pull/54)
 
 ## 0.3.1 - 2019-04-09
-* [fixed] Fix checking 404 by status code when fetching related objects #52 [#52](https://github.com/treasure-data/embulk-input-zendesk/pull/52)
+* [fixed] Fix checking 404 by status code when fetching related objects [#52](https://github.com/treasure-data/embulk-input-zendesk/pull/52)
 
 ## 0.3.0 - 2019-04-08
-* [enhancement] Convert embulk-input-zendesk to Java #50 [#50](https://github.com/treasure-data/embulk-input-zendesk/pull/50)
+* [enhancement] Convert embulk-input-zendesk to Java [#50](https://github.com/treasure-data/embulk-input-zendesk/pull/50)
 
 ## 0.2.14 - 2019-01-25
 * [fixed] Disable pagination and add `dedup` option for non-incremental targets [#49](https://github.com/treasure-data/embulk-input-zendesk/pull/49)

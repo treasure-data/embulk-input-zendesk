@@ -29,6 +29,7 @@ import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.Buffer;
 import org.embulk.spi.Exec;
+import org.embulk.spi.ExecInternal;
 import org.embulk.spi.InputPlugin;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.PageOutput;
@@ -282,7 +283,7 @@ public class ZendeskInputPlugin implements InputPlugin
         final JsonNode sample = new ObjectMapper().valueToTree(StreamSupport.stream(
                 jsonNode.get(target.getJsonName()).spliterator(), false).limit(10).collect(Collectors.toList()));
         final Buffer bufferSample = Buffer.copyOf(sample.toString().getBytes(StandardCharsets.UTF_8));
-        final JsonNode columns = Exec.getInjector().getInstance(GuessExecutor.class)
+        final JsonNode columns = ExecInternal.getInjector().getInstance(GuessExecutor.class)
                 .guessParserConfig(bufferSample, Exec.newConfigSource(), createGuessConfig())
                 .get(JsonNode.class,  "columns");
 

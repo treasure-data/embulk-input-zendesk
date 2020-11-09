@@ -1,10 +1,10 @@
 plugins {
+    id "com.jfrog.bintray" version "1.1"
     id "java"
-    id "maven" // install jar files to the local repo: $ gradle install
     id "maven-publish"
     id "checkstyle"
     id "jacoco"
-    id "org.embulk.embulk-plugins" version "0.3.0"
+    id "org.embulk.embulk-plugins" version "0.4.2"
 }
 
 repositories {
@@ -12,23 +12,20 @@ repositories {
     jcenter()
 }
 
-group = "org.embulk"
-version = "0.3.9"
-description = "Import records from Zendesk."
+group = "com.treasuredata.embulk.plugins"
+version = "0.3.10"
+description = "Loads records From Zendesk"
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compileOnly "org.embulk:embulk-core:0.9.23"
-
+    compileOnly  "org.embulk:embulk-core:0.10.18"
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.6'
     testCompile "junit:junit:4.+"
-    testCompile "org.embulk:embulk-core:0.9.23:tests"
-    testCompile "org.embulk:embulk-test:0.9.23"
-    testCompile "org.embulk:embulk-deps-buffer:0.9.23"
-    testCompile "org.embulk:embulk-deps-config:0.9.23"
-    testCompile "org.embulk:embulk-deps-guess:0.9.23"
+    testCompile "org.embulk:embulk-core:0.10.18:tests"
+    testCompile 'org.embulk:embulk-junit4:0.10.18'
+    testCompile "org.embulk:embulk-deps:0.10.18"
     testCompile "org.mockito:mockito-core:2.+"
 }
 
@@ -36,17 +33,6 @@ embulkPlugin {
     mainClass = "org.embulk.input.zendesk.ZendeskInputPlugin"
     category = "input"
     type = "zendesk"
-}
-
-publishing {
-    publications {
-        embulkPluginMaven(MavenPublication) {  // Publish it with "publishEmbulkPluginMavenPublicationToMavenRepository".
-            from components.java  // Must be "components.java". The dependency modification works only for it.
-        }
-    }
-    repositories {
-        // TODO: Configure some public Maven repo(s).
-    }
 }
 
 jacocoTestReport {
@@ -58,29 +44,53 @@ jacocoTestReport {
     }
 }
 
+publishing {
+    publications {
+        embulkPluginMaven(MavenPublication) {  // Publish it with "publishEmbulkPluginMavenPublicationToMavenRepository".
+            from components.java  // Must be "components.java". The dependency modification works only for it.
+        }
+    }
+    repositories {
+        maven {
+            url = uri("https://treasuredata.jfrog.io/treasuredata/libs-release-local")
+            credentials {
+                username = System.getenv("TD_ARTIFACTORY_USERNAME")
+                password = System.getenv("TD_ARTIFACTORY_PASSWORD")
+            }
+        }
+    }
+}
+
 checkstyle {
     configFile = file("${project.rootDir}/config/checkstyle/checkstyle.xml")
     toolVersion = '6.14.1'
 }
+
 checkstyleMain {
     configFile = file("${project.rootDir}/config/checkstyle/default.xml")
     ignoreFailures = false
 }
+
 checkstyleTest {
     configFile = file("${project.rootDir}/config/checkstyle/default.xml")
     ignoreFailures = false
 }
+
 task checkstyle(type: Checkstyle) {
     classpath = sourceSets.main.output + sourceSets.test.output
     source = sourceSets.main.allJava + sourceSets.test.allJava
 }
 
+gemPush {
+    host = "https://treasuredata.jfrog.io/treasuredata/api/gems/rubygems-local"
+}
+
 gem {
-    authors = [ "Hieu Duong" ]
-    email = [ "duongminhhieu89@gmail.com" ]
-    summary = "Embulk Input Zendesk input plugin for Embulk"
-    homepage = "https://github.com/treasure-data/embulk-input-zendesk"
-    licenses = []
+    authors = [ "hieu.duong" ]
+    email = [ "tuan@treasure-data.com" ]
+    summary = "Facebook Leads input plugin for Embulk"
+    homepage = "https://github.com/treasure-data/td-embulk-plugins/tree/embulk-input-facebook_leads"
+    licenses = [ "MIT" ]
 
     generateRubyCode = false
     into("lib/embulk/input/") {
@@ -91,9 +101,7 @@ gem {
     }
 }
 
-gemPush {
-    host = "https://rubygems.org"
-}
+clean { delete "${project.name}.gemspec" }
 
 test {
     testLogging {

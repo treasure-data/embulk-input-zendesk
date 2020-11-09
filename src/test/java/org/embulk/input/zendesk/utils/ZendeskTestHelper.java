@@ -8,7 +8,7 @@ import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigLoader;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.ModelManager;
-import org.embulk.spi.ExecSession;
+import org.embulk.spi.ExecSessionInternal;
 import org.embulk.test.EmbulkTests;
 import org.junit.Assert;
 
@@ -27,6 +27,7 @@ public final class ZendeskTestHelper
 
     static {
         mapper = new ObjectMapper();
+        mapper.registerModule(new org.embulk.spi.type.TypeJacksonModule());
         mapper.registerModule(new Jdk8Module());
         configLoader = new ConfigLoader(new ModelManager(null, mapper));
     }
@@ -68,7 +69,7 @@ public final class ZendeskTestHelper
     {
         // A small hack to make the plugin executed in preview mode so
         try {
-            final Field previewField = ExecSession.class.getDeclaredField("preview");
+            final Field previewField = ExecSessionInternal.class.getDeclaredField("preview");
             previewField.setAccessible(true);
             previewField.set(runtime.getExec(), isPreview);
         }
@@ -81,7 +82,7 @@ public final class ZendeskTestHelper
     {
         // A small hack to make the plugin executed in preview mode so
         try {
-            final Field previewField = ExecSession.class.getDeclaredField("preview");
+            final Field previewField = ExecSessionInternal.class.getDeclaredField("preview");
             previewField.setAccessible(true);
             previewField.set(runtime.getExec(), isPreview);
         }

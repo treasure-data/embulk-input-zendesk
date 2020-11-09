@@ -87,9 +87,9 @@ gemPush {
 
 gem {
     authors = [ "hieu.duong" ]
-    email = [ "tuan@treasure-data.com" ]
-    summary = "Facebook Leads input plugin for Embulk"
-    homepage = "https://github.com/treasure-data/td-embulk-plugins/tree/embulk-input-facebook_leads"
+    email = [ "duongminhhieu89@gmail.com" ]
+    summary = "Zendesk input plugin for Embulk"
+    homepage = "https://github.com/treasure-data/embulk-input-zendesk"
     licenses = [ "MIT" ]
 
     generateRubyCode = false

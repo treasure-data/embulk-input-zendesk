@@ -52,11 +52,7 @@ publishing {
     }
     repositories {
         maven {
-            url = uri("https://treasuredata.jfrog.io/treasuredata/libs-release-local")
-            credentials {
-                username = System.getenv("TD_ARTIFACTORY_USERNAME")
-                password = System.getenv("TD_ARTIFACTORY_PASSWORD")
-            }
+            url = uri("https://rubygems.org")
         }
     }
 }
@@ -90,7 +86,7 @@ gem {
     email = [ "duongminhhieu89@gmail.com" ]
     summary = "Zendesk input plugin for Embulk"
     homepage = "https://github.com/treasure-data/embulk-input-zendesk"
-    licenses = [ "MIT" ]
+    licenses = []
 
     generateRubyCode = false
     into("lib/embulk/input/") {

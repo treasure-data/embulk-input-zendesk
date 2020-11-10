@@ -1,4 +1,4 @@
-## 0.3.9 - 2020-11-10
+## 0.3.10 - 2020-11-10
 * [enhancement] support Embulk 0.10.18 [#70](https://github.com/treasure-data/embulk-input-zendesk/pull/70)
 
 ## 0.3.9 - 2020-03-24

@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Module;
+import org.embulk.EmbulkSystemProperties;
 import org.embulk.GuiceBinder;
-import org.embulk.RandomManager;
 import org.embulk.TestPluginSourceModule;
 import org.embulk.TestUtilityModule;
 import org.embulk.config.ConfigSource;
@@ -17,17 +17,13 @@ import org.embulk.exec.ExecModule;
 import org.embulk.exec.ExtensionServiceLoaderModule;
 import org.embulk.exec.SystemConfigModule;
 import org.embulk.jruby.JRubyScriptingModule;
-import org.embulk.plugin.BuiltinPluginSourceModule;
-import org.embulk.plugin.PluginClassLoaderFactory;
-import org.embulk.plugin.PluginClassLoaderModule;
-import org.embulk.spi.BufferAllocator;
-import org.embulk.spi.Exec;
 import org.embulk.spi.ExecAction;
-import org.embulk.spi.ExecSession;
+import org.embulk.spi.ExecInternal;
+import org.embulk.spi.ExecSessionInternal;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-import java.util.Random;
+import java.util.Properties;
 
 /**
  * This is a clone from {@link org.embulk.EmbulkTestRuntime}, since there is no easy way to extend it.
@@ -40,51 +36,31 @@ public class ZendeskPluginTestRuntime extends GuiceBinder
         @Override
         public void configure(Binder binder)
         {
-            ConfigSource systemConfig = getSystemConfig();
-            new SystemConfigModule(systemConfig).configure(binder);
-            new ExecModule(systemConfig).configure(binder);
-            new ExtensionServiceLoaderModule(systemConfig).configure(binder);
-            new BuiltinPluginSourceModule().configure(binder);
-            new JRubyScriptingModule(systemConfig).configure(binder);
-            new PluginClassLoaderModule().configure(binder);
+            final EmbulkSystemProperties embulkSystemProperties = EmbulkSystemProperties.of(new Properties() { {
+                setProperty("jruby_load_path", "lib");
+            }});
+            new SystemConfigModule(embulkSystemProperties).configure(binder);
+            new ExecModule(embulkSystemProperties).configure(binder);
+            new ExtensionServiceLoaderModule(embulkSystemProperties).configure(binder);
+            new JRubyScriptingModule().configure(binder);
             new TestUtilityModule().configure(binder);
             new TestPluginSourceModule().configure(binder);
         }
     }
 
-    private ExecSession exec;
+    private ExecSessionInternal exec;
 
     public ZendeskPluginTestRuntime()
     {
-        super(new TestRuntimeModule());
+        super(new ZendeskPluginTestRuntime.TestRuntimeModule());
         Injector injector = getInjector();
         ConfigSource execConfig = new DataSourceImpl(injector.getInstance(ModelManager.class));
-        this.exec = ExecSession.builder(injector).fromExecConfig(execConfig).build();
+        this.exec = ExecSessionInternal.builderInternal(injector).fromExecConfig(execConfig).build();
     }
 
-    public ExecSession getExec()
+    public ExecSessionInternal getExec()
     {
         return exec;
-    }
-
-    public BufferAllocator getBufferAllocator()
-    {
-        return getInstance(BufferAllocator.class);
-    }
-
-    public ModelManager getModelManager()
-    {
-        return getInstance(ModelManager.class);
-    }
-
-    public Random getRandom()
-    {
-        return getInstance(RandomManager.class).getRandom();
-    }
-
-    public PluginClassLoaderFactory getPluginClassLoaderFactory()
-    {
-        return getInstance(PluginClassLoaderFactory.class);
     }
 
     @Override
@@ -95,7 +71,7 @@ public class ZendeskPluginTestRuntime extends GuiceBinder
             public void evaluate() throws Throwable
             {
                 try {
-                    Exec.doWith(exec, (ExecAction<Void>) () -> {
+                    ExecInternal.doWith(exec, (ExecAction<Void>) () -> {
                         try {
                             superStatement.evaluate();
                         }

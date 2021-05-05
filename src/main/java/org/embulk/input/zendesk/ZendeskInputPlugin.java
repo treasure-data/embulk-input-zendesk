@@ -374,6 +374,8 @@ public class ZendeskInputPlugin implements InputPlugin
                 return new ZendeskCustomObjectService(task);
             case USER_EVENTS:
                 return new ZendeskUserEventService(task);
+            case GROUPS:
+                return new ZendeskSupportAPIService(task);
             default:
                 throw new ConfigException("Unsupported " + task.getTarget() + ", supported values: '" + Arrays.toString(Target.values()) + "'");
         }

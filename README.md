@@ -16,6 +16,7 @@ Required Embulk version >= 0.9.6.
 * Supports satisfaction_ratings API
 * Supports ticket_metric_events API
 * Supports SLA Policies API
+* Supports Groups API
 
 
 * **Plugin type**: input

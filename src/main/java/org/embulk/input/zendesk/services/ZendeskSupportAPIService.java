@@ -18,7 +18,8 @@ public class ZendeskSupportAPIService extends ZendeskNormalServices
         return !(task.getTarget().equals(Target.TICKET_FORMS)
                 || task.getTarget().equals(Target.SLA_POLICIES)
                 || task.getTarget().equals(Target.TICKET_FIELDS)
-                || task.getTarget().equals(Target.SATISFACTION_RATINGS));
+                || task.getTarget().equals(Target.SATISFACTION_RATINGS)
+                || task.getTarget().equals(Target.GROUPS));
     }
 
     @Override

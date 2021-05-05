@@ -14,7 +14,7 @@ public enum Target
     TICKET_METRICS("metric_sets"), TICKET_FIELDS("ticket_fields"), TICKET_FORMS("ticket_forms"),
     TICKET_METRIC_EVENTS("ticket_metric_events"), SATISFACTION_RATINGS("satisfaction_ratings"),
     SLA_POLICIES("sla_policies"), SCORES("responses"), OBJECT_RECORDS("data"),
-    RECIPIENTS("recipients"),  RELATIONSHIP_RECORDS("data"), USER_EVENTS("data");
+    RECIPIENTS("recipients"), RELATIONSHIP_RECORDS("data"), USER_EVENTS("data"), GROUPS("groups");
 
     String jsonName;
 

@@ -24,7 +24,8 @@ import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.DataException;
-import org.embulk.spi.util.RetryExecutor;
+import org.embulk.util.retryhelper.RetryGiveupException;
+import org.embulk.util.retryhelper.Retryable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +35,7 @@ import java.util.regex.Pattern;
 
 import static org.apache.http.HttpHeaders.AUTHORIZATION;
 import static org.apache.http.protocol.HTTP.CONTENT_TYPE;
-import static org.embulk.spi.util.RetryExecutor.retryExecutor;
+import static org.embulk.util.retryhelper.RetryExecutor.retryExecutor;
 
 public class ZendeskRestClient
 {
@@ -63,7 +64,7 @@ public class ZendeskRestClient
             return retryExecutor().withRetryLimit(task.getRetryLimit())
                 .withInitialRetryWait(task.getRetryInitialWaitSec() * 1000)
                 .withMaxRetryWait(task.getMaxRetryWaitSec() * 1000)
-                .runInterruptible(new RetryExecutor.Retryable<String>() {
+                .runInterruptible(new Retryable<String>() {
                 @Override
                 public String call()
                     throws Exception
@@ -109,8 +110,8 @@ public class ZendeskRestClient
                 }
             });
         }
-        catch (final RetryExecutor.RetryGiveupException | InterruptedException e) {
-            if (e instanceof RetryExecutor.RetryGiveupException && e.getCause() != null && e.getCause() instanceof ZendeskException) {
+        catch (final RetryGiveupException | InterruptedException e) {
+            if (e instanceof RetryGiveupException && e.getCause() != null && e.getCause() instanceof ZendeskException) {
                 throw new ConfigException("Status: '" + ((ZendeskException) (e.getCause())).getStatusCode() + "', error message: '" + e.getCause().getMessage() + "'", e.getCause());
             }
             throw new ConfigException(e);

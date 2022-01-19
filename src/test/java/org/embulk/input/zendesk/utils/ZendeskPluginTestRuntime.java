@@ -8,7 +8,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import org.embulk.EmbulkSystemProperties;
 import org.embulk.GuiceBinder;
-import org.embulk.TestPluginSourceModule;
 import org.embulk.TestUtilityModule;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.DataSourceImpl;
@@ -44,7 +43,6 @@ public class ZendeskPluginTestRuntime extends GuiceBinder
             new ExtensionServiceLoaderModule(embulkSystemProperties).configure(binder);
             new JRubyScriptingModule().configure(binder);
             new TestUtilityModule().configure(binder);
-            new TestPluginSourceModule().configure(binder);
         }
     }
 

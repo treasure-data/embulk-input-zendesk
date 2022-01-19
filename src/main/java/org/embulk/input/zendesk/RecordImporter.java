@@ -7,8 +7,8 @@ import org.embulk.spi.Column;
 import org.embulk.spi.ColumnVisitor;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.Schema;
-import org.embulk.spi.json.JsonParser;
 import org.embulk.spi.time.Timestamp;
+import org.embulk.util.json.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

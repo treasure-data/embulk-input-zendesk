@@ -1,9 +1,9 @@
 plugins {
-    id "com.jfrog.bintray" version "1.1"
     id "java"
-    id "maven-publish"
     id "checkstyle"
     id "jacoco"
+    id "maven"
+    id 'maven-publish'
     id "org.embulk.embulk-plugins" version "0.4.2"
 }
 
@@ -11,6 +11,8 @@ repositories {
     mavenCentral()
     jcenter()
 }
+
+def embulkVersion = '0.10.31'
 
 group = "com.treasuredata.embulk.plugins"
 version = "0.3.10"
@@ -20,12 +22,39 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compileOnly  "org.embulk:embulk-core:0.10.18"
+    compileOnly "org.embulk:embulk-api:$embulkVersion"
+    compileOnly "org.embulk:embulk-spi:$embulkVersion"
+
+    compile("org.embulk:embulk-util-config:0.3.1") {
+        // Conflict with Embulk Core
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-annotations'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-core'
+        exclude group: 'com.fasterxml.jackson.core', module: 'jackson-databind'
+        exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
+        exclude group: 'javax.validation', module: 'validation-api'
+    }
+    compile 'org.embulk:embulk-util-retryhelper:0.8.1'
+    compile "org.embulk:embulk-util-json:0.1.0"
+    compile "org.embulk:embulk-guess-csv:0.10.36"
+    compile "org.embulk:embulk-parser-csv:0.10.36"
+    compile "org.embulk:embulk-input-file:$embulkVersion"
+
+    compile 'javax.validation:validation-api:1.1.0.Final'
+    compile "com.fasterxml.jackson.core:jackson-annotations:2.6.7"
+    compile "com.fasterxml.jackson.core:jackson-core:2.6.7"
+    compile "com.fasterxml.jackson.core:jackson-databind:2.6.7"
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-guava:2.6.7"
+    compile "com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.6.7"
+    compile "commons-io:commons-io:2.7"
+    compile "org.json:json:20200518"
+
+    compile 'com.google.guava:guava:18.0'
     compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.6'
+
     testCompile "junit:junit:4.+"
-    testCompile "org.embulk:embulk-core:0.10.18:tests"
-    testCompile 'org.embulk:embulk-junit4:0.10.18'
-    testCompile "org.embulk:embulk-deps:0.10.18"
+    testCompile "org.embulk:embulk-core:$embulkVersion:tests"
+    testCompile "org.embulk:embulk-deps:$embulkVersion"
+    testCompile "org.embulk:embulk-junit4:$embulkVersion"
     testCompile "org.mockito:mockito-core:2.+"
 }
 

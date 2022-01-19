@@ -30,6 +30,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.junit.Assert.assertEquals;
 
 import static org.junit.Assert.assertTrue;
@@ -242,7 +243,7 @@ public class TestZendeskInputPlugin
         src.set("target", Target.USER_EVENTS.name().toLowerCase());
         src.set("profile_source", "dummy");
         src.set("columns", Collections.EMPTY_LIST);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskUserEventService);
     }
@@ -381,7 +382,7 @@ public class TestZendeskInputPlugin
         final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
         src.set("target", target.name().toLowerCase());
         src.set("columns", Collections.EMPTY_LIST);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskSupportAPIService);
     }
@@ -391,7 +392,7 @@ public class TestZendeskInputPlugin
         final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
         src.set("target", target.name().toLowerCase());
         src.set("columns", Collections.EMPTY_LIST);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskNPSService);
     }
@@ -403,7 +404,7 @@ public class TestZendeskInputPlugin
         src.set("relationship_types", Collections.singletonList("dummy"));
         src.set("object_types", Collections.singletonList("account"));
         src.set("columns", Collections.EMPTY_LIST);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskCustomObjectService);
     }
@@ -413,7 +414,7 @@ public class TestZendeskInputPlugin
         final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
         src.set("target", target.name().toLowerCase());
         src.set("columns", Collections.EMPTY_LIST);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskChatService);
     }

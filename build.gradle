@@ -15,7 +15,7 @@ repositories {
 def embulkVersion = '0.10.31'
 
 group = "com.treasuredata.embulk.plugins"
-version = "0.3.10"
+version = "0.3.11"
 description = "Loads records From Zendesk"
 
 sourceCompatibility = 1.8
@@ -35,6 +35,8 @@ dependencies {
     }
     compile 'org.embulk:embulk-util-retryhelper:0.8.1'
     compile "org.embulk:embulk-util-json:0.1.0"
+
+    // embulk 10.31 has problem with null value
     compile "org.embulk:embulk-guess-csv:0.10.36"
     compile "org.embulk:embulk-parser-csv:0.10.36"
     compile "org.embulk:embulk-input-file:$embulkVersion"

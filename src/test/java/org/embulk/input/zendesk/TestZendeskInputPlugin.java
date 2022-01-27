@@ -1,6 +1,8 @@
 package org.embulk.input.zendesk;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.TextNode;
+
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -53,7 +55,10 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -429,8 +434,20 @@ public class TestZendeskInputPlugin
     {
         loadData(fileName);
         ConfigDiff configDiff = zendeskInputPlugin.guess(src);
+        List<String> actualValues = new ArrayList<>();
         JsonNode columns = configDiff.get(JsonNode.class, "columns");
-        assertEquals(ZendeskTestHelper.getJsonFromFile(expectedSource), columns);
+        Iterator<JsonNode> it = columns.elements();
+        while (it.hasNext()) {
+            JsonNode actual = it.next();
+            actualValues.add(actual.toString());
+        }
+        System.out.println(actualValues);
+        JsonNode expectedNodes = ZendeskTestHelper.getJsonFromFile(expectedSource);
+        it = expectedNodes.elements();
+        while (it.hasNext()) {
+            JsonNode expectedNode = it.next();
+            assertTrue("Missing expected node: " + expectedNode.toString(), actualValues.contains(expectedNode.toString()));
+        }
     }
 
     private void setupSupportAPIService()

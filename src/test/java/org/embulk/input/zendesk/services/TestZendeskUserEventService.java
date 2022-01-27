@@ -15,6 +15,7 @@ import org.mockito.ArgumentCaptor;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -117,9 +118,8 @@ public class TestZendeskUserEventService
     public void testAddRecordToImporterWithDuplicateUser()
     {
         ZendeskTestHelper.setPreviewMode(runtime, false);
-        PluginTask task = ZendeskTestHelper.getConfigSource("user_events.yml")
-                .set("dedup", true)
-                .loadConfig(PluginTask.class);
+        PluginTask task =
+            CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource("user_events.yml").set("dedup", true), PluginTask.class);
         setupZendeskSupportAPIService(task);
 
         JsonNode dataJsonOrganization = ZendeskTestHelper.getJsonFromFile("data/organization.json");
@@ -149,8 +149,7 @@ public class TestZendeskUserEventService
 
     private PluginTask setup()
     {
-        PluginTask task = ZendeskTestHelper.getConfigSource("user_events.yml")
-                .loadConfig(PluginTask.class);
+        PluginTask task = CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource("user_events.yml"), PluginTask.class);
         setupZendeskSupportAPIService(task);
         return task;
     }

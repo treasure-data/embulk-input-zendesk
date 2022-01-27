@@ -23,6 +23,7 @@ import org.junit.Test;
 
 import org.mockito.ArgumentCaptor;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.apache.http.HttpHeaders.AUTHORIZATION;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
@@ -44,7 +45,7 @@ public class TestZendeskRestClient
     public EmbulkTestRuntime embulkTestRuntime = new EmbulkTestRuntime();
 
     private ZendeskRestClient zendeskRestClient;
-    private PluginTask task = ZendeskTestHelper.getConfigSource("incremental.yml").loadConfig(PluginTask.class);
+    private PluginTask task = CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource("incremental.yml"), PluginTask.class);
     private JsonNode data = ZendeskTestHelper.getJsonFromFile("data/client.json");
 
     private HttpClient client = mock(HttpClient.class);
@@ -162,8 +163,8 @@ public class TestZendeskRestClient
         configSource.set("auth_method", "oauth");
         configSource.set("access_token", "token");
         configSource.set("target", "chat");
-        configSource.set("login_url", "http://abc.zendesk.com");
-        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+        configSource.set("login_url", "https://abc.zendesk.com");
+        PluginTask pluginTask = CONFIG_MAPPER.map(configSource, PluginTask.class);
 
         String expectedMessage = "Invalid login url. Check that you are using https://www.zopim.com to import chat data.";
         int expectedRetryTime = 1;
@@ -185,7 +186,7 @@ public class TestZendeskRestClient
         configSource.set("auth_method", "oauth");
         configSource.set("access_token", "token");
         configSource.set("login_url", "https://www.zopim.com/");
-        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+        PluginTask pluginTask = CONFIG_MAPPER.map(configSource, PluginTask.class);
 
         String expectedMessage = "Invalid login url. Check that you are using the correct Zendesk url (https://example.zendesk.com/) to import data.";
         int expectedRetryTime = 1;
@@ -207,8 +208,8 @@ public class TestZendeskRestClient
         configSource.set("auth_method", "oauth");
         configSource.set("access_token", "token");
         configSource.set("target", "chat");
-        configSource.set("login_url", "http://abc.zendesk.com");
-        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+        configSource.set("login_url", "https://abc.zendesk.com");
+        PluginTask pluginTask = CONFIG_MAPPER.map(configSource, PluginTask.class);
 
         String expectedMessage = "Invalid credentials. Check that you are using your Zopim credentials to import Chat data.";
         int expectedRetryTime = 1;
@@ -230,7 +231,7 @@ public class TestZendeskRestClient
         configSource.set("auth_method", "oauth");
         configSource.set("access_token", "token");
         configSource.set("login_url", "https://www.zopim.com/");
-        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+        PluginTask pluginTask = CONFIG_MAPPER.map(configSource, PluginTask.class);
 
         String expectedMessage = "Invalid credentials. Check that you are using your Zendesk credentials to import non-Chat data.";
         int expectedRetryTime = 1;
@@ -298,7 +299,7 @@ public class TestZendeskRestClient
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
         configSource.set("auth_method", "oauth");
         configSource.set("access_token", accessToken);
-        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+        PluginTask pluginTask = CONFIG_MAPPER.map(configSource, PluginTask.class);
 
         String expectedValue = "Bearer " + accessToken;
         setupAndVerifyAuthenticationString(expectedValue, pluginTask);
@@ -316,7 +317,7 @@ public class TestZendeskRestClient
         configSource.set("auth_method", "basic");
         configSource.set("username", Optional.of(username));
         configSource.set("password", password);
-        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+        PluginTask pluginTask = CONFIG_MAPPER.map(configSource, PluginTask.class);
 
         String expectedValue = "Basic " + ZendeskUtils.convertBase64(String.format("%s:%s", username, password));
         setupAndVerifyAuthenticationString(expectedValue, pluginTask);
@@ -334,7 +335,7 @@ public class TestZendeskRestClient
         configSource.set("auth_method", "token");
         configSource.set("username", username);
         configSource.set("token", token);
-        PluginTask pluginTask = configSource.loadConfig(PluginTask.class);
+        PluginTask pluginTask = CONFIG_MAPPER.map(configSource, PluginTask.class);
 
         String expectedValue = "Basic " + ZendeskUtils.convertBase64(String.format("%s/token:%s", username, token));
         setupAndVerifyAuthenticationString(expectedValue, pluginTask);

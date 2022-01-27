@@ -8,6 +8,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -47,8 +48,8 @@ public class TestZendeskNPSService
 
     private void setup()
     {
-        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource("nps.yml")
-                .loadConfig(ZendeskInputPlugin.PluginTask.class);
+      ZendeskInputPlugin.PluginTask task =
+          CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource("nps.yml"), ZendeskInputPlugin.PluginTask.class);
         setupZendeskNPSService(task);
     }
 }

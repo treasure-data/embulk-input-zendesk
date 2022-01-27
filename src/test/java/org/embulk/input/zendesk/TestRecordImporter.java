@@ -6,9 +6,10 @@ import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 import org.embulk.spi.Column;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.Schema;
-import org.embulk.spi.json.JsonParser;
 import org.embulk.spi.time.Timestamp;
 import org.embulk.spi.time.TimestampParser;
+import org.embulk.util.json.JsonParser;
+import org.embulk.util.timestamp.TimestampFormatter;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -16,10 +17,14 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.msgpack.value.Value;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 public class TestRecordImporter
 {
@@ -42,7 +47,7 @@ public class TestRecordImporter
     @BeforeClass
     public static void setUp()
     {
-        pluginTask = ZendeskTestHelper.getConfigSource("util.yml").loadConfig(ZendeskInputPlugin.PluginTask.class);
+        pluginTask = CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource("util.yml"), ZendeskInputPlugin.PluginTask.class);
         schema = pluginTask.getColumns().toSchema();
         booleanColumn = schema.getColumn(0);
         longColumn = schema.getColumn(1);
@@ -68,7 +73,8 @@ public class TestRecordImporter
         long longValue = 1;
         double doubleValue = 1;
         String stringValue = "string";
-        Timestamp dateValue = TimestampParser.of("%Y-%m-%dT%H:%M:%S%z", "UTC").parse("2019-01-01T00:00:00Z");
+        Instant dateValue = TimestampFormatter.builder("%Y-%m-%dT%H:%M:%S%z", true).setDefaultZoneOffset(ZoneOffset.UTC).build()
+            .parse("2019-01-01T00:00:00Z");
         Value jsonValue = new JsonParser().parse("{}");
 
         recordImporter.addRecord(dataJson);
@@ -77,7 +83,7 @@ public class TestRecordImporter
         verify(pageBuilder, times(1)).setLong(longColumn, longValue);
         verify(pageBuilder, times(1)).setDouble(doubleColumn, doubleValue);
         verify(pageBuilder, times(1)).setString(stringColumn, stringValue);
-        verify(pageBuilder, times(1)).setTimestamp(dateColumn, dateValue);
+        verify(pageBuilder, times(1)).setTimestamp(dateColumn, Timestamp.ofInstant(dateValue));
         verify(pageBuilder, times(1)).setJson(jsonColumn, jsonValue);
     }
 

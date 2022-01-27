@@ -12,6 +12,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -68,7 +69,8 @@ public class TestZendeskChatService
 
     private void setup()
     {
-        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource("chat.yml").loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task =
+            CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource("chat.yml"), ZendeskInputPlugin.PluginTask.class);
         setupZendeskChatService(task);
     }
 

@@ -43,6 +43,7 @@ import org.embulk.util.config.modules.ColumnModule;
 import org.embulk.util.config.modules.SchemaModule;
 import org.embulk.util.config.modules.TypeModule;
 import org.embulk.util.config.units.SchemaConfig;
+import org.embulk.util.guess.SchemaGuess;
 import org.json.CDL;
 import org.json.JSONArray;
 import org.slf4j.Logger;
@@ -59,6 +60,7 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
@@ -304,21 +306,7 @@ public class ZendeskInputPlugin
 
     private JsonNode addAllColumnsToSchema(final JsonNode jsonNode, final Target target, final List<String> includes)
     {
-        final ArrayNode sample = new ObjectMapper().valueToTree(StreamSupport.stream(
-            jsonNode.get(target.getJsonName()).spliterator(), false).limit(10).collect(Collectors.toList()));
-
-        File file = Exec.getTempFileSpace().createTempFile("csv");
-        JSONArray output = new JSONArray(sample.toString());
-        String csv = CDL.toString(output);
-        try {
-            FileUtils.writeStringToFile(file, csv);
-        }
-        catch (IOException ioException) {
-            ioException.printStackTrace();
-        }
-
-        ConfigDiff configDiff = guessData(file.getAbsolutePath());
-
+        ConfigDiff configDiff = guessData(jsonNode, target.getJsonName());
         ConfigDiff parser = configDiff.getNested("parser");
         if (parser.has("columns")) {
             JsonNode columns = parser.get(JsonNode.class,  "columns");
@@ -362,22 +350,59 @@ public class ZendeskInputPlugin
     }
 
     @VisibleForTesting
-    protected ConfigDiff guessData(String downloadedFilePath)
+    protected ConfigDiff guessData(final JsonNode jsonNode, final String targetJsonName)
     {
-        final ConfigSource parserConfig = CONFIG_MAPPER_FACTORY.newConfigSource()
-            .set("type", "csv")
-            .set("charset", "UTF-8")
-            .set("null_string", "null")
-            .set("newline", "CRLF");
+        List<String> unifiedFieldNames = unifiedFieldNames(jsonNode, targetJsonName);
+        List<List<Object>> samples = createSampleData(jsonNode, targetJsonName, unifiedFieldNames);
+        List<ConfigDiff> columnConfigs = SchemaGuess.of(CONFIG_MAPPER_FACTORY).fromListRecords(unifiedFieldNames, samples);
+        if (columnConfigs.isEmpty()) {
+            throw new ConfigException("Fail to guess column");
+        }
+        columnConfigs.forEach(conf -> conf.remove("index"));
+        ConfigDiff parserGuessed = CONFIG_MAPPER_FACTORY.newConfigDiff();
+        parserGuessed.set("columns", columnConfigs);
 
-        final ConfigSource config = CONFIG_MAPPER_FACTORY.newConfigSource().set("parser", parserConfig);
+        ConfigDiff configDiff = CONFIG_MAPPER_FACTORY.newConfigDiff();
+        configDiff.setNested("parser", parserGuessed);
+        return configDiff;
+    }
 
-        final byte[] data = readSampleBytes(downloadedFilePath);
-        final Buffer sample = Exec.getBufferAllocator().allocate(data.length);
-        sample.setBytes(0, data, 0, data.length);
-        sample.limit(data.length);
+    private List<List<Object>> createSampleData(JsonNode jsonNode, String targetJsonName, List<String> unifiedFieldNames) {
+        final List<List<Object>> samples = new ArrayList<>();
+        Iterator<JsonNode> records = ZendeskUtils.getListRecords(jsonNode, targetJsonName);
+        while (records.hasNext()) {
+            JsonNode node = records.next();
+            List<Object> line = new ArrayList<>();
+            for (String field: unifiedFieldNames) {
+                JsonNode childNode = node.get(field);
+                if (childNode == null || childNode.isNull() || "null".equals(childNode.asText())) {
+                    line.add(null);
+                    continue;
+                }
+                if (childNode.isContainerNode()) {
+                    line.add(childNode);
+                } else {
+                    line.add(childNode.asText());
+                }
+            }
+            samples.add(line);
+        }
+        return samples;
+    }
 
-        return new CsvGuessPlugin().guess(config, sample);
+    private List<String> unifiedFieldNames(JsonNode jsonNode, String targetJsonName) {
+        List<String> columnNames = new ArrayList<>();
+        Iterator<JsonNode> records = ZendeskUtils.getListRecords(jsonNode, targetJsonName);
+        while (records.hasNext()) {
+            Iterator<String> fieldNames = records.next().fieldNames();
+            while (fieldNames.hasNext()) {
+                String field = fieldNames.next();
+                if (!columnNames.contains(field)) {
+                    columnNames.add(field);
+                }
+            }
+        }
+        return columnNames;
     }
 
     /**

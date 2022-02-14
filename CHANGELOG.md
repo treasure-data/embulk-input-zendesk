@@ -1,3 +1,6 @@
+## 0.3.11 - 2022-14-02
+* [enhancement] catch up Embulk 0.10 [#73](https://github.com/treasure-data/embulk-input-zendesk/pull/73)
+
 ## 0.3.10 - 2020-11-10
 * [enhancement] support Embulk 0.10.18 [#70](https://github.com/treasure-data/embulk-input-zendesk/pull/70)
 

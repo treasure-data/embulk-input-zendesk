@@ -1,7 +1,6 @@
 package org.embulk.input.zendesk;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
@@ -57,7 +56,6 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;

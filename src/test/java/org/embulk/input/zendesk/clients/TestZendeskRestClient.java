@@ -2,29 +2,27 @@ package org.embulk.input.zendesk.clients;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.Header;
-
 import org.apache.http.HttpResponse;
 import org.apache.http.StatusLine;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
-
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
 import org.embulk.input.zendesk.ZendeskInputPlugin.PluginTask;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
-
 import org.embulk.input.zendesk.utils.ZendeskUtils;
-
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
 import org.mockito.ArgumentCaptor;
 
-import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
+import java.io.IOException;
+import java.util.Optional;
+
 import static org.apache.http.HttpHeaders.AUTHORIZATION;
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
@@ -35,9 +33,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import java.io.IOException;
-import java.util.Optional;
 
 public class TestZendeskRestClient
 {

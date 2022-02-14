@@ -7,7 +7,6 @@ import org.embulk.spi.Column;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.Schema;
 import org.embulk.spi.time.Timestamp;
-import org.embulk.spi.time.TimestampParser;
 import org.embulk.util.json.JsonParser;
 import org.embulk.util.timestamp.TimestampFormatter;
 import org.junit.Before;
@@ -17,14 +16,14 @@ import org.junit.Test;
 import org.mockito.Mockito;
 import org.msgpack.value.Value;
 
+import java.time.Instant;
+import java.time.ZoneOffset;
+
 import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-
-import java.time.Instant;
-import java.time.ZoneOffset;
 
 public class TestRecordImporter
 {

@@ -7,13 +7,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
-import org.apache.commons.io.FileUtils;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
-import org.embulk.guess.csv.CsvGuessPlugin;
 import org.embulk.input.zendesk.models.AuthenticationMethod;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.services.ZendeskChatService;
@@ -25,7 +23,6 @@ import org.embulk.input.zendesk.services.ZendeskUserEventService;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
-import org.embulk.spi.Buffer;
 import org.embulk.spi.DataException;
 import org.embulk.spi.Exec;
 import org.embulk.spi.InputPlugin;
@@ -44,8 +41,6 @@ import org.embulk.util.config.modules.SchemaModule;
 import org.embulk.util.config.modules.TypeModule;
 import org.embulk.util.config.units.SchemaConfig;
 import org.embulk.util.guess.SchemaGuess;
-import org.json.CDL;
-import org.json.JSONArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +48,6 @@ import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
 import java.io.ByteArrayOutputStream;
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.time.Instant;
@@ -66,8 +60,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 public class ZendeskInputPlugin
     implements InputPlugin
@@ -367,13 +359,14 @@ public class ZendeskInputPlugin
         return configDiff;
     }
 
-    private List<List<Object>> createSampleData(JsonNode jsonNode, String targetJsonName, List<String> unifiedFieldNames) {
+    private List<List<Object>> createSampleData(JsonNode jsonNode, String targetJsonName, List<String> unifiedFieldNames)
+    {
         final List<List<Object>> samples = new ArrayList<>();
         Iterator<JsonNode> records = ZendeskUtils.getListRecords(jsonNode, targetJsonName);
         while (records.hasNext()) {
             JsonNode node = records.next();
             List<Object> line = new ArrayList<>();
-            for (String field: unifiedFieldNames) {
+            for (String field : unifiedFieldNames) {
                 JsonNode childNode = node.get(field);
                 if (childNode == null || childNode.isNull() || "null".equals(childNode.asText())) {
                     line.add(null);
@@ -381,7 +374,8 @@ public class ZendeskInputPlugin
                 }
                 if (childNode.isContainerNode()) {
                     line.add(childNode);
-                } else {
+                }
+                else {
                     line.add(childNode.asText());
                 }
             }
@@ -390,7 +384,8 @@ public class ZendeskInputPlugin
         return samples;
     }
 
-    private List<String> unifiedFieldNames(JsonNode jsonNode, String targetJsonName) {
+    private List<String> unifiedFieldNames(JsonNode jsonNode, String targetJsonName)
+    {
         List<String> columnNames = new ArrayList<>();
         Iterator<JsonNode> records = ZendeskUtils.getListRecords(jsonNode, targetJsonName);
         while (records.hasNext()) {

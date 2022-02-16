@@ -35,11 +35,7 @@ dependencies {
     }
     compile 'org.embulk:embulk-util-retryhelper:0.8.1'
     compile "org.embulk:embulk-util-json:0.1.0"
-
-    // embulk 10.31 has problem with null value
-    compile "org.embulk:embulk-guess-csv:0.10.36"
-    compile "org.embulk:embulk-parser-csv:0.10.36"
-    compile "org.embulk:embulk-input-file:$embulkVersion"
+    compile "org.embulk:embulk-util-guess:0.2.0"
 
     compile 'javax.validation:validation-api:1.1.0.Final'
     compile "com.fasterxml.jackson.core:jackson-annotations:2.6.7"

@@ -439,7 +439,6 @@ public class TestZendeskInputPlugin
             JsonNode actual = it.next();
             actualValues.add(actual.toString());
         }
-        System.out.println(actualValues);
         JsonNode expectedNodes = ZendeskTestHelper.getJsonFromFile(expectedSource);
         it = expectedNodes.elements();
         while (it.hasNext()) {

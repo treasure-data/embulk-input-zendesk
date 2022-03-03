@@ -1,0 +1,10 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/openjdk:8-jdk
+    steps:
+      - checkout
+      - run: ./gradlew checkstyle test jacocoTestReport
+      - store_test_results:
+          path: ./build/test-results/test

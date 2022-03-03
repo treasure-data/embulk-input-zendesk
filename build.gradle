@@ -4,6 +4,7 @@ plugins {
     id "jacoco"
     id "maven"
     id 'maven-publish'
+    id "signing"
     id "org.embulk.embulk-plugins" version "0.4.2"
 }
 
@@ -99,25 +100,85 @@ javadocJar {
     from rootProject.file("LICENSE")
 }
 
+// It should not publish a `.module` file in Maven Central.
+// https://docs.gradle.org/current/userguide/publishing_gradle_module_metadata.html#sub:disabling-gmm-publication
+tasks.withType(GenerateModuleMetadata) {
+    enabled = false
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name
+
+            from components.java  // Must be "components.java". The dependency modification works only for it.
+            // javadocJar and sourcesJar are added by java.withJavadocJar() and java.withSourcesJar() above.
+            // See: https://docs.gradle.org/current/javadoc/org/gradle/api/plugins/JavaPluginExtension.html
+
+            pom {  // https://central.sonatype.org/pages/requirements.html
+                packaging "jar"
+
+                name = project.name
+                description = project.description
+                url = "https://github.com/treasure-data/embulk-input-zendesk"
+
+                licenses {
+                    license {
+                        // http://central.sonatype.org/pages/requirements.html#license-information
+                        name = "The Apache License, Version 2.0"
+                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+
+                developers {
+                    // Authors after reimplementing it in Java.
+                    developer {
+                        name = "Hieu Duong"
+                        email = "duongminhhieu89@gmail.com"
+                    }
+                    developer {
+                        name = "Ngoc Hoang"
+                        email = "ngoc.hc91@gmail.com"
+                    }
+                }
+
+                scm {
+                    connection = "scm:git:git://github.com/treasure-data/embulk-input-zendesk.git"
+                    developerConnection = "scm:git:git@github.com:treasure-data/embulk-input-zendesk.git"
+                    url = "https://github.com/treasure-data/embulk-input-zendesk"
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {  // publishMavenPublicationToMavenCentralRepository
+            name = "mavenCentral"
+            if (project.version.endsWith("-SNAPSHOT")) {
+                url "https://oss.sonatype.org/content/repositories/snapshots"
+            } else {
+                url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            }
+
+            credentials {
+                username = project.hasProperty("ossrhUsername") ? ossrhUsername : ""
+                password = project.hasProperty("ossrhPassword") ? ossrhPassword : ""
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.maven
+}
+
 jacocoTestReport {
     group = "Reporting"
     reports {
         xml.enabled false
         csv.enabled false
         html.destination file("${buildDir}/reports/coverage")
-    }
-}
-
-publishing {
-    publications {
-        embulkPluginMaven(MavenPublication) {  // Publish it with "publishEmbulkPluginMavenPublicationToMavenRepository".
-            from components.java  // Must be "components.java". The dependency modification works only for it.
-        }
-    }
-    repositories {
-        maven {
-            url = uri("https://rubygems.org")
-        }
     }
 }
 

@@ -34,7 +34,9 @@ dependencies {
         exclude group: 'javax.validation', module: 'validation-api'
     }
     compile 'org.embulk:embulk-util-retryhelper:0.8.1'
-    compile "org.embulk:embulk-util-json:0.1.0"
+    compile("org.embulk:embulk-util-json:0.1.0") {
+        exclude group: 'org.msgpack', module: 'msgpack-core'
+    }
     compile "org.embulk:embulk-util-guess:0.2.0"
 
     compile 'javax.validation:validation-api:1.1.0.Final'
@@ -47,7 +49,16 @@ dependencies {
     compile "org.json:json:20200518"
 
     compile 'com.google.guava:guava:18.0'
-    compile group: 'org.apache.httpcomponents', name: 'httpclient', version: '4.5.6'
+    compile("org.apache.httpcomponents:httpclient:4.5.6") {
+        exclude group: 'commons-logging', module: 'commons-logging'
+    }
+
+    // Instead of "commons-logging:commons-logging:1.2" that is required from "google-cloud-storage",
+    // we use "jcl-over-slf4j" because Embulk is based on SLF4J.
+    compile("org.slf4j:jcl-over-slf4j:1.7.12") {
+        // slf4j-api is in embulk-core / embulk-api.
+        exclude group: "org.slf4j", module: "slf4j-api"
+    }
 
     testCompile "junit:junit:4.+"
     testCompile "org.embulk:embulk-core:$embulkVersion:tests"

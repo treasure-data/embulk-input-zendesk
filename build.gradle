@@ -9,7 +9,6 @@ plugins {
 
 repositories {
     mavenCentral()
-    jcenter()
 }
 
 def embulkVersion = '0.10.31'
@@ -33,10 +32,8 @@ dependencies {
         exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
         exclude group: 'javax.validation', module: 'validation-api'
     }
-    compile 'org.embulk:embulk-util-retryhelper:0.8.1'
-    compile("org.embulk:embulk-util-json:0.1.0") {
-        exclude group: 'org.msgpack', module: 'msgpack-core'
-    }
+    compile 'org.embulk:embulk-util-retryhelper:0.8.2'
+    compile "org.embulk:embulk-util-json:0.1.1"
     compile "org.embulk:embulk-util-guess:0.2.0"
 
     compile 'javax.validation:validation-api:1.1.0.Final'
@@ -53,7 +50,7 @@ dependencies {
         exclude group: 'commons-logging', module: 'commons-logging'
     }
 
-    // Instead of "commons-logging:commons-logging:1.2" that is required from "google-cloud-storage",
+    // Instead of "commons-logging:commons-logging:1.2" that is required from Apache httpclient,
     // we use "jcl-over-slf4j" because Embulk is based on SLF4J.
     compile("org.slf4j:jcl-over-slf4j:1.7.12") {
         // slf4j-api is in embulk-core / embulk-api.

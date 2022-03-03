@@ -430,13 +430,6 @@ public class ZendeskInputPlugin
             .forEach(arrayNode::add);
     }
 
-    private ConfigSource createGuessConfig()
-    {
-        return CONFIG_MAPPER_FACTORY.newConfigSource()
-            .set("guess_plugins", ImmutableList.of("zendesk"))
-            .set("guess_sample_buffer_bytes", ZendeskConstants.Misc.GUESS_BUFFER_SIZE);
-    }
-
     private ZendeskService getZendeskService(PluginTask task)
     {
         if (zendeskService == null) {

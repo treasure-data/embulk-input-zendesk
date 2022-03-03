@@ -122,14 +122,6 @@ gem {
     summary = "Zendesk input plugin for Embulk"
     homepage = "https://github.com/treasure-data/embulk-input-zendesk"
     licenses = []
-
-    generateRubyCode = false
-    into("lib/embulk/input/") {
-        from "lib/embulk/input/zendesk.rb"
-    }
-    into("lib/embulk/guess/") {
-        from "lib/embulk/guess/zendesk.rb"
-    }
 }
 
 clean { delete "${project.name}.gemspec" }

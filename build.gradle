@@ -113,7 +113,7 @@ task checkstyle(type: Checkstyle) {
 }
 
 gemPush {
-    host = "https://treasuredata.jfrog.io/treasuredata/api/gems/rubygems-local"
+    host = "https://rubygems.org"
 }
 
 gem {

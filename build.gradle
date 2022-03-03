@@ -4,22 +4,32 @@ plugins {
     id "jacoco"
     id "maven"
     id 'maven-publish'
+    id "signing"
     id "org.embulk.embulk-plugins" version "0.4.2"
 }
 
 repositories {
     mavenCentral()
-    jcenter()
 }
 
 def embulkVersion = '0.10.31'
 
 group = "com.treasuredata.embulk.plugins"
-version = "0.3.11"
+version = "0.4.0-SNAPSHOT"
 description = "Loads records From Zendesk"
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:deprecation" << "-Xlint:unchecked"
+    options.encoding = "UTF-8"
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
 
 dependencies {
     compileOnly "org.embulk:embulk-api:$embulkVersion"
@@ -33,10 +43,8 @@ dependencies {
         exclude group: 'com.fasterxml.jackson.datatype', module: 'jackson-datatype-jdk8'
         exclude group: 'javax.validation', module: 'validation-api'
     }
-    compile 'org.embulk:embulk-util-retryhelper:0.8.1'
-    compile("org.embulk:embulk-util-json:0.1.0") {
-        exclude group: 'org.msgpack', module: 'msgpack-core'
-    }
+    compile 'org.embulk:embulk-util-retryhelper:0.8.2'
+    compile "org.embulk:embulk-util-json:0.1.1"
     compile "org.embulk:embulk-util-guess:0.2.0"
 
     compile 'javax.validation:validation-api:1.1.0.Final'
@@ -53,7 +61,7 @@ dependencies {
         exclude group: 'commons-logging', module: 'commons-logging'
     }
 
-    // Instead of "commons-logging:commons-logging:1.2" that is required from "google-cloud-storage",
+    // Instead of "commons-logging:commons-logging:1.2" that is required from Apache httpclient,
     // we use "jcl-over-slf4j" because Embulk is based on SLF4J.
     compile("org.slf4j:jcl-over-slf4j:1.7.12") {
         // slf4j-api is in embulk-core / embulk-api.
@@ -73,25 +81,104 @@ embulkPlugin {
     type = "zendesk"
 }
 
+javadoc {
+    options {
+        locale = "en_US"
+        encoding = "UTF-8"
+    }
+}
+
+jar {
+    from rootProject.file("LICENSE")
+}
+
+sourcesJar {
+    from rootProject.file("LICENSE")
+}
+
+javadocJar {
+    from rootProject.file("LICENSE")
+}
+
+// It should not publish a `.module` file in Maven Central.
+// https://docs.gradle.org/current/userguide/publishing_gradle_module_metadata.html#sub:disabling-gmm-publication
+tasks.withType(GenerateModuleMetadata) {
+    enabled = false
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = project.group
+            artifactId = project.name
+
+            from components.java  // Must be "components.java". The dependency modification works only for it.
+            // javadocJar and sourcesJar are added by java.withJavadocJar() and java.withSourcesJar() above.
+            // See: https://docs.gradle.org/current/javadoc/org/gradle/api/plugins/JavaPluginExtension.html
+
+            pom {  // https://central.sonatype.org/pages/requirements.html
+                packaging "jar"
+
+                name = project.name
+                description = project.description
+                url = "https://github.com/treasure-data/embulk-input-zendesk"
+
+                licenses {
+                    license {
+                        // http://central.sonatype.org/pages/requirements.html#license-information
+                        name = "The Apache License, Version 2.0"
+                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
+                    }
+                }
+
+                developers {
+                    // Authors after reimplementing it in Java.
+                    developer {
+                        name = "Hieu Duong"
+                        email = "duongminhhieu89@gmail.com"
+                    }
+                    developer {
+                        name = "Ngoc Hoang"
+                        email = "ngoc.hc91@gmail.com"
+                    }
+                }
+
+                scm {
+                    connection = "scm:git:git://github.com/treasure-data/embulk-input-zendesk.git"
+                    developerConnection = "scm:git:git@github.com:treasure-data/embulk-input-zendesk.git"
+                    url = "https://github.com/treasure-data/embulk-input-zendesk"
+                }
+            }
+        }
+    }
+
+    repositories {
+        maven {  // publishMavenPublicationToMavenCentralRepository
+            name = "mavenCentral"
+            if (project.version.endsWith("-SNAPSHOT")) {
+                url "https://oss.sonatype.org/content/repositories/snapshots"
+            } else {
+                url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
+            }
+
+            credentials {
+                username = project.hasProperty("ossrhUsername") ? ossrhUsername : ""
+                password = project.hasProperty("ossrhPassword") ? ossrhPassword : ""
+            }
+        }
+    }
+}
+
+signing {
+    sign publishing.publications.maven
+}
+
 jacocoTestReport {
     group = "Reporting"
     reports {
         xml.enabled false
         csv.enabled false
         html.destination file("${buildDir}/reports/coverage")
-    }
-}
-
-publishing {
-    publications {
-        embulkPluginMaven(MavenPublication) {  // Publish it with "publishEmbulkPluginMavenPublicationToMavenRepository".
-            from components.java  // Must be "components.java". The dependency modification works only for it.
-        }
-    }
-    repositories {
-        maven {
-            url = uri("https://rubygems.org")
-        }
     }
 }
 
@@ -116,7 +203,7 @@ task checkstyle(type: Checkstyle) {
 }
 
 gemPush {
-    host = "https://treasuredata.jfrog.io/treasuredata/api/gems/rubygems-local"
+    host = "https://rubygems.org"
 }
 
 gem {
@@ -124,15 +211,9 @@ gem {
     email = [ "duongminhhieu89@gmail.com" ]
     summary = "Zendesk input plugin for Embulk"
     homepage = "https://github.com/treasure-data/embulk-input-zendesk"
-    licenses = []
+    licenses = [ "Apache-2.0" ]
 
-    generateRubyCode = false
-    into("lib/embulk/input/") {
-        from "lib/embulk/input/zendesk.rb"
-    }
-    into("lib/embulk/guess/") {
-        from "lib/embulk/guess/zendesk.rb"
-    }
+    from rootProject.file("LICENSE")
 }
 
 clean { delete "${project.name}.gemspec" }

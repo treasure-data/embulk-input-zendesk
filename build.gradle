@@ -20,6 +20,16 @@ description = "Loads records From Zendesk"
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:deprecation" << "-Xlint:unchecked"
+    options.encoding = "UTF-8"
+}
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 dependencies {
     compileOnly "org.embulk:embulk-api:$embulkVersion"
     compileOnly "org.embulk:embulk-spi:$embulkVersion"
@@ -68,6 +78,25 @@ embulkPlugin {
     mainClass = "org.embulk.input.zendesk.ZendeskInputPlugin"
     category = "input"
     type = "zendesk"
+}
+
+javadoc {
+    options {
+        locale = "en_US"
+        encoding = "UTF-8"
+    }
+}
+
+jar {
+    from rootProject.file("LICENSE")
+}
+
+sourcesJar {
+    from rootProject.file("LICENSE")
+}
+
+javadocJar {
+    from rootProject.file("LICENSE")
 }
 
 jacocoTestReport {
@@ -121,7 +150,9 @@ gem {
     email = [ "duongminhhieu89@gmail.com" ]
     summary = "Zendesk input plugin for Embulk"
     homepage = "https://github.com/treasure-data/embulk-input-zendesk"
-    licenses = []
+    licenses = [ "Apache-2.0" ]
+
+    from rootProject.file("LICENSE")
 }
 
 clean { delete "${project.name}.gemspec" }

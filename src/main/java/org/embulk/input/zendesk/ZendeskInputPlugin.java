@@ -7,15 +7,11 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
-import org.embulk.config.Task;
 import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
-import org.embulk.exec.GuessExecutor;
 import org.embulk.input.zendesk.models.AuthenticationMethod;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.services.ZendeskChatService;
@@ -27,37 +23,49 @@ import org.embulk.input.zendesk.services.ZendeskUserEventService;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
-import org.embulk.spi.Buffer;
+import org.embulk.spi.DataException;
 import org.embulk.spi.Exec;
-import org.embulk.spi.ExecInternal;
 import org.embulk.spi.InputPlugin;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.Schema;
-import org.embulk.spi.SchemaConfig;
 import org.embulk.spi.type.Types;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
+import org.embulk.util.config.ConfigMapper;
+import org.embulk.util.config.ConfigMapperFactory;
+import org.embulk.util.config.Task;
+import org.embulk.util.config.TaskMapper;
+import org.embulk.util.config.modules.ColumnModule;
+import org.embulk.util.config.modules.SchemaModule;
+import org.embulk.util.config.modules.TypeModule;
+import org.embulk.util.config.units.SchemaConfig;
+import org.embulk.util.guess.SchemaGuess;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
 
-import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
-public class ZendeskInputPlugin implements InputPlugin
+public class ZendeskInputPlugin
+    implements InputPlugin
 {
-    public interface PluginTask extends Task
+    public interface PluginTask
+        extends Task
     {
         @Config("login_url")
         String getLoginUrl();
@@ -161,10 +169,20 @@ public class ZendeskInputPlugin implements InputPlugin
 
     private static final Logger logger = LoggerFactory.getLogger(ZendeskInputPlugin.class);
 
+    public static final ConfigMapperFactory CONFIG_MAPPER_FACTORY = ConfigMapperFactory.builder()
+        .addDefaultModules()
+        .addModule(new SchemaModule())
+        .addModule(new ColumnModule())
+        .addModule(new TypeModule())
+        .build();
+
+    public static final ConfigMapper CONFIG_MAPPER = CONFIG_MAPPER_FACTORY.createConfigMapper();
+    private static final TaskMapper TASK_MAPPER = CONFIG_MAPPER_FACTORY.createTaskMapper();
+
     @Override
     public ConfigDiff transaction(final ConfigSource config, final Control control)
     {
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         validateInputTask(task);
 
         final Schema schema = task.getColumns().toSchema();
@@ -175,17 +193,17 @@ public class ZendeskInputPlugin implements InputPlugin
         if (!Exec.isPreview() && !getZendeskService(task).isSupportIncremental() && getZendeskService(task) instanceof ZendeskSupportAPIService) {
             final JsonNode result = getZendeskService(task).getDataFromPath("", 0, false, 0);
             if (result.has(ZendeskConstants.Field.COUNT) && !result.get(ZendeskConstants.Field.COUNT).isNull()
-                    && result.get(ZendeskConstants.Field.COUNT).isInt()) {
+                && result.get(ZendeskConstants.Field.COUNT).isInt()) {
                 taskCount = ZendeskUtils.numberToSplitWithHintingInTask(result.get(ZendeskConstants.Field.COUNT).asInt());
             }
         }
-        return resume(task.dump(), schema, taskCount, control);
+        return resume(task.toTaskSource(), schema, taskCount, control);
     }
 
     @Override
     public ConfigDiff resume(final TaskSource taskSource, final Schema schema, final int taskCount, final Control control)
     {
-        final PluginTask task = taskSource.loadTask(PluginTask.class);
+        final PluginTask task = TASK_MAPPER.map(taskSource, PluginTask.class);
         final List<TaskReport> taskReports = control.run(taskSource, schema, taskCount);
         return this.buildConfigDiff(task, taskReports);
     }
@@ -198,7 +216,7 @@ public class ZendeskInputPlugin implements InputPlugin
     @Override
     public TaskReport run(final TaskSource taskSource, final Schema schema, final int taskIndex, final PageOutput output)
     {
-        final PluginTask task = taskSource.loadTask(PluginTask.class);
+        final PluginTask task = TASK_MAPPER.map(taskSource, PluginTask.class);
 
         if (getZendeskService(task).isSupportIncremental() && !isValidTimeRange(task)) {
             if (Exec.isPreview()) {
@@ -225,7 +243,7 @@ public class ZendeskInputPlugin implements InputPlugin
     public ConfigDiff guess(final ConfigSource config)
     {
         config.set("columns", new ObjectMapper().createArrayNode());
-        final PluginTask task = config.loadConfig(PluginTask.class);
+        final PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         validateInputTask(task);
         if (!isValidTimeRange(task)) {
             throw new ConfigException("Invalid End time. End time is greater than current time");
@@ -236,7 +254,7 @@ public class ZendeskInputPlugin implements InputPlugin
     @VisibleForTesting
     protected PageBuilder getPageBuilder(final Schema schema, final PageOutput output)
     {
-        return new PageBuilder(Exec.getBufferAllocator(), schema, output);
+        return Exec.getPageBuilder(Exec.getBufferAllocator(), schema, output);
     }
 
     private ConfigDiff buildConfigDiff(final PluginTask task, final List<TaskReport> taskReports)
@@ -247,18 +265,18 @@ public class ZendeskInputPlugin implements InputPlugin
             final TaskReport taskReport = taskReports.get(0);
             if (taskReport.has(ZendeskConstants.Field.START_TIME)) {
                 final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
-                        taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong()), ZoneOffset.UTC);
+                    taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong()), ZoneOffset.UTC);
 
                 configDiff.set(ZendeskConstants.Field.START_TIME,
-                        offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
+                    offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
             }
 
             if (taskReport.has(ZendeskConstants.Field.END_TIME)) {
                 final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
-                        taskReport.get(JsonNode.class, ZendeskConstants.Field.END_TIME).asLong()), ZoneOffset.UTC);
+                    taskReport.get(JsonNode.class, ZendeskConstants.Field.END_TIME).asLong()), ZoneOffset.UTC);
 
                 configDiff.set(ZendeskConstants.Field.END_TIME,
-                        offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
+                    offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
             }
         }
         return configDiff;
@@ -280,46 +298,125 @@ public class ZendeskInputPlugin implements InputPlugin
 
     private JsonNode addAllColumnsToSchema(final JsonNode jsonNode, final Target target, final List<String> includes)
     {
-        final JsonNode sample = new ObjectMapper().valueToTree(StreamSupport.stream(
-                jsonNode.get(target.getJsonName()).spliterator(), false).limit(10).collect(Collectors.toList()));
-        final Buffer bufferSample = Buffer.copyOf(sample.toString().getBytes(StandardCharsets.UTF_8));
-        final JsonNode columns = ExecInternal.getInjector().getInstance(GuessExecutor.class)
-                .guessParserConfig(bufferSample, Exec.newConfigSource(), createGuessConfig())
-                .get(JsonNode.class,  "columns");
+        ConfigDiff configDiff = guessData(jsonNode, target.getJsonName());
+        ConfigDiff parser = configDiff.getNested("parser");
+        if (parser.has("columns")) {
+            JsonNode columns = parser.get(JsonNode.class,  "columns");
+            final Iterator<JsonNode> ite = columns.elements();
 
-        final Iterator<JsonNode> ite = columns.elements();
+            while (ite.hasNext()) {
+                final ObjectNode entry = (ObjectNode) ite.next();
+                final String name = entry.get("name").asText();
+                final String type = entry.get("type").asText();
 
-        while (ite.hasNext()) {
-            final ObjectNode entry = (ObjectNode) ite.next();
-            final String name = entry.get("name").asText();
-            final String type = entry.get("type").asText();
+                if (type.equals(Types.TIMESTAMP.getName())) {
+                    entry.put("format", ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
+                }
 
-            if (type.equals(Types.TIMESTAMP.getName())) {
-                entry.put("format", ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT);
-            }
+                if (name.equals("id")) {
+                    if (!type.equals(Types.LONG.getName())) {
+                        if (type.equals(Types.TIMESTAMP.getName())) {
+                            entry.remove("format");
+                        }
+                        entry.put("type", Types.LONG.getName());
+                    }
 
-            if (name.equals("id")) {
-                if (!type.equals(Types.LONG.getName())) {
+                    // Id of User Events target is more suitable for String
+                    if (target.equals(Target.USER_EVENTS)) {
+                        entry.put("type", Types.STRING.getName());
+                    }
+                }
+                else if (idPattern.matcher(name).find()) {
                     if (type.equals(Types.TIMESTAMP.getName())) {
                         entry.remove("format");
                     }
-                    entry.put("type", Types.LONG.getName());
-                }
-
-                // Id of User Events target is more suitable for String
-                if (target.equals(Target.USER_EVENTS)) {
                     entry.put("type", Types.STRING.getName());
                 }
             }
-            else if (idPattern.matcher(name).find()) {
-                if (type.equals(Types.TIMESTAMP.getName())) {
-                    entry.remove("format");
+            addIncludedObjectsToSchema((ArrayNode) columns, includes);
+            return columns;
+        }
+        else {
+            throw new ConfigException("Fail to guess column");
+        }
+    }
+
+    @VisibleForTesting
+    protected ConfigDiff guessData(final JsonNode jsonNode, final String targetJsonName)
+    {
+        List<String> unifiedFieldNames = unifiedFieldNames(jsonNode, targetJsonName);
+        List<List<Object>> samples = createSampleData(jsonNode, targetJsonName, unifiedFieldNames);
+        List<ConfigDiff> columnConfigs = SchemaGuess.of(CONFIG_MAPPER_FACTORY).fromListRecords(unifiedFieldNames, samples);
+        if (columnConfigs.isEmpty()) {
+            throw new ConfigException("Fail to guess column");
+        }
+        columnConfigs.forEach(conf -> conf.remove("index"));
+        ConfigDiff parserGuessed = CONFIG_MAPPER_FACTORY.newConfigDiff();
+        parserGuessed.set("columns", columnConfigs);
+
+        ConfigDiff configDiff = CONFIG_MAPPER_FACTORY.newConfigDiff();
+        configDiff.setNested("parser", parserGuessed);
+        return configDiff;
+    }
+
+    private List<List<Object>> createSampleData(JsonNode jsonNode, String targetJsonName, List<String> unifiedFieldNames)
+    {
+        final List<List<Object>> samples = new ArrayList<>();
+        Iterator<JsonNode> records = ZendeskUtils.getListRecords(jsonNode, targetJsonName);
+        while (records.hasNext()) {
+            JsonNode node = records.next();
+            List<Object> line = new ArrayList<>();
+            for (String field : unifiedFieldNames) {
+                JsonNode childNode = node.get(field);
+                if (childNode == null || childNode.isNull() || "null".equals(childNode.asText())) {
+                    line.add(null);
+                    continue;
                 }
-                entry.put("type", Types.STRING.getName());
+                if (childNode.isContainerNode()) {
+                    line.add(childNode);
+                }
+                else {
+                    line.add(childNode.asText());
+                }
+            }
+            samples.add(line);
+        }
+        return samples;
+    }
+
+    private List<String> unifiedFieldNames(JsonNode jsonNode, String targetJsonName)
+    {
+        List<String> columnNames = new ArrayList<>();
+        Iterator<JsonNode> records = ZendeskUtils.getListRecords(jsonNode, targetJsonName);
+        while (records.hasNext()) {
+            Iterator<String> fieldNames = records.next().fieldNames();
+            while (fieldNames.hasNext()) {
+                String field = fieldNames.next();
+                if (!columnNames.contains(field)) {
+                    columnNames.add(field);
+                }
             }
         }
-        addIncludedObjectsToSchema((ArrayNode) columns, includes);
-        return columns;
+        return columnNames;
+    }
+
+    /**
+     * Method to read sample bytes of the csv file
+     */
+    private byte[] readSampleBytes(String downloadedFilePath)
+    {
+        final int sampleBytes = 64000;
+        final ByteArrayOutputStream bos = new ByteArrayOutputStream(sampleBytes);
+
+        byte[] buffer = new byte[sampleBytes];
+        try (FileInputStream inputStream = new FileInputStream(downloadedFilePath)) {
+            int read = inputStream.read(buffer, 0, sampleBytes);
+            bos.write(buffer, 0, read);
+        }
+        catch (IOException e) {
+            throw new DataException(e);
+        }
+        return bos.toByteArray();
     }
 
     private void addIncludedObjectsToSchema(final ArrayNode arrayNode, final List<String> includes)
@@ -327,17 +424,17 @@ public class ZendeskInputPlugin implements InputPlugin
         final ObjectMapper mapper = new ObjectMapper();
 
         includes.stream()
-                .map((include) -> mapper.createObjectNode()
-                        .put("name", include)
-                        .put("type", Types.JSON.getName()))
-                .forEach(arrayNode::add);
+            .map((include) -> mapper.createObjectNode()
+                .put("name", include)
+                .put("type", Types.JSON.getName()))
+            .forEach(arrayNode::add);
     }
 
     private ConfigSource createGuessConfig()
     {
-        return Exec.newConfigSource()
-                .set("guess_plugins", ImmutableList.of("zendesk"))
-                .set("guess_sample_buffer_bytes", ZendeskConstants.Misc.GUESS_BUFFER_SIZE);
+        return CONFIG_MAPPER_FACTORY.newConfigSource()
+            .set("guess_plugins", ImmutableList.of("zendesk"))
+            .set("guess_sample_buffer_bytes", ZendeskConstants.Misc.GUESS_BUFFER_SIZE);
     }
 
     private ZendeskService getZendeskService(PluginTask task)
@@ -386,8 +483,8 @@ public class ZendeskInputPlugin implements InputPlugin
     private void validateInputTask(PluginTask task)
     {
         validateAppMarketPlace(task.getAppMarketPlaceIntegrationName().isPresent(),
-                task.getAppMarketPlaceAppId().isPresent(),
-                task.getAppMarketPlaceOrgId().isPresent());
+            task.getAppMarketPlaceAppId().isPresent(),
+            task.getAppMarketPlaceOrgId().isPresent());
         validateCredentials(task);
         validateIncremental(task);
         validateCustomObject(task);
@@ -401,19 +498,19 @@ public class ZendeskInputPlugin implements InputPlugin
             case OAUTH:
                 if (!task.getAccessToken().isPresent()) {
                     throw new ConfigException(String.format("access_token is required for authentication method '%s'",
-                            task.getAuthenticationMethod().name().toLowerCase()));
+                        task.getAuthenticationMethod().name().toLowerCase()));
                 }
                 break;
             case TOKEN:
                 if (!task.getUsername().isPresent() || !task.getToken().isPresent()) {
                     throw new ConfigException(String.format("username and token are required for authentication method '%s'",
-                            task.getAuthenticationMethod().name().toLowerCase()));
+                        task.getAuthenticationMethod().name().toLowerCase()));
                 }
                 break;
             case BASIC:
                 if (!task.getUsername().isPresent() || !task.getPassword().isPresent()) {
                     throw new ConfigException(String.format("username and password are required for authentication method '%s'",
-                            task.getAuthenticationMethod().name().toLowerCase()));
+                        task.getAuthenticationMethod().name().toLowerCase()));
                 }
                 break;
             default:
@@ -422,31 +519,31 @@ public class ZendeskInputPlugin implements InputPlugin
     }
 
     private void validateAppMarketPlace(final boolean isAppMarketIntegrationNamePresent,
-            final boolean isAppMarketAppIdPresent,
-            final boolean isAppMarketOrgIdPresent)
+        final boolean isAppMarketAppIdPresent,
+        final boolean isAppMarketOrgIdPresent)
     {
         final boolean isAllAvailable =
-                isAppMarketIntegrationNamePresent && isAppMarketAppIdPresent && isAppMarketOrgIdPresent;
+            isAppMarketIntegrationNamePresent && isAppMarketAppIdPresent && isAppMarketOrgIdPresent;
         final boolean isAllUnAvailable =
-                !isAppMarketIntegrationNamePresent && !isAppMarketAppIdPresent && !isAppMarketOrgIdPresent;
+            !isAppMarketIntegrationNamePresent && !isAppMarketAppIdPresent && !isAppMarketOrgIdPresent;
         // All or nothing needed
         if (!(isAllAvailable || isAllUnAvailable)) {
             throw new ConfigException("All of app_marketplace_integration_name, app_marketplace_org_id, " +
-                    "app_marketplace_app_id " +
-                    "are required to fill out for Apps Marketplace API header");
+                "app_marketplace_app_id " +
+                "are required to fill out for Apps Marketplace API header");
         }
     }
 
     private void validateIncremental(PluginTask task)
     {
-        if (task.getIncremental() && getZendeskService(task).isSupportIncremental())  {
+        if (task.getIncremental() && getZendeskService(task).isSupportIncremental()) {
             if (!task.getDedup()) {
                 logger.warn("You've selected to skip de-duplicating records, result may contain duplicated data");
             }
 
             if (!getZendeskService(task).isSupportIncremental() && task.getStartTime().isPresent()) {
                 logger.warn(String.format("Target: '%s' doesn't support incremental export API. Will be ignored start_time option",
-                        task.getTarget()));
+                    task.getTarget()));
             }
         }
     }
@@ -482,7 +579,7 @@ public class ZendeskInputPlugin implements InputPlugin
             });
 
             if (task.getStartTime().isPresent() && task.getEndTime().isPresent()
-                    && ZendeskDateUtils.getStartTime(task.getStartTime().get()) > ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
+                && ZendeskDateUtils.getStartTime(task.getStartTime().get()) > ZendeskDateUtils.isoToEpochSecond(task.getEndTime().get())) {
                 throw new ConfigException("End Time should be later or equal than Start Time");
             }
         }

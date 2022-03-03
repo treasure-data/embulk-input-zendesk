@@ -1,6 +1,7 @@
 package org.embulk.input.zendesk;
 
 import com.fasterxml.jackson.databind.JsonNode;
+
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -30,6 +31,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.junit.Assert.assertEquals;
 
 import static org.junit.Assert.assertTrue;
@@ -52,7 +54,9 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -242,7 +246,7 @@ public class TestZendeskInputPlugin
         src.set("target", Target.USER_EVENTS.name().toLowerCase());
         src.set("profile_source", "dummy");
         src.set("columns", Collections.EMPTY_LIST);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskUserEventService);
     }
@@ -381,7 +385,7 @@ public class TestZendeskInputPlugin
         final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
         src.set("target", target.name().toLowerCase());
         src.set("columns", Collections.EMPTY_LIST);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskSupportAPIService);
     }
@@ -391,7 +395,7 @@ public class TestZendeskInputPlugin
         final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
         src.set("target", target.name().toLowerCase());
         src.set("columns", Collections.EMPTY_LIST);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskNPSService);
     }
@@ -403,7 +407,7 @@ public class TestZendeskInputPlugin
         src.set("relationship_types", Collections.singletonList("dummy"));
         src.set("object_types", Collections.singletonList("account"));
         src.set("columns", Collections.EMPTY_LIST);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskCustomObjectService);
     }
@@ -413,7 +417,7 @@ public class TestZendeskInputPlugin
         final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
         src.set("target", target.name().toLowerCase());
         src.set("columns", Collections.EMPTY_LIST);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
         assertTrue(zendeskService instanceof ZendeskChatService);
     }
@@ -428,8 +432,19 @@ public class TestZendeskInputPlugin
     {
         loadData(fileName);
         ConfigDiff configDiff = zendeskInputPlugin.guess(src);
+        List<String> actualValues = new ArrayList<>();
         JsonNode columns = configDiff.get(JsonNode.class, "columns");
-        assertEquals(ZendeskTestHelper.getJsonFromFile(expectedSource), columns);
+        Iterator<JsonNode> it = columns.elements();
+        while (it.hasNext()) {
+            JsonNode actual = it.next();
+            actualValues.add(actual.toString());
+        }
+        JsonNode expectedNodes = ZendeskTestHelper.getJsonFromFile(expectedSource);
+        it = expectedNodes.elements();
+        while (it.hasNext()) {
+            JsonNode expectedNode = it.next();
+            assertTrue("Missing expected node: " + expectedNode.toString(), actualValues.contains(expectedNode.toString()));
+        }
     }
 
     private void setupSupportAPIService()

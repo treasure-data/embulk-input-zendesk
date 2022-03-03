@@ -10,6 +10,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -52,7 +53,7 @@ public class TestZendeskSupportAPIService
 
         ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
         src.set("target", "ticket_metrics");
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
 
         String url = zendeskSupportAPIService.buildURI(0, 0);
@@ -67,7 +68,7 @@ public class TestZendeskSupportAPIService
 
         ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
         src.set("includes", Collections.singletonList("organizations"));
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
 
         String url = zendeskSupportAPIService.buildURI(0, 0);
@@ -81,7 +82,7 @@ public class TestZendeskSupportAPIService
         loadData("data/tickets.json");
 
         ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
         String url = zendeskSupportAPIService.buildURI(0, 100);
         assertEquals(expectURL, url);
@@ -121,8 +122,8 @@ public class TestZendeskSupportAPIService
 
     private void setup(String file)
     {
-        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource(file)
-                .loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task =
+            CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource(file), ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
     }
 }

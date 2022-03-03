@@ -17,6 +17,7 @@ import org.mockito.ArgumentCaptor;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -153,7 +154,8 @@ public class TestZendeskCustomObjectService
 
     private void setup(String file)
     {
-        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource(file).loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task =
+            CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource(file), ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
     }
 }

@@ -18,6 +18,7 @@ import org.mockito.ArgumentCaptor;
 
 import java.time.Instant;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -62,7 +63,7 @@ public class TestZendeskNormalService
     {
         ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
         src.set("dedup", false);
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
         loadData("data/tickets.json");
 
@@ -91,7 +92,7 @@ public class TestZendeskNormalService
         src.set("target", Target.TICKETS.toString());
 
         src.set("start_time", "2219-02-20T06:52:00Z");
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
         loadData("data/empty_result.json");
 
@@ -129,9 +130,9 @@ public class TestZendeskNormalService
         // api_end_time of ticket_events_share_same_time_with_next_page.json
         String expectedURL = "https://abc.zendesk.com/api/v2/incremental/ticket_events.json?start_time=1550645443";
         setupSupportAPIService("incremental.yml");
-        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource("incremental.yml")
-                .set("target", "ticket_events")
-                .loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task =
+            CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource("incremental.yml").set("target", "ticket_events"),
+                ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
 
         JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/ticket_events_share_same_time_with_next_page.json");
@@ -154,9 +155,9 @@ public class TestZendeskNormalService
     public void testTicketEventsAddRecordToImporterIncrementalAndAllRecordsShareTheSameTime()
     {
         setupSupportAPIService("incremental.yml");
-        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource("incremental.yml")
-                .set("target", "ticket_events")
-                .loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task =
+            CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource("incremental.yml").set("target", "ticket_events"),
+                ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
         loadData("data/ticket_events_share_same_time_without_next_page.json");
 
@@ -172,7 +173,7 @@ public class TestZendeskNormalService
         ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
         // same updated_at time of last record
         src.set("end_time", "2019-02-20T07:17:32Z");
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
         loadData("data/tickets.json");
 
@@ -189,7 +190,7 @@ public class TestZendeskNormalService
         ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml");
         // earlier than updated_at time of last record
         src.set("end_time", "2019-02-20T07:17:32Z");
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
         loadData("data/tickets.json");
 
@@ -208,7 +209,7 @@ public class TestZendeskNormalService
         // earlier than updated_at time of last record
         // 1550645520
         src.set("end_time", "2019-02-20T06:52:00Z");
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
         loadData("data/ticket_events_updated_by_system_records.json");
 
@@ -227,7 +228,7 @@ public class TestZendeskNormalService
         // earlier than updated_at time of last record
         // 1550645520
         src.set("end_time", "2019-02-20T06:52:00Z");
-        ZendeskInputPlugin.PluginTask task = src.loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
         loadData("data/scores.json");
 
@@ -240,8 +241,8 @@ public class TestZendeskNormalService
 
     private void setupSupportAPIService(String file)
     {
-        ZendeskInputPlugin.PluginTask task = ZendeskTestHelper.getConfigSource(file)
-                .loadConfig(ZendeskInputPlugin.PluginTask.class);
+        ZendeskInputPlugin.PluginTask task =
+            CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource(file), ZendeskInputPlugin.PluginTask.class);
         setupZendeskSupportAPIService(task);
     }
 

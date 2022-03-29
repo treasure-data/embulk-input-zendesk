@@ -27,6 +27,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER_FACTORY;
+
 public class ZendeskUserEventService implements ZendeskService
 {
     protected ZendeskInputPlugin.PluginTask task;
@@ -46,7 +48,7 @@ public class ZendeskUserEventService implements ZendeskService
     @Override
     public TaskReport addRecordToImporter(final int taskIndex, final RecordImporter recordImporter)
     {
-        final TaskReport taskReport = Exec.newTaskReport();
+        final TaskReport taskReport = CONFIG_MAPPER_FACTORY.newTaskReport();
 
         if (Exec.isPreview()) {
             JsonNode jsonNode = mockJsonNode();

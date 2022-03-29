@@ -1,3 +1,9 @@
+## 0.4.1 - 2022-29-03
+* [enhancement] Remove deprecated functions [#76](https://github.com/treasure-data/embulk-input-zendesk/pull/76)
+
+## 0.4.0 - 2022-03-03
+* [enhancement] Release to Maven Central [#74](https://github.com/treasure-data/embulk-input-zendesk/pull/74)
+
 ## 0.3.11 - 2022-14-02
 * [enhancement] catch up Embulk 0.10 [#73](https://github.com/treasure-data/embulk-input-zendesk/pull/73)
 

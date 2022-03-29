@@ -29,6 +29,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER_FACTORY;
+
 public abstract class ZendeskNormalServices implements ZendeskService
 {
     private static final Logger logger = LoggerFactory.getLogger(ZendeskNormalServices.class);
@@ -44,7 +46,7 @@ public abstract class ZendeskNormalServices implements ZendeskService
 
     public TaskReport addRecordToImporter(final int taskIndex, final RecordImporter recordImporter)
     {
-        TaskReport taskReport = Exec.newTaskReport();
+        TaskReport taskReport = CONFIG_MAPPER_FACTORY.newTaskReport();
 
         if (isSupportIncremental()) {
             importDataForIncremental(task, recordImporter, taskReport);

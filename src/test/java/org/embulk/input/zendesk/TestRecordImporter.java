@@ -6,7 +6,6 @@ import org.embulk.input.zendesk.utils.ZendeskTestHelper;
 import org.embulk.spi.Column;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.Schema;
-import org.embulk.spi.time.Timestamp;
 import org.embulk.util.json.JsonParser;
 import org.embulk.util.timestamp.TimestampFormatter;
 import org.junit.Before;
@@ -82,7 +81,7 @@ public class TestRecordImporter
         verify(pageBuilder, times(1)).setLong(longColumn, longValue);
         verify(pageBuilder, times(1)).setDouble(doubleColumn, doubleValue);
         verify(pageBuilder, times(1)).setString(stringColumn, stringValue);
-        verify(pageBuilder, times(1)).setTimestamp(dateColumn, Timestamp.ofInstant(dateValue));
+        verify(pageBuilder, times(1)).setTimestamp(dateColumn, dateValue);
         verify(pageBuilder, times(1)).setJson(jsonColumn, jsonValue);
     }
 

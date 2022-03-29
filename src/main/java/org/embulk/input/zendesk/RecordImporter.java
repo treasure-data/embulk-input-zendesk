@@ -7,11 +7,11 @@ import org.embulk.spi.Column;
 import org.embulk.spi.ColumnVisitor;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.Schema;
-import org.embulk.spi.time.Timestamp;
 import org.embulk.util.json.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Instant;
 import java.util.function.Function;
 
 public class RecordImporter
@@ -58,7 +58,7 @@ public class RecordImporter
             {
                 final JsonNode data = record.get(column.getName());
                 setColumn(column, data, (value) -> {
-                    final Timestamp timestamp = getTimestampValue(value.asText());
+                    final Instant timestamp = getTimestampValue(value.asText());
                     if (timestamp == null) {
                         pageBuilder.setNull(column);
                     }
@@ -119,12 +119,12 @@ public class RecordImporter
      * For getting the timestamp value of the node
      * Sometime if the parser could not parse the value then return null
      * */
-    private Timestamp getTimestampValue(final String value)
+    private Instant getTimestampValue(final String value)
     {
-        Timestamp result = null;
+        Instant result = null;
         try {
             final long timeStamp = ZendeskDateUtils.isoToEpochSecond(value);
-            result = Timestamp.ofEpochSecond(timeStamp);
+            result = Instant.ofEpochSecond(timeStamp);
         }
         catch (final Exception e) {
             logger.warn("Error when parse time stamp data " + value);

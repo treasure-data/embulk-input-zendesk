@@ -23,6 +23,8 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER_FACTORY;
+
 public class ZendeskCustomObjectService implements ZendeskService
 {
     protected ZendeskInputPlugin.PluginTask task;
@@ -47,7 +49,7 @@ public class ZendeskCustomObjectService implements ZendeskService
         paths.parallelStream().forEach(path -> StreamSupport.stream(new CustomObjectSpliterator(path, getZendeskRestClient(), task, Exec.isPreview()), !Exec.isPreview())
                 .forEach(recordImporter::addRecord));
 
-        return Exec.newTaskReport();
+        return CONFIG_MAPPER_FACTORY.newTaskReport();
     }
 
     @Override

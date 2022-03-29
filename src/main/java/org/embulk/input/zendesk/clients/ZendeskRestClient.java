@@ -24,6 +24,7 @@ import org.embulk.input.zendesk.models.ZendeskException;
 import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskUtils;
 import org.embulk.spi.DataException;
+import org.embulk.util.retryhelper.RetryExecutor;
 import org.embulk.util.retryhelper.RetryGiveupException;
 import org.embulk.util.retryhelper.Retryable;
 import org.slf4j.Logger;
@@ -35,7 +36,6 @@ import java.util.regex.Pattern;
 
 import static org.apache.http.HttpHeaders.AUTHORIZATION;
 import static org.apache.http.protocol.HTTP.CONTENT_TYPE;
-import static org.embulk.util.retryhelper.RetryExecutor.retryExecutor;
 
 public class ZendeskRestClient
 {
@@ -61,9 +61,11 @@ public class ZendeskRestClient
         loginURL = task.getLoginUrl();
 
         try {
-            return retryExecutor().withRetryLimit(task.getRetryLimit())
-                .withInitialRetryWait(task.getRetryInitialWaitSec() * 1000)
-                .withMaxRetryWait(task.getMaxRetryWaitSec() * 1000)
+            return RetryExecutor.builder()
+                .withRetryLimit(task.getRetryLimit())
+                .withInitialRetryWaitMillis(task.getRetryInitialWaitSec() * 1000)
+                .withMaxRetryWaitMillis(task.getMaxRetryWaitSec() * 1000)
+                .build()
                 .runInterruptible(new Retryable<String>() {
                 @Override
                 public String call()

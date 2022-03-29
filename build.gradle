@@ -191,7 +191,10 @@ checkstyleMain {
     configFile = file("${project.rootDir}/config/checkstyle/default.xml")
     ignoreFailures = false
 }
-
+tasks.withType(JavaCompile) {
+    options.compilerArgs << "-Xlint:deprecation" << "-Xlint:unchecked"
+    options.encoding = "UTF-8"
+}
 checkstyleTest {
     configFile = file("${project.rootDir}/config/checkstyle/default.xml")
     ignoreFailures = false

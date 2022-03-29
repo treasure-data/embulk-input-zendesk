@@ -1,7 +1,6 @@
 package org.embulk.input.zendesk;
 
 import com.fasterxml.jackson.databind.JsonNode;
-
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -18,37 +17,15 @@ import org.embulk.input.zendesk.utils.ZendeskConstants;
 import org.embulk.input.zendesk.utils.ZendeskDateUtils;
 import org.embulk.input.zendesk.utils.ZendeskPluginTestRuntime;
 import org.embulk.input.zendesk.utils.ZendeskTestHelper;
-
-import org.embulk.spi.Exec;
 import org.embulk.spi.InputPlugin;
 import org.embulk.spi.PageBuilder;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.Schema;
-
 import org.embulk.spi.TestPageBuilderReader;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-
-import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
-import static org.junit.Assert.assertEquals;
-
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.spy;
-
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -60,6 +37,23 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER;
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER_FACTORY;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class TestZendeskInputPlugin
 {
@@ -160,7 +154,7 @@ public class TestZendeskInputPlugin
     {
         final ConfigSource src = ZendeskTestHelper.getConfigSource("incremental.yml")
                 .set("end_time", "2019-04-12 06:51:50 +0000");
-        TaskReport taskReport = Exec.newTaskReport();
+        TaskReport taskReport = CONFIG_MAPPER_FACTORY.newTaskReport();
         taskReport.set(ZendeskConstants.Field.START_TIME, 1557026576);
         taskReport.set(ZendeskConstants.Field.END_TIME, 1560309776);
 
@@ -182,7 +176,7 @@ public class TestZendeskInputPlugin
         final ConfigSource src = ZendeskTestHelper.getConfigSource("chat.yml")
             .set("incremental", true)
             .set("end_time", "2019-04-12 06:51:50 +0000");
-        TaskReport taskReport = Exec.newTaskReport();
+        TaskReport taskReport = CONFIG_MAPPER_FACTORY.newTaskReport();
         taskReport.set(ZendeskConstants.Field.START_TIME, 1557026576);
         taskReport.set(ZendeskConstants.Field.END_TIME, 1560309776);
 

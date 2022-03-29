@@ -26,6 +26,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.IntStream;
 
+import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER_FACTORY;
+
 public class ZendeskChatService implements ZendeskService
 {
     private static final Logger logger = LoggerFactory.getLogger(ZendeskChatService.class);
@@ -54,7 +56,7 @@ public class ZendeskChatService implements ZendeskService
     @Override
     public TaskReport addRecordToImporter(final int taskIndex, final RecordImporter recordImporter)
     {
-        final TaskReport taskReport = Exec.newTaskReport();
+        final TaskReport taskReport = CONFIG_MAPPER_FACTORY.newTaskReport();
         String startTime = getStartTime();
         String endTime = getEndTime();
 

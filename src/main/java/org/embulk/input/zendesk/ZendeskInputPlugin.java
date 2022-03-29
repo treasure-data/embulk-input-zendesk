@@ -5,8 +5,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableList;
-
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -229,7 +227,7 @@ public class ZendeskInputPlugin
             if (task.getIncremental()) {
                 return buildTaskReportKeepOldStartAndEndTime(task);
             }
-            return Exec.newTaskReport();
+            return CONFIG_MAPPER_FACTORY.newTaskReport();
         }
 
         try (final PageBuilder pageBuilder = getPageBuilder(schema, output)) {
@@ -248,7 +246,7 @@ public class ZendeskInputPlugin
         if (!isValidTimeRange(task)) {
             throw new ConfigException("Invalid End time. End time is greater than current time");
         }
-        return Exec.newConfigDiff().set("columns", buildColumns(task));
+        return CONFIG_MAPPER_FACTORY.newConfigDiff().set("columns", buildColumns(task));
     }
 
     @VisibleForTesting
@@ -259,7 +257,7 @@ public class ZendeskInputPlugin
 
     private ConfigDiff buildConfigDiff(final PluginTask task, final List<TaskReport> taskReports)
     {
-        final ConfigDiff configDiff = Exec.newConfigDiff();
+        final ConfigDiff configDiff = CONFIG_MAPPER_FACTORY.newConfigDiff();
 
         if (!taskReports.isEmpty() && task.getIncremental()) {
             final TaskReport taskReport = taskReports.get(0);
@@ -585,7 +583,7 @@ public class ZendeskInputPlugin
 
     private TaskReport buildTaskReportKeepOldStartAndEndTime(PluginTask task)
     {
-        final TaskReport taskReport = Exec.newTaskReport();
+        final TaskReport taskReport = CONFIG_MAPPER_FACTORY.newTaskReport();
 
         if (task.getStartTime().isPresent()) {
             taskReport.set(ZendeskConstants.Field.START_TIME, ZendeskDateUtils.isoToEpochSecond(task.getStartTime().get()));

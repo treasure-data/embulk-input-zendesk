@@ -1,3 +1,6 @@
+## 0.4.2 - 2022-23-05
+* [enhancement] Catchup embulk v0.10.32 [#77](https://github.com/treasure-data/embulk-input-zendesk/pull/77)
+
 ## 0.4.1 - 2022-29-03
 * [enhancement] Remove deprecated functions [#76](https://github.com/treasure-data/embulk-input-zendesk/pull/76)
 

@@ -240,7 +240,7 @@ public class ZendeskInputPlugin
     @Override
     public ConfigDiff guess(final ConfigSource config)
     {
-        config.set("columns", new ObjectMapper().createArrayNode());
+        config.set("columns", new ArrayList<>());
         final PluginTask task = CONFIG_MAPPER.map(config, PluginTask.class);
         validateInputTask(task);
         if (!isValidTimeRange(task)) {

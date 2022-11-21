@@ -262,19 +262,21 @@ public class ZendeskInputPlugin
         if (!taskReports.isEmpty() && task.getIncremental()) {
             final TaskReport taskReport = taskReports.get(0);
             if (taskReport.has(ZendeskConstants.Field.START_TIME)) {
-                final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
-                    taskReport.get(JsonNode.class, ZendeskConstants.Field.START_TIME).asLong()), ZoneOffset.UTC);
-
-                configDiff.set(ZendeskConstants.Field.START_TIME,
-                    offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
+                final Long startTime = taskReport.get(Long.class, ZendeskConstants.Field.START_TIME);
+                if (startTime != null) {
+                    final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(startTime), ZoneOffset.UTC);
+                    configDiff.set(ZendeskConstants.Field.START_TIME,
+                        offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
+                }
             }
 
             if (taskReport.has(ZendeskConstants.Field.END_TIME)) {
-                final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(
-                    taskReport.get(JsonNode.class, ZendeskConstants.Field.END_TIME).asLong()), ZoneOffset.UTC);
-
-                configDiff.set(ZendeskConstants.Field.END_TIME,
-                    offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
+                final Long endTime = taskReport.get(Long.class, ZendeskConstants.Field.END_TIME);
+                if (endTime != null) {
+                    final OffsetDateTime offsetDateTime = OffsetDateTime.ofInstant(Instant.ofEpochSecond(endTime), ZoneOffset.UTC);
+                    configDiff.set(ZendeskConstants.Field.END_TIME,
+                        offsetDateTime.format(DateTimeFormatter.ofPattern(ZendeskConstants.Misc.RUBY_TIMESTAMP_FORMAT_INPUT)));
+                }
             }
         }
         return configDiff;

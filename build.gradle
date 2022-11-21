@@ -5,7 +5,7 @@ plugins {
     id "maven"
     id 'maven-publish'
     id "signing"
-    id "org.embulk.embulk-plugins" version "0.4.2"
+    id "org.embulk.embulk-plugins" version "0.5.5"
 }
 
 repositories {
@@ -15,7 +15,7 @@ repositories {
 def embulkVersion = '0.10.31'
 
 group = "com.treasuredata.embulk.plugins"
-version = "0.4.2-SNAPSHOT"
+version = "0.4.3-SNAPSHOT"
 description = "Loads records From Zendesk"
 
 sourceCompatibility = 1.8

@@ -65,27 +65,8 @@ in:
 $ ./gradlew package
 ```
 
+## Test
 
-@Config("object_types")
-        @ConfigDefault("[]")
-        List<String> getObjectTypes();
-
-        @Config("relationship_types")
-        @ConfigDefault("[]")
-        List<String> getRelationshipTypes();
-
-        @Config("profile_source")
-        @ConfigDefault("null")
-        Optional<String> getProfileSource();
-
-        @Config("end_time")
-        @ConfigDefault("null")
-        Optional<String> getEndTime();
-
-        @Config("user_event_type")
-        @ConfigDefault("null")
-        Optional<String> getUserEventType();
-
-        @Config("user_event_source")
-        @ConfigDefault("null")
-        Optional<String> getUserEventSource();
+```
+$ ./gradlew checkstyle test jacocoTestReport
+```

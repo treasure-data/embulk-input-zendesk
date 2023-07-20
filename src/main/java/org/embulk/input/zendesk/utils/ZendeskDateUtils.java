@@ -56,7 +56,7 @@ public class ZendeskDateUtils
     }
 
     // start_time should be start from 0
-    public static long getStartTime(final  String time)
+    public static long getStartTime(final String time)
     {
         try {
             return isoToEpochSecond(time);

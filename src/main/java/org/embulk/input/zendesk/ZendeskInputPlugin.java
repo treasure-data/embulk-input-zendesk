@@ -13,6 +13,7 @@ import org.embulk.config.TaskSource;
 import org.embulk.input.zendesk.models.AuthenticationMethod;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.services.ZendeskChatService;
+import org.embulk.input.zendesk.services.ZendeskCursorBasedService;
 import org.embulk.input.zendesk.services.ZendeskCustomObjectService;
 import org.embulk.input.zendesk.services.ZendeskNPSService;
 import org.embulk.input.zendesk.services.ZendeskService;
@@ -156,6 +157,10 @@ public class ZendeskInputPlugin
         @Config("user_event_source")
         @ConfigDefault("null")
         Optional<String> getUserEventSource();
+
+        @Config("enable_cursor_based_api")
+        @ConfigDefault("false")
+        boolean getEnableCursorBasedApi();
 
         @Config("columns")
         SchemaConfig getColumns();
@@ -301,7 +306,7 @@ public class ZendeskInputPlugin
         ConfigDiff configDiff = guessData(jsonNode, target.getJsonName());
         ConfigDiff parser = configDiff.getNested("parser");
         if (parser.has("columns")) {
-            JsonNode columns = parser.get(JsonNode.class,  "columns");
+            JsonNode columns = parser.get(JsonNode.class, "columns");
             final Iterator<JsonNode> ite = columns.elements();
 
             while (ite.hasNext()) {
@@ -444,6 +449,7 @@ public class ZendeskInputPlugin
         switch (task.getTarget()) {
             case TICKETS:
             case USERS:
+                return task.getEnableCursorBasedApi() ? new ZendeskCursorBasedService(task) : new ZendeskSupportAPIService(task);
             case ORGANIZATIONS:
             case TICKET_METRICS:
             case TICKET_EVENTS:

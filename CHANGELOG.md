@@ -1,7 +1,13 @@
-## 0.4.2 - 2022-23-05
+## 0.4.4 - 2023-07-21
+* [enhancement] Support cursor based incremental [#84](https://github.com/treasure-data/embulk-input-zendesk/pull/84)
+
+## 0.4.3 - 2022-10-21
+* [enhancement] Bump up to v0.4.3, built with the Gradle plugin v0.5.5 [#78](https://github.com/treasure-data/embulk-input-zendesk/pull/78)
+
+## 0.4.2 - 2022-05-23
 * [enhancement] Catchup embulk v0.10.32 [#77](https://github.com/treasure-data/embulk-input-zendesk/pull/77)
 
-## 0.4.1 - 2022-29-03
+## 0.4.1 - 2022-03-29
 * [enhancement] Remove deprecated functions [#76](https://github.com/treasure-data/embulk-input-zendesk/pull/76)
 
 ## 0.4.0 - 2022-03-03

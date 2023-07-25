@@ -449,6 +449,11 @@ public class ZendeskInputPlugin
         switch (task.getTarget()) {
             case TICKETS:
             case USERS:
+                /*
+                 The cursor based incremental API is enabled only tickets and users targets
+                 It allows to fetch more than 10.000 records which is now the limitation of the old incremental api
+                 https://developer.zendesk.com/documentation/ticketing/managing-tickets/using-the-incremental-export-api/#cursor-based-incremental-exports
+                */
                 return task.getEnableCursorBasedApi() ? new ZendeskCursorBasedService(task) : new ZendeskSupportAPIService(task);
             case ORGANIZATIONS:
             case TICKET_METRICS:

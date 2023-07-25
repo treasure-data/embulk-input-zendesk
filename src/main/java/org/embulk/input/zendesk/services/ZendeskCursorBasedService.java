@@ -56,7 +56,14 @@ public class ZendeskCursorBasedService
     @Override
     public JsonNode getDataFromPath(String path, int page, boolean isPreview, long startTime)
     {
-        throw new UnsupportedOperationException();
+        try {
+            String buildPath = buildPath(0);
+            final String response = getZendeskRestClient().doGet(buildPath, task, Exec.isPreview());
+            return ZendeskUtils.parseJsonObject(response);
+        }
+        catch (URISyntaxException e) {
+            throw new ConfigException(e);
+        }
     }
 
     @VisibleForTesting
@@ -77,9 +84,9 @@ public class ZendeskCursorBasedService
         }
 
         long nextStartTime = initStartTime;
-
+        long totalRecords = 0;
         try {
-            String path = buildPath(task, initStartTime);
+            String path = buildPath(initStartTime);
 
             while (true) {
                 final JsonNode result = fetchResultFromPath(path);
@@ -87,20 +94,18 @@ public class ZendeskCursorBasedService
                 final Iterator<JsonNode> iterator = ZendeskUtils.getListRecords(result, task.getTarget().getJsonName());
 
                 int numberOfRecords = 0;
-                if (result.has(ZendeskConstants.Field.COUNT)) {
-                    numberOfRecords = result.get(ZendeskConstants.Field.COUNT).asInt();
-                }
 
                 while (iterator.hasNext()) {
                     final JsonNode recordJsonNode = iterator.next();
                     fetchSubResourceAndAddToImporter(recordJsonNode, task, recordImporter);
-
+                    numberOfRecords++;
                     // Store nextStartTime of last item
                     if (!iterator.hasNext() && task.getIncremental()) {
                         nextStartTime = ZendeskDateUtils.isoToEpochSecond(recordJsonNode.get(ZendeskConstants.Field.UPDATED_AT).asText());
                     }
                 }
 
+                totalRecords = totalRecords + numberOfRecords;
                 if (result.has(ZendeskConstants.Field.END_OF_STREAM)) {
                     if (result.get(ZendeskConstants.Field.END_OF_STREAM).asBoolean()) {
                         break;
@@ -110,6 +115,7 @@ public class ZendeskCursorBasedService
                     throw new DataException("Missing end of stream, please double-check the endpoint");
                 }
                 if (Exec.isPreview()) {
+                    logger.info("import records total " + totalRecords);
                     break;
                 }
 
@@ -121,19 +127,14 @@ public class ZendeskCursorBasedService
             }
         }
         catch (Exception e) {
-            e.printStackTrace();
+            throw new DataException(e);
         }
     }
 
-    private String buildPath(ZendeskInputPlugin.PluginTask task, long startTime)
+    private String buildPath(long startTime)
         throws URISyntaxException
     {
-        return ZendeskUtils.getURIBuilder(task.getLoginUrl())
-            .setPath(ZendeskConstants.Url.API
-                + "/" + "incremental"
-                + "/" + task.getTarget().toString()
-                + "/" + "cursor.json").build().toString()
-            + "?start_time=" + startTime;
+        return ZendeskUtils.getURIBuilder(task.getLoginUrl()).setPath(ZendeskConstants.Url.API + "/" + "incremental" + "/" + task.getTarget().toString() + "/" + "cursor.json").build().toString() + "?start_time=" + startTime;
     }
 
     private JsonNode fetchResultFromPath(String path)
@@ -147,11 +148,7 @@ public class ZendeskCursorBasedService
         task.getIncludes().forEach(include -> {
             final String relatedObjectName = include.trim();
 
-            final URIBuilder uriBuilder = ZendeskUtils.getURIBuilder(task.getLoginUrl())
-                .setPath(ZendeskConstants.Url.API
-                    + "/" + task.getTarget().toString()
-                    + "/" + jsonNode.get(ZendeskConstants.Field.ID).asText()
-                    + "/" + relatedObjectName + ".json");
+            final URIBuilder uriBuilder = ZendeskUtils.getURIBuilder(task.getLoginUrl()).setPath(ZendeskConstants.Url.API + "/" + task.getTarget().toString() + "/" + jsonNode.get(ZendeskConstants.Field.ID).asText() + "/" + relatedObjectName + ".json");
             try {
                 final JsonNode result = getDataFromPath(uriBuilder.toString(), 0, false, 0);
                 if (result != null && result.has(relatedObjectName)) {

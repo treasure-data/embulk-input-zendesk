@@ -41,6 +41,7 @@ Required Embulk version >= 0.9.6.
 - **profile_source**: Profile source of user event, required if `target` is `user_events`.
 - **user_event_source**: Source of user event, required if `target` is `user_events`.
 - **user_event_type**: Type of user event, required if `target` is `user_events`.   
+- **enable_cursor_based_api**: Enable to use cursor based api endpoint for tickets and users target (boolean, default: `false`)
 
 ## Example
 

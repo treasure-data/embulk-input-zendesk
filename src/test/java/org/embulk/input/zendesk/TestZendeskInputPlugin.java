@@ -8,6 +8,7 @@ import org.embulk.config.TaskReport;
 import org.embulk.config.TaskSource;
 import org.embulk.input.zendesk.models.Target;
 import org.embulk.input.zendesk.services.ZendeskChatService;
+import org.embulk.input.zendesk.services.ZendeskCursorBasedService;
 import org.embulk.input.zendesk.services.ZendeskCustomObjectService;
 import org.embulk.input.zendesk.services.ZendeskNPSService;
 import org.embulk.input.zendesk.services.ZendeskService;
@@ -203,6 +204,25 @@ public class TestZendeskInputPlugin
         testReturnSupportAPIService(Target.TICKET_FIELDS);
         testReturnSupportAPIService(Target.USERS);
         testReturnSupportAPIService(Target.ORGANIZATIONS);
+    }
+
+    @Test
+    public void testDispatchPerTargetShouldReturn()
+    {
+        zendeskInputPlugin = spy(new ZendeskInputPlugin());
+
+        final ConfigSource src = ZendeskTestHelper.getConfigSource("base.yml");
+        src.set("target", Target.TICKETS.name().toLowerCase());
+        src.set("columns", Collections.EMPTY_LIST);
+        src.set("enable_cursor_based_api", true);
+        ZendeskInputPlugin.PluginTask task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
+        ZendeskService zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
+        assertTrue(zendeskService instanceof ZendeskCursorBasedService);
+
+        src.set("target", Target.USERS.name().toLowerCase());
+        task = CONFIG_MAPPER.map(src, ZendeskInputPlugin.PluginTask.class);
+        zendeskService = zendeskInputPlugin.dispatchPerTarget(task);
+        assertTrue(zendeskService instanceof ZendeskCursorBasedService);
     }
 
     @Test

@@ -1,0 +1,408 @@
+{
+  "tickets": [
+    {
+      "url": "https://treasuredata.zendesk.com/api/v2/tickets/10046.json",
+      "id": 10046,
+      "external_id": null,
+      "via": {
+        "channel": "api",
+        "source": {
+          "from": {},
+          "to": {},
+          "rel": null
+        }
+      },
+      "created_at": "2015-07-17T09:44:45Z",
+      "updated_at": "2015-07-23T08:03:20Z",
+      "type": null,
+      "subject": "YBI Incident Report (20150717)",
+      "raw_subject": "YBI Incident Report (20150717)",
+      "description": "YBI ご担当者様\r\n\r\nYBIサービスにおきまして、下記の障害が発生しましたので報告します。\r\n\r\n発生日時: 18:20頃\r\n終了日時: \r\nステータス: 対応中\r\n\r\nIN_CODE: 11\r\n影響範囲: 複数\r\n優先度: 高\r\n障害症状: APIアクセス不良\r\nhttp://ybi-status.idcfcloud.com/incidents/f4972585dzw1\r\n\r\n原因としては、オブスト障害で、IDCF様側で対応中。\r\n\r\n\r\n本件についてのお問い合わせは、Treasure Data サポートデスク(support@treasure-data.com)にお願いします。\r\n\r\n以上。",
+      "priority": "urgent",
+      "status": "closed",
+      "recipient": null,
+      "requester_id": 1149067997,
+      "submitter_id": 1098710047,
+      "assignee_id": 1098710047,
+      "organization_id": 260110007,
+      "group_id": 25952037,
+      "collaborator_ids": [],
+      "follower_ids": [],
+      "email_cc_ids": [],
+      "forum_topic_id": null,
+      "problem_id": null,
+      "has_incidents": false,
+      "is_public": true,
+      "due_at": null,
+      "tags": [
+        "idcf",
+        "problem-report"
+      ],
+      "custom_fields": [
+        {
+          "id": 80429327,
+          "value": null
+        },
+        {
+          "id": 360057418513,
+          "value": null
+        },
+        {
+          "id": 10682994795795,
+          "value": null
+        },
+        {
+          "id": 18713266567699,
+          "value": null
+        },
+        {
+          "id": 10682857506067,
+          "value": null
+        },
+        {
+          "id": 18713263822355,
+          "value": null
+        },
+        {
+          "id": 18713307078931,
+          "value": null
+        },
+        {
+          "id": 10682946518035,
+          "value": null
+        },
+        {
+          "id": 10682908596243,
+          "value": null
+        },
+        {
+          "id": 81568788,
+          "value": null
+        },
+        {
+          "id": 77496087,
+          "value": null
+        },
+        {
+          "id": 81568808,
+          "value": null
+        },
+        {
+          "id": 1500003342381,
+          "value": null
+        },
+        {
+          "id": 360029416254,
+          "value": null
+        },
+        {
+          "id": 360047029573,
+          "value": null
+        },
+        {
+          "id": 360031529033,
+          "value": null
+        },
+        {
+          "id": 77984587,
+          "value": null
+        },
+        {
+          "id": 360051649613,
+          "value": null
+        },
+        {
+          "id": 360000277327,
+          "value": null
+        },
+        {
+          "id": 360000277347,
+          "value": null
+        },
+        {
+          "id": 360029761653,
+          "value": null
+        },
+        {
+          "id": 360044991094,
+          "value": null
+        },
+        {
+          "id": 360026802814,
+          "value": null
+        },
+        {
+          "id": 360000448128,
+          "value": null
+        },
+        {
+          "id": 360000047248,
+          "value": null
+        },
+        {
+          "id": 18713273505171,
+          "value": null
+        },
+        {
+          "id": 10682899319443,
+          "value": null
+        },
+        {
+          "id": 18713301837715,
+          "value": null
+        },
+        {
+          "id": 10682905434515,
+          "value": null
+        },
+        {
+          "id": 10682945281427,
+          "value": null
+        },
+        {
+          "id": 10577093706899,
+          "value": null
+        },
+        {
+          "id": 18713241832595,
+          "value": null
+        },
+        {
+          "id": 18713228737939,
+          "value": null
+        },
+        {
+          "id": 360043549854,
+          "value": null
+        },
+        {
+          "id": 26703268,
+          "value": false
+        },
+        {
+          "id": 1500001360042,
+          "value": null
+        },
+        {
+          "id": 360047049654,
+          "value": null
+        },
+        {
+          "id": 360036700353,
+          "value": null
+        },
+        {
+          "id": 32334037,
+          "value": null
+        },
+        {
+          "id": 1500011161301,
+          "value": null
+        },
+        {
+          "id": 27013087,
+          "value": null
+        },
+        {
+          "id": 360039452393,
+          "value": null
+        },
+        {
+          "id": 1500001359081,
+          "value": null
+        }
+      ],
+      "satisfaction_rating": {
+        "score": "unoffered"
+      },
+      "sharing_agreement_ids": [],
+      "custom_status_id": 1500007502322,
+      "fields": [
+        {
+          "id": 80429327,
+          "value": null
+        },
+        {
+          "id": 360057418513,
+          "value": null
+        },
+        {
+          "id": 10682994795795,
+          "value": null
+        },
+        {
+          "id": 18713266567699,
+          "value": null
+        },
+        {
+          "id": 10682857506067,
+          "value": null
+        },
+        {
+          "id": 18713263822355,
+          "value": null
+        },
+        {
+          "id": 18713307078931,
+          "value": null
+        },
+        {
+          "id": 10682946518035,
+          "value": null
+        },
+        {
+          "id": 10682908596243,
+          "value": null
+        },
+        {
+          "id": 81568788,
+          "value": null
+        },
+        {
+          "id": 77496087,
+          "value": null
+        },
+        {
+          "id": 81568808,
+          "value": null
+        },
+        {
+          "id": 1500003342381,
+          "value": null
+        },
+        {
+          "id": 360029416254,
+          "value": null
+        },
+        {
+          "id": 360047029573,
+          "value": null
+        },
+        {
+          "id": 360031529033,
+          "value": null
+        },
+        {
+          "id": 77984587,
+          "value": null
+        },
+        {
+          "id": 360051649613,
+          "value": null
+        },
+        {
+          "id": 360000277327,
+          "value": null
+        },
+        {
+          "id": 360000277347,
+          "value": null
+        },
+        {
+          "id": 360029761653,
+          "value": null
+        },
+        {
+          "id": 360044991094,
+          "value": null
+        },
+        {
+          "id": 360026802814,
+          "value": null
+        },
+        {
+          "id": 360000448128,
+          "value": null
+        },
+        {
+          "id": 360000047248,
+          "value": null
+        },
+        {
+          "id": 18713273505171,
+          "value": null
+        },
+        {
+          "id": 10682899319443,
+          "value": null
+        },
+        {
+          "id": 18713301837715,
+          "value": null
+        },
+        {
+          "id": 10682905434515,
+          "value": null
+        },
+        {
+          "id": 10682945281427,
+          "value": null
+        },
+        {
+          "id": 10577093706899,
+          "value": null
+        },
+        {
+          "id": 18713241832595,
+          "value": null
+        },
+        {
+          "id": 18713228737939,
+          "value": null
+        },
+        {
+          "id": 360043549854,
+          "value": null
+        },
+        {
+          "id": 26703268,
+          "value": false
+        },
+        {
+          "id": 1500001360042,
+          "value": null
+        },
+        {
+          "id": 360047049654,
+          "value": null
+        },
+        {
+          "id": 360036700353,
+          "value": null
+        },
+        {
+          "id": 32334037,
+          "value": null
+        },
+        {
+          "id": 1500011161301,
+          "value": null
+        },
+        {
+          "id": 27013087,
+          "value": null
+        },
+        {
+          "id": 360039452393,
+          "value": null
+        },
+        {
+          "id": 1500001359081,
+          "value": null
+        }
+      ],
+      "followup_ids": [],
+      "ticket_form_id": null,
+      "brand_id": 381217,
+      "allow_channelback": false,
+      "allow_attachments": true,
+      "from_messaging_channel": false,
+      "generated_timestamp": 1437638600
+    }
+  ],
+  "after_url": "https://treasuredata.zendesk.com/api/v2/incremental/tickets/cursor.json?cursor=xxxx",
+  "before_url": null,
+  "after_cursor": "xxxx",
+  "before_cursor": null,
+  "end_of_stream": false
+}

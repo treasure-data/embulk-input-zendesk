@@ -28,6 +28,8 @@ public class ZendeskConstants
         public static final String GENERATED_TIMESTAMP = "generated_timestamp";
         public static final String UPDATED_AT = "updated_at";
         public static final String ID = "id";
+        public static final String END_OF_STREAM = "end_of_stream";
+        public static final String AFTER_URL = "after_url";
     }
 
     public static class Url

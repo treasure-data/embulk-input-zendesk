@@ -115,12 +115,13 @@ public class ZendeskCursorBasedService
                     throw new DataException("Missing end of stream, please double-check the endpoint");
                 }
                 if (Exec.isPreview()) {
-                    logger.info("import records total " + totalRecords);
                     break;
                 }
 
                 path = result.get(ZendeskConstants.Field.AFTER_URL).asText();
             }
+
+            logger.info("import records total " + totalRecords);
 
             if (!Exec.isPreview() && task.getIncremental()) {
                 storeStartTimeForConfigDiff(taskReport, nextStartTime);

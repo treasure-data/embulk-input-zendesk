@@ -276,6 +276,9 @@ public class ZendeskChatService implements ZendeskService
             : OffsetDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
     }
 
+    // Zopim domain is the domain for old Chat API
+    // But it will be removed soon and replaced by new Chat API follow new pattern {subdomain}.zendesk.com/api/v2/chat
+    // The expected released day is before October 29, 2024. So we need to handle this case
     private String resolveEndpointPatternByDomain(String endpoint)
     {
         if (isZopimDomain()) {

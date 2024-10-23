@@ -1,4 +1,7 @@
-## 0.4.5 - 2024-10-29
+## 0.4.6 - 2024-10-24
+* [enhancement] Update the API endpoint pattern for Chat endpoint [#88](https://github.com/treasure-data/embulk-input-zendesk/pull/88)
+
+## 0.4.5 - 2024-10-24
 * [enhancement] Remove checking for Chat API due to domain update [#87](https://github.com/treasure-data/embulk-input-zendesk/pull/87)
 
 ## 0.4.4 - 2023-07-21

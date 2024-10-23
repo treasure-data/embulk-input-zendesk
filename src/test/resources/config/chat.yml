@@ -1,5 +1,5 @@
 type: zendesk
-login_url: https://www.zopim.com
+login_url: https://www.chat.zendesk.com
 auth_method: basic
 username: username
 password: password

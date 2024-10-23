@@ -4,14 +4,14 @@
       "id": "id_1",
       "timestamp": "2019-10-12T21:43:23Z",
       "preview": "abc",
-      "url": "https://www.zopim.com/api/v2/chats/id_1",
+      "url": "https://www.chat.zendesk.com/api/v2/chats/id_1",
       "type": "offline_msg"
     },
     {
       "id": "id_2",
       "timestamp": "2019-10-12T20:02:54Z",
       "preview": "abc",
-      "url": "https://www.zopim.com/api/v2/chats/id_2",
+      "url": "https://www.chat.zendesk.com/api/v2/chats/id_2",
       "type": "offline_msg"
     }
   ],

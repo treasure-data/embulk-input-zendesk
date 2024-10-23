@@ -173,11 +173,7 @@ public class ZendeskRestClient
                 // In case we can't parse the message, error should not be show here
             }
 
-            if (target.equals(Target.CHAT) && !Pattern.compile(ZendeskConstants.Regex.CHAT_LOGIN_URL).matcher(loginURL).matches()) {
-                throw new ConfigException("Invalid login url. Check that you are using https://www.zopim.com to import chat data.");
-            }
-
-            if (!target.equals(Target.CHAT) && !Pattern.compile(ZendeskConstants.Regex.LOGIN_URL).matcher(loginURL).matches()) {
+            if (!Pattern.compile(ZendeskConstants.Regex.LOGIN_URL).matcher(loginURL).matches()) {
                 throw new ConfigException("Invalid login url. Check that you are using the correct Zendesk url (https://example.zendesk.com/) to import data.");
             }
 
@@ -214,12 +210,7 @@ public class ZendeskRestClient
         // Won't retry for 4xx range errors except above. Almost they should be ConfigError e.g. 403 Forbidden
         if (status / 100 == 4) {
             if (status == HttpStatus.SC_UNAUTHORIZED) {
-                if (target.equals(Target.CHAT)) {
-                    throw new ConfigException("Invalid credentials. Check that you are using your Zopim credentials to import Chat data.");
-                }
-                else {
-                    throw new ConfigException("Invalid credentials. Check that you are using your Zendesk credentials to import non-Chat data.");
-                }
+                throw new ConfigException("Invalid credentials. Check that you are using your Zendesk credentials.");
             }
 
             if (status == HttpStatus.SC_FORBIDDEN) {

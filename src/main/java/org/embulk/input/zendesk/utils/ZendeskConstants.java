@@ -40,7 +40,7 @@ public class ZendeskConstants
         public static final String API_OBJECT_RECORD = "api/sunshine/objects/records";
         public static final String API_RELATIONSHIP_RECORD = "api/sunshine/relationships/records";
         public static final String API_USER_EVENT = "api/v2/users/%s/events";
-        public static final String API_CHAT = API + "/chats";
+        public static final String API_CHAT = API + "/chat/chats";
         public static final String API_CHAT_SEARCH = API_CHAT + "/search";
     }
 

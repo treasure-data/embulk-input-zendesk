@@ -1,3 +1,6 @@
+## 0.4.5 - 2024-10-29
+* [enhancement] Remove checking for Chat API due to domain update [#87](https://github.com/treasure-data/embulk-input-zendesk/pull/87)
+
 ## 0.4.4 - 2023-07-21
 * [enhancement] Support cursor based incremental [#84](https://github.com/treasure-data/embulk-input-zendesk/pull/84)
 

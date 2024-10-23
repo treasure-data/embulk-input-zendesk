@@ -67,6 +67,25 @@ public class TestZendeskChatService
         verify(recordImporter, times(2)).addRecord(any());
     }
 
+    @Test
+    public void testFetchDataWithZopimDomain()
+    {
+        ZendeskInputPlugin.PluginTask task =
+            CONFIG_MAPPER.map(ZendeskTestHelper.getConfigSource("chat.yml").set("login_url", "https://www.zopim.com"), ZendeskInputPlugin.PluginTask.class);
+        setupZendeskChatService(task);
+
+        JsonNode dataSearchJson = ZendeskTestHelper.getJsonFromFile("data/chat_search.json");
+        JsonNode dataJson = ZendeskTestHelper.getJsonFromFile("data/chat.json");
+
+        when(zendeskRestClient.doGet(eq("https://www.zopim.com/api/v2/chats/search?q=timestamp%3A%5B2018-09-15T05%3A00%3A00Z+TO+2019-09-29T05%3A00%3A00Z%5D&page=1"), any(), anyBoolean())).thenReturn(dataSearchJson.toString());
+
+        when(zendeskRestClient.doGet(eq("https://www.zopim.com/api/v2/chats?ids=id_1%2Cid_2"), any(), anyBoolean())).thenReturn(dataJson.toString());
+
+        zendeskChatService.fetchData("2018-09-15T05:00:00Z", "2019-09-29T05:00:00Z", 1, recordImporter);
+
+        verify(recordImporter, times(2)).addRecord(any());
+    }
+
     private void setup()
     {
         ZendeskInputPlugin.PluginTask task =

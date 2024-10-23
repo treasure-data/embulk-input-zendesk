@@ -24,6 +24,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static org.embulk.input.zendesk.ZendeskInputPlugin.CONFIG_MAPPER_FACTORY;
@@ -164,9 +165,9 @@ public class ZendeskChatService implements ZendeskService
     private String buildSearchRequest(final String startTime, final String endTime, final int page)
     {
         return ZendeskUtils.getURIBuilder(task.getLoginUrl())
-            .setPath(ZendeskConstants.Url.API_CHAT_SEARCH)
-            .setParameter("q", buildSearchParam(startTime, endTime))
-            .setParameter("page", String.valueOf(page)).toString();
+        .setPath(resolveEndpointPatternByDomain(ZendeskConstants.Url.ENDPOINT_CHAT_SEARCH))
+        .setParameter("q", buildSearchParam(startTime, endTime))
+        .setParameter("page", String.valueOf(page)).toString();
     }
 
     private String buildSearchParam(final String startTime, final String endTime)
@@ -186,7 +187,7 @@ public class ZendeskChatService implements ZendeskService
     private String buildSearchRequest(final List<String> ids)
     {
         return ZendeskUtils.getURIBuilder(task.getLoginUrl())
-            .setPath(ZendeskConstants.Url.API_CHAT)
+            .setPath(resolveEndpointPatternByDomain(ZendeskConstants.Url.ENDPOINT_CHAT))
             .setParameter("ids", buildIdsParam(ids))
             .toString();
     }
@@ -273,5 +274,22 @@ public class ZendeskChatService implements ZendeskService
         return task.getEndTime().isPresent()
             ? task.getEndTime().get()
             : OffsetDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
+    }
+
+    private String resolveEndpointPatternByDomain(String endpoint)
+    {
+        if (isZopimDomain()) {
+            return ZendeskConstants.Url.API + endpoint;
+        }
+        else {
+            return ZendeskConstants.Url.NEW_API_CHAT + endpoint;
+        }
+    }
+
+    private boolean isZopimDomain()
+    {
+        return Pattern.compile(ZendeskConstants.Regex.ZOPIM_LOGIN_URL)
+            .matcher(task.getLoginUrl())
+            .matches();
     }
 }

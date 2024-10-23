@@ -68,7 +68,6 @@ public class ZendeskConstants
     {
         public static final String ID = "_id$";
         public static final String LOGIN_URL = "^https?://+[a-z0-9_\\\\-]+(.zendesk.com/?)$";
-        public static final String CHAT_LOGIN_URL = "^https://www.zopim.com/?$";
     }
 
     public static class HttpStatus

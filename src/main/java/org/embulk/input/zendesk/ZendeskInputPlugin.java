@@ -80,10 +80,6 @@ public class ZendeskInputPlugin
         @ConfigDefault("null")
         Optional<String> getUsername();
 
-        @Config("password")
-        @ConfigDefault("null")
-        Optional<String> getPassword();
-
         @Config("token")
         @ConfigDefault("null")
         Optional<String> getToken();

@@ -21,11 +21,10 @@ Required Embulk version >= 0.9.6.
 ## Configuration
 
 - **login_url**: Login URL for Zendesk (string, required)
-- **auth_method**: `basic`, `token`, or `oauth`. For more detail on [zendesk document](https://developer.zendesk.com/rest_api/docs/core/introduction#security-and-authentication). (string, required)
+- **auth_method**: `token`, or `oauth`. For more detail on [zendesk document](https://developer.zendesk.com/rest_api/docs/core/introduction#security-and-authentication). (string, required)
 - **target**: Which export Zendesk resource. Currently supported are `tickets`, `ticket_events`, `users`, `organizations`, `ticket_fields`, `ticket_forms`, `ticket_metrics`, `scores`, `recipients`, `object_records`, `relationship_records` or `user_events`. (string, required)
 - **includes**: Will fetch sub resources. For example, ticket has ticket_audits, ticket_comments. See below example config. (array, default: `[]`)
-- **username**: The user name a.k.a. email. Required if `auth_method` is `basic` or `token`. (string, default: `null`)
-- **password**: Password. required if `auth_method` is `basic`. (string, default: `null`)
+- **username**: The user name a.k.a. email. Required if `auth_method` is `token`. (string, default: `null`)
 - **token**: Token. required if `auth_method` is `token`. (string, default: `null`)
 - **access_token**: OAuth Access Token. required if `auth_method` is `oauth`. (string, default: `null`)
 - **start_time**: Start export from this time if present. (string, default: `null`)

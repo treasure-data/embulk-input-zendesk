@@ -1,8 +1,7 @@
 type: zendesk
 login_url: https://www.chat.zendesk.com
-auth_method: basic
-username: username
-password: password
+auth_method: oauth
+access_token: dummy
 target: chat
 app_marketplace_integration_name: abc
 app_marketplace_app_id: abc

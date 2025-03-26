@@ -7,7 +7,7 @@ import java.util.Arrays;
 
 public enum AuthenticationMethod
 {
-    BASIC, OAUTH, TOKEN;
+    OAUTH, TOKEN;
 
     @JsonCreator
     public static AuthenticationMethod fromString(final String value)

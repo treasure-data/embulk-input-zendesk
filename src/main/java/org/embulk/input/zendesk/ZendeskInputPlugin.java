@@ -70,7 +70,7 @@ public class ZendeskInputPlugin
         String getLoginUrl();
 
         @Config("auth_method")
-        @ConfigDefault("\"oauth\"")
+        @ConfigDefault("\"token\"")
         AuthenticationMethod getAuthenticationMethod();
 
         @Config("target")

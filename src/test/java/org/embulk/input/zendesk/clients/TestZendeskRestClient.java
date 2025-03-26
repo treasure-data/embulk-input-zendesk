@@ -255,24 +255,6 @@ public class TestZendeskRestClient
     }
 
     @Test
-    public void authenticationBasicSuccess() throws IOException
-    {
-        setup("doGet200");
-
-        String username = "zendesk_username";
-        String password = "zendesk_password";
-
-        ConfigSource configSource = ZendeskTestHelper.getConfigSource("incremental.yml");
-        configSource.set("auth_method", "basic");
-        configSource.set("username", Optional.of(username));
-        configSource.set("password", password);
-        PluginTask pluginTask = CONFIG_MAPPER.map(configSource, PluginTask.class);
-
-        String expectedValue = "Basic " + ZendeskUtils.convertBase64(String.format("%s:%s", username, password));
-        setupAndVerifyAuthenticationString(expectedValue, pluginTask);
-    }
-
-    @Test
     public void authenticationTokenSuccess() throws IOException
     {
         setup("doGet200");

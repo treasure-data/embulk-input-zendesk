@@ -275,19 +275,6 @@ public class TestZendeskInputPlugin
     }
 
     @Test
-    public void validateCredentialBasicShouldThrowException()
-    {
-        ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");
-        configSource.set("auth_method", "basic");
-        configSource.remove("username");
-        assertValidation(configSource, "username and password are required for authentication method 'basic'");
-
-        configSource.set("username", "");
-        configSource.remove("password");
-        assertValidation(configSource, "username and password are required for authentication method 'basic'");
-    }
-
-    @Test
     public void validateCredentialTokenShouldThrowException()
     {
         ConfigSource configSource = ZendeskTestHelper.getConfigSource("base_validator.yml");

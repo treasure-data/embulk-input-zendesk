@@ -70,7 +70,7 @@ public class ZendeskInputPlugin
         String getLoginUrl();
 
         @Config("auth_method")
-        @ConfigDefault("\"basic\"")
+        @ConfigDefault("\"token\"")
         AuthenticationMethod getAuthenticationMethod();
 
         @Config("target")
@@ -79,10 +79,6 @@ public class ZendeskInputPlugin
         @Config("username")
         @ConfigDefault("null")
         Optional<String> getUsername();
-
-        @Config("password")
-        @ConfigDefault("null")
-        Optional<String> getPassword();
 
         @Config("token")
         @ConfigDefault("null")
@@ -508,12 +504,6 @@ public class ZendeskInputPlugin
             case TOKEN:
                 if (!task.getUsername().isPresent() || !task.getToken().isPresent()) {
                     throw new ConfigException(String.format("username and token are required for authentication method '%s'",
-                        task.getAuthenticationMethod().name().toLowerCase()));
-                }
-                break;
-            case BASIC:
-                if (!task.getUsername().isPresent() || !task.getPassword().isPresent()) {
-                    throw new ConfigException(String.format("username and password are required for authentication method '%s'",
                         task.getAuthenticationMethod().name().toLowerCase()));
                 }
                 break;

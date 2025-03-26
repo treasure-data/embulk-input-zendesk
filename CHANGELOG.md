@@ -1,3 +1,6 @@
+## 0.4.7 - 2025-03-18
+* [enhancement] Remove the support for basic authentication
+
 ## 0.4.6 - 2024-10-24
 * [enhancement] Update the API endpoint pattern for Chat endpoint [#88](https://github.com/treasure-data/embulk-input-zendesk/pull/88)
 
